@@ -1,8 +1,0 @@
-setup.py
-weighted.py
-test/test_weighted.py
-wquantiles.egg-info/PKG-INFO
-wquantiles.egg-info/SOURCES.txt
-wquantiles.egg-info/dependency_links.txt
-wquantiles.egg-info/requires.txt
-wquantiles.egg-info/top_level.txt

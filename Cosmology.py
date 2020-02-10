@@ -190,15 +190,15 @@ def report_cosmology():
 
     USAGE: report_comology()
     """
-    print "***********************"
-    print "COSMOLOGY:"
-    print "   Omega_M = {0:5.3f}".format(WM)
-    print "   Omega_b = {0:5.3f}".format(WB)
-    print "   Omega_V = {0:5.3f}".format(WV)
-    print "   h       = {0:5.3f}".format(h)
-    print "   Omega_R = {0:5.3e}".format(WR)
-    print "   Omega_k = {0:5.3f}".format(WK)
-    print "***********************"
+    print("***********************")
+    print("COSMOLOGY:")
+    print("   Omega_M = {0:5.3f}".format(WM))
+    print("   Omega_b = {0:5.3f}".format(WB))
+    print("   Omega_V = {0:5.3f}".format(WV))
+    print("   h       = {0:5.3f}".format(h))
+    print("   Omega_R = {0:5.3e}".format(WR))
+    print("   Omega_k = {0:5.3f}".format(WK))
+    print("***********************")
     return
 
 
@@ -641,35 +641,37 @@ def kaiser_factor(z,bias,gamma=None):
 
 
 def emission_line_flux(luminosity_data,z):
-	"""Returns flux in units of erg/s/cm^2 from input of luminosity_data in units of E+40*h-2erg/s and corresponding redshifts."""
+    """Returns flux in units of erg/s/cm^2 from input of 
+    luminosity_data in units of E+40*h-2erg/s and corresponding redshifts."""
 
-        if luminosity_data>0.:
-            # Luminosity distance in cm/h
-            d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
+    if luminosity_data>0.:
+        # Luminosity distance in cm/h
+        d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
 
-            # Luminosities are in 10^40 h-2 erg/s units
-            den = 4.0*np.pi*(d_L**2)
-            emission_line_flux = np.log10(luminosity_data/den) + 40.
-            # Flux in erg/s/cm^2
-            emission_line_flux = 10**(emission_line_flux)
-        else:
-            emission_line_flux = 0.
-
-	return emission_line_flux
+        # Luminosities are in 10^40 h-2 erg/s units
+        den = 4.0*np.pi*(d_L**2)
+        emission_line_flux = np.log10(luminosity_data/den) + 40.
+        # Flux in erg/s/cm^2
+        emission_line_flux = 10**(emission_line_flux)
+    else:
+        emission_line_flux = 0.
+        
+    return emission_line_flux
 
 def emission_line_luminosity(flux_data,z):
-	"""Returns luminosity in units of E+40*h-2erg/s from input of flux_data in units of erg/s/cm^2 and corresponding redshifts."""
+    """Returns luminosity in units of E+40*h-2erg/s from input of 
+    flux_data in units of erg/s/cm^2 and corresponding redshifts."""
 
-        if flux_data>0.:
-            # Luminosity distance in cm/h
-            d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
-
-            emission_line_luminosity = np.log10(4.0*np.pi*(d_L**2)*flux_data) - 40. 
-            emission_line_luminosity = 10**(emission_line_luminosity)
-        else:
-            emission_line_luminosity = 0.
-
-	return emission_line_luminosity
+    if flux_data>0.:
+        # Luminosity distance in cm/h
+        d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
+        
+        emission_line_luminosity = np.log10(4.0*np.pi*(d_L**2)*flux_data) - 40. 
+        emission_line_luminosity = 10**(emission_line_luminosity)
+    else:
+        emission_line_luminosity = 0.
+        
+    return emission_line_luminosity
 
 
 def polar2cartesians(ra,dec,zz):
