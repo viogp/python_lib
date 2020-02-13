@@ -115,6 +115,8 @@ def get_snap(zz,sim,outdir):
     -----
     snap : int
         Snapshot value
+    z_snap : float
+        Redshift for that snapshot
 
     Examples
     ---------
@@ -139,21 +141,21 @@ def get_snap(zz,sim,outdir):
             return sns
         else:
             print('WARNING: {} far from single z found in {}'.format(zz,zzs,tablez))
-            return -999.
+            return -999.,-999.
     
     # Find the closest redshift
     if (zz < zzs[0]):
         print('WARNING: {} below {}, min. z found in {}'.format(zz,zzs[0],tablez))
         if (zz<0):
-            return -999.
+            return -999.,-999.
         else: 
-            return sns[0]
+            return sns[0],zzs[0]
     elif(zz > zzs[-1]):
         print('WARNING: {} above {}, max. z found in {}'.format(zz,zzs[-1],tablez))
-        return sns[-1]
+        return sns[-1],zzs[-1]
     else:
         idx = (np.abs(zzs - zz)).argmin()
-        return sns[idx]
+        return sns[idx],zzs[idx]
 
 if __name__== "__main__":
     print(get_z('-1','AGN_TUNED_nu0_L100N256_WMAP9'))
