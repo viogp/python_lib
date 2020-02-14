@@ -140,16 +140,16 @@ def get_snap(zz,zmin,zmax,sim,outdir):
     # Case of having a single snapshot:
     if (not hasattr(zzs, "__len__")):
         if (zmin < zzs and zzs < zmax):
-            return lsns,zzs
+            return int(lsns),float(zzs)
         else:
             print('WARNING: {} far from single {} found in {}'.format(zz,zzs,tablez))
-            return -999.,-999.
+            return -999,-999.
     sns = np.asarray(lsns,dtype=int)
 
     # Find the closest redshift
     if ((zz < zzs[0] and zmax < zzs[0]) or (zz<0.)):
         print('WARNING: {}<{}, min. z found in {}'.format(zz,zzs[0],tablez))
-        return -999.,-999.
+        return -999,-999.
     elif(zz > zzs[-1] and zmin > zzs[-1]):
         print('WARNING: {}>{}, max. z found in {}'.format(zz,zzs[-1],tablez))
         return -999.,-999.
@@ -159,7 +159,7 @@ def get_snap(zz,zmin,zmax,sim,outdir):
             return sns[idx],zzs[idx]
         else:
             print('WARNING: z={} outside range {}<z<{}, {}'.format(zzs[idx],zmin,zmax,tablez))
-            return -999.,-999.
+            return -999,-999.
 
 if __name__== "__main__":
     print(get_z('-1','AGN_TUNED_nu0_L100N256_WMAP9'))
