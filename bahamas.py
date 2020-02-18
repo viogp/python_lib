@@ -12,6 +12,8 @@ dirobs = '/hpcdata0/Obs_Data/'
 
 tblz = 'snap_z.txt'
 
+defaultdz = 0.25
+
 def table_z_sn(sim,outdir):
     output = outdir+sim+'/'+tblz
     path = dirbahamas+sim+'/Data/EagleSubGroups_5r200/'
@@ -38,11 +40,11 @@ def table_z_sn(sim,outdir):
     zz = zzs[ind]
     sn = sns[ind]
 
-    # Write list to file                                                                
-    with open(output, 'w') as f:                                                        
-        f.write('# Redshift Snapshot \n')                                               
-        for ii in range(len(zz)):                                                       
-            tofile = '{:.2f} {:d}'.format(zz[ii],sn[ii])                                
+    # Write list to file
+    with open(output, 'w') as f:
+        f.write('# Redshift Snapshot \n')
+        for ii in range(len(zz)):
+            tofile = '{:.2f} {:d}'.format(zz[ii],sn[ii])
             f.write("%s\n" % tofile)
 
     return output
@@ -70,7 +72,7 @@ def get_z(snap,sim,outdir):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_z('26','AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
+    >>> b.get_z(26,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
     >>>
     """
 
@@ -96,10 +98,11 @@ def get_z(snap,sim,outdir):
         zz = zzs[ind][0]
         return zz
 
+
 def get_snap(zz,zmin,zmax,sim,outdir):
     """
     Get the closest snapshot given a redshift and
-    a simulation name
+    a simulation name, within some limits
 
     Parameters
     -----------
@@ -124,7 +127,7 @@ def get_snap(zz,zmin,zmax,sim,outdir):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_snap(3.2,3.,3.4,'AGN_TUNED_nu0_L100N256_WMAP9')
+    >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
     >>>
     """
 
@@ -135,8 +138,8 @@ def get_snap(zz,zmin,zmax,sim,outdir):
         tablez = table_z_sn(sim,outdir)
 
     # Read the table:
-    zzs, lsns = np.loadtxt(tablez, unpack=True)
-
+    zzs, lsns = np.loadtxt(tablez, unpack=True)        
+            
     # Case of having a single snapshot:
     if (not hasattr(zzs, "__len__")):
         if (zmin < zzs and zzs < zmax):
@@ -161,10 +164,62 @@ def get_snap(zz,zmin,zmax,sim,outdir):
             print('WARNING: z={} outside range {}<z<{}, {}'.format(zzs[idx],zmin,zmax,tablez))
             return -999,-999.
 
-if __name__== "__main__":
-    print(get_z('-1','AGN_TUNED_nu0_L100N256_WMAP9'))
-    print(get_z('32','AGN_TUNED_nu0_L100N256_WMAP9'))
 
-    print(get_snap(100.,'AGN_TUNED_nu0_L100N256_WMAP9'))
-    print(get_snap(-100.,'AGN_TUNED_nu0_L100N256_WMAP9'))
-    print(get_snap(1.2,'AGN_TUNED_nu0_L100N256_WMAP9'))
+def get_zminmaxs(zz,dz=None):
+    """
+    Get the previous (min) and next (max) values
+    given an array. If the input is a single value 
+    zmaxs = zz+dz, zmins = zz-dz
+
+    Parameters
+    -----------
+    zz : list of floats
+        Redshift 
+    dz : float
+        Optional parameter with an interval
+
+    Returns
+    -----
+    zmins : list of floats
+        Minimum redshifts
+    zmaxs : list of floats
+        Maximum redshifts
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_zminmaxs([0.,1.])
+    >>> [-1.0, 0.0], [1.0, 2.0]
+    """
+
+    if (dz is not None):
+        zmins = [iz - dz for iz in zz]
+        zmaxs = [iz + dz for iz in zz]
+    elif(len(zz)<2):
+        print('WARNING (get_zminmaxs): Setting to default dz={}'.format(defaultdz))
+        dz = defaultdz
+        zmins = [iz - dz for iz in zz]
+        zmaxs = [iz + dz for iz in zz]
+    else:
+        zmins = zz[:-1]
+        zmins.insert(0,2*zz[0]-zz[1])
+
+        zmaxs = zz[1:]
+        zmaxs.append(2*zz[-1]-zz[-2]) 
+        
+    return zmins,zmaxs
+
+        
+if __name__== "__main__":
+    print(get_z(-1,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/'))
+    print(get_z(26,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/'))
+
+    snap,zsnap = get_snap(3.2,2.8,3.8,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
+    print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+    print(get_snap(-100.,-200.,-5.,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/'))
+    print(get_snap(0.28,0.26,0.3,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/'))
+
+    print(get_zminmaxs([0.]))
+    print(get_zminmaxs([0.,1.],dz=0.5))
+    print(get_zminmaxs([0.,1.]))
+
