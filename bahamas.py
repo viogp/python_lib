@@ -1,4 +1,4 @@
-import os.path
+import sys,os.path
 import numpy as np
 import h5py
 import glob
@@ -192,6 +192,12 @@ def get_zminmaxs(zz,dz=None):
     >>> [-1.0, 0.0], [1.0, 2.0]
     """
 
+    # Check that the input list is sorted
+    if(zz != sorted(zz)):
+        print('STOP (get_zminmaxs): Sort the redshift list')
+        sys.exit()
+        return -999.,-999.
+    
     if (dz is not None):
         zmins = [iz - dz for iz in zz]
         zmaxs = [iz + dz for iz in zz]
@@ -222,4 +228,5 @@ if __name__== "__main__":
     print(get_zminmaxs([0.]))
     print(get_zminmaxs([0.,1.],dz=0.5))
     print(get_zminmaxs([0.,1.]))
+    print(get_zminmaxs([0.,1.,0.5]))
 
