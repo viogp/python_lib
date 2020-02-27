@@ -2,6 +2,7 @@ import sys,os.path
 import numpy as np
 import h5py
 import glob
+from iotools import stop_if_no_file, is_sorted
 #print('\n \n')
 
 dirbahamas = '/hpcdata0/simulations/BAHAMAS/'
@@ -215,7 +216,55 @@ def get_zminmaxs(zz,dz=None):
         
     return zmins,zmaxs
 
-        
+
+def cenids(snap,sim):
+    """
+    Get the list of indexes for central galaxies
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot 
+    sim : string
+        Simulation name
+
+    Returns
+    -----
+    cenids : numpy array int
+        Global indexes for central galaxies
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.cenids(31,AGN_TUNED_nu0_L050N256_WMAP9)
+    """
+
+    path = dirbahamas+sim+'/Data/EagleSubGroups_5r200/groups_0'+str(snap)
+    root = path+'/eagle_subfind_tab_0'+str(snap)+'.'
+    files = glob.glob(root+'*.hdf5')
+    lenf = len(files) ; files = []
+    if (lenf<1):
+        print('STOP(~/python_lib/bahamas): Make sure you can see the path {}'.format(path))
+        sys.exit()
+
+    for ii in range(lenf):
+        ff = root+str(ii)+'.hdf5'
+        stop_if_no_file(ff)
+        f = h5py.File(ff, 'r')
+        haloes = f['FOF']
+        if (ii == 0):
+            cenids = haloes['FirstSubhaloID'][:]
+        else:
+            np.append(cenids, haloes['FirstSubhaloID'][:]) 
+
+    # Check that the array is sorted
+    sorted = is_sorted(cenids)
+    if (not sorted):
+        print('STOP(bahamas/cenids): central indexes not sorted')
+        sys.exit()
+    
+    return cenids
+    
 if __name__== "__main__":
     print(get_z(-1,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/'))
     print(get_z(26,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/'))

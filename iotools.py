@@ -22,3 +22,9 @@ def check_file(infile):
 	if (not os.path.isfile(infile)):
 		file_fine = False
 	return file_fine
+
+def is_sorted(a):
+    for i in range(a.size-1):
+         if a[i+1] < a[i] :
+               return False
+    return True
