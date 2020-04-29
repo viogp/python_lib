@@ -55,13 +55,13 @@ style1 = {
 
     # Legend
     'legend.fancybox': False,
-    'legend.fontsize': 'small',
+    'legend.fontsize': 'medium',
     'legend.scatterpoints': 1,
     'legend.numpoints': 1,
     'legend.loc': 'best',
 
     # Figure
-    'figure.figsize': [7., 5.8],
+    'figure.figsize': [6.5, 7],
     'figure.titlesize': 'large',
 
     # Images
