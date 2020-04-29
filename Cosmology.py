@@ -640,9 +640,32 @@ def kaiser_factor(z,bias,gamma=None):
     return kaiser_factor
 
 
+def logL2flux(log10luminosity,z):
+    """
+    Returns flux in units of erg/s/cm^2 from input of
+    log10(Luminosity in units of h-2erg/s)
+    and corresponding redshifts.
+    """
+    if log10luminosity>-9.:
+        # Luminosity distance in cm/h
+        d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
+
+        # Luminosities are in h-2 erg/s units
+        den = 4.0*np.pi*(d_L**2)
+        emission_line_flux = log10luminosity - np.log10(den)
+        # Flux in erg/s/cm^2
+        emission_line_flux = 10**(emission_line_flux)
+    else:
+        emission_line_flux = 0.
+
+    return emission_line_flux
+
+
 def emission_line_flux(luminosity_data,z):
-    """Returns flux in units of erg/s/cm^2 from input of 
-    luminosity_data in units of E+40*h-2erg/s and corresponding redshifts."""
+    """
+    Returns flux in units of erg/s/cm^2 from input of 
+    luminosity_data in units of E+40*h-2erg/s and corresponding redshifts.
+    """
 
     if luminosity_data>0.:
         # Luminosity distance in cm/h
@@ -659,8 +682,10 @@ def emission_line_flux(luminosity_data,z):
     return emission_line_flux
 
 def emission_line_luminosity(flux_data,z):
-    """Returns luminosity in units of E+40*h-2erg/s from input of 
-    flux_data in units of erg/s/cm^2 and corresponding redshifts."""
+    """
+    Returns luminosity in units of E+40*h-2erg/s from input of 
+    flux_data in units of erg/s/cm^2 and corresponding redshifts.
+    """
 
     if flux_data>0.:
         # Luminosity distance in cm/h

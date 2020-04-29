@@ -6,6 +6,8 @@ Some useful functions
 
   convert_to_stdev(grid): normalised a grid to cumulative standard deviations.
 
+  n_gt_x(x,array): returns the number of elements in the array larger than each of the values in x.
+
 NOTE: this module requires the numpy and scipy libraries to be
       available for import!
 
@@ -88,3 +90,12 @@ def convert_to_stdev(grid):
     grid_cumsum /= grid_cumsum[-1]
 
     return grid_cumsum[i_unsort].reshape(shape)
+
+def n_gt_x(xedges,array):
+    y = np.zeros(len(xedges))
+    
+    for i,xedge in enumerate(xedges):
+        ind = np.where(array > xedge)
+        y[i] = np.shape(ind)[1]
+
+    return y

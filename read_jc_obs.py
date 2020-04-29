@@ -67,7 +67,7 @@ def read_jc_lf(obs_dir,zz,dz=None,h0=None,infile=None,survey=None,limit=None,inl
                     eh = np.append(eh,(oPhigh[ind]-oPhi[ind])/(obsh0**3))
         else:
             L, Phi, el, eh = [ -999. for i in range(4)]
-            print 'No adecuate data for this redshift'
+            print('No adecuate data for this redshift')
 
     return L, Phi, el, eh
 
@@ -77,7 +77,7 @@ def read_jc_indlf(obs_dir,zz,dz=None,h0=None,survey=None,line=None,band=None):
     
     if(survey is None or band is None):
         L, Phi, el, eh = [ -999. for i in range(4)]
-        print 'No band or observational survey given'
+        print('No band or observational survey given')
     else:
         if (line is None):
             line = 'O2_3728'
@@ -89,7 +89,7 @@ def read_jc_indlf(obs_dir,zz,dz=None,h0=None,survey=None,line=None,band=None):
         if (np.min(abs(zf-zz)) < 0.2):
             i = np.argmin(abs(zf-zz))
             fil = obs_dir+line+'-'+survey+band+'-z'+str(zf[i])+'.txt'
-            print 'Obs. ',fil
+            print('Obs. {}'.format(fil))
 
             oz,ozlow,ozhigh,oL,oPhi,oPlow,oPhigh = np.loadtxt(fil,usecols=(0,1,2,3,6,7,8),comments='#',unpack=True)
 
@@ -113,10 +113,10 @@ def read_jc_indlf(obs_dir,zz,dz=None,h0=None,survey=None,line=None,band=None):
                                    - np.log10(oPhi[ind]))
             else:
                 L, Phi, el, eh = [ -999. for i in range(4)]
-                print 'No adecuate data for this redshift'
+                print('No adecuate data for this redshift')
         else:
             L, Phi, el, eh = [ -999. for i in range(4)]
-            print 'No adecuate data for this redshift'
+            print('No adecuate data for this redshift')
 
     return L, Phi, el, eh
 

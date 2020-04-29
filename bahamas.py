@@ -5,11 +5,13 @@ import glob
 from iotools import stop_if_no_file, is_sorted
 #print('\n \n')
 
-dirbahamas = '/hpcdata0/simulations/BAHAMAS/'
-
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
-dirobs = '/hpcdata0/Obs_Data/'
+dirbahamasari = '/hpcdata0/simulations/BAHAMAS/'
+dirobsari = '/hpcdata0/Obs_Data/'
+
+dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
+dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 
 tblz = 'snap_z.txt'
 
