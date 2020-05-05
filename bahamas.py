@@ -70,7 +70,7 @@ def get_zminmaxs(zz,dz=None):
     return zmins,zmaxs
 
 
-def table_z_sn(sim,outdir,env):
+def table_z_sn(sim,env,dirz=None):
     """
     Produce a table with redshifts and snapshot numbers
     for a simulation.
@@ -79,11 +79,10 @@ def table_z_sn(sim,outdir,env):
     -----------
     sim : string
         Name of the Bahamas directory.
-    outdir : string
-        Subpath to specific simulations (cosma) or 
-        alternative path to table with z and snapshot.
     env : string
         ari or cosma, to use the adecuate paths.
+    dirz : string
+        Alternative path to table with z and snapshot.
 
     Returns
     -----
@@ -95,20 +94,27 @@ def table_z_sn(sim,outdir,env):
     ---------
     >>> import bahamas as b
     >>> b.table_z_sn('AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/','ari')
-    >>> b.table_z_sn('ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128',
-                     'L050N256/WMAP9/Sims/','cosma')
+    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
+    >>> b.table_z_sn(sim,'cosma')
     """
 
+    # Simulation input
     if (env == 'ari'):
         path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
-        tablez = outdir+sim+'/'+tblz
     elif (env == 'cosma'):
-        path = dirbahamascosma+outdir+sim+'/data/'
-        tablez = path+tblz
+        path = dirbahamascosma+sim+'/data/'
 
-    dirs = glob.glob(path+'groups_*')
+    # Output file
+    if (dirz == None):
+        tablez = path+tblz
+    else:
+        dirz = dirz+sim+'/'
+        if (not os.path.exists(dirz)):
+            os.makedirs(dirz)
+        tablez = dirz+tblz
 
     # Initialize arrays for z and sn
+    dirs = glob.glob(path+'groups_*')
     zzs = np.zeros(shape=len(dirs)) ; zzs.fill(-999.)
     sns = np.zeros(shape=len(dirs), dtype=int)
 
@@ -121,6 +127,12 @@ def table_z_sn(sim,outdir,env):
         sns[ii] = int(snap)
 
         infile = dir+'/eagle_subfind_tab_'+ending+'.0.hdf5'
+        if (not os.path.isfile(infile)):
+            print('WARNING: Subfind not ran for {}'.format(dir))
+            infile = dir+'/group_tab_'+ending+'.0.hdf5'
+            if (not os.path.isfile(infile)):
+                print('WARNING: Files missing in {}'.format(dir))
+                continue
 
         f = h5py.File(infile, 'r')
         header = f['Header']
@@ -144,7 +156,7 @@ def table_z_sn(sim,outdir,env):
     return tablez
 
 
-def get_z(snap,sim,outdir,env):
+def get_z(snap,sim,env,dirz=None):
     """
     Get the redshift for a snapshot number and
     a simulation name.
@@ -155,11 +167,10 @@ def get_z(snap,sim,outdir,env):
         Snapshot number
     sim : string
         Name of the simulation
-    outdir : string
-        Subpath to specific simulations (cosma) or 
-        alternative path to table with z and snapshot.
     env : string
         ari or cosma, to use the adecuate paths
+    dirz : string
+        Alternative path to table with z and snapshot.
 
     Returns
     -----
@@ -170,19 +181,26 @@ def get_z(snap,sim,outdir,env):
     ---------
     >>> import bahamas as b
     >>> b.get_z(26,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/','ari')
-    >>> b.get_z(0, 'ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128',
-                'L050N256/WMAP9/Sims/','cosma')
+    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
+    >>> b.get_z(0,sim,'cosma')
+    >>> 20.0
     """
 
-    # Table with increasing redshifts and corresponding snapshots
+    # Simulation input
     if (env == 'ari'):
-        tablez = outdir+sim+'/'+tblz
+        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
     elif (env == 'cosma'):
-        tablez = dirbahamascosma+outdir+sim+'/data/'+tblz
+        path = dirbahamascosma+sim+'/data/'
+
+    # Table with increasing redshifts and corresponding snapshots
+    if (dirz == None):
+        tablez = path+tblz
+    else:
+        tablez = dirz+sim+'/'+tblz
 
     if (not os.path.isfile(tablez)):
         # Generate the table if it doesn't exist
-        tablez = table_z_sn(sim,outdir,env)
+        tablez = table_z_sn(sim,env,dirz=dirz)
 
     # Read the table:
     zzs, snsf = np.loadtxt(tablez, unpack=True)
@@ -210,7 +228,7 @@ def get_z(snap,sim,outdir,env):
             return zz
 
 
-def get_snap(zz,zmin,zmax,sim,outdir,env):
+def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     """
     Get the closest snapshot given a redshift and
     a simulation name, within some limits
@@ -225,9 +243,8 @@ def get_snap(zz,zmin,zmax,sim,outdir,env):
         Maximum redsfhit to look for the sanpshot
     sim : string
         Name of the Bahamas simulation
-    outdir : string
-        Subpath to specific simulations (cosma) or 
-        alternative directory where the table with z and snapshots is.
+    dirz : string
+        Alternative directory where the table with z and snapshots is.
     env : string
         ari or cosma, to use the adecuate paths
 
@@ -242,21 +259,29 @@ def get_snap(zz,zmin,zmax,sim,outdir,env):
     ---------
     >>> import bahamas as b
     >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
-    >>> b.get_snap(20.,10.,30.,
-                   'ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128',
-                   'L050N256/WMAP9/Sims/','cosma')
-    >>>
+    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
+    >>> b.get_snap(12.3,12.0,12.6,sim,'cosma')
+    >>> (2, 12.5)
+    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask128'
+    >>> b.get_snap(99.,20.,150.,sim,'cosma')
+    >>> (0, 99.0)
     """
 
-    # Table with increasing redshifts and corresponding snapshots
+    # Simulation input
     if (env == 'ari'):
-        tablez = outdir+sim+'/'+tblz
+        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
     elif (env == 'cosma'):
-        tablez = dirbahamascosma+outdir+sim+'/data/'+tblz
+        path = dirbahamascosma+sim+'/data/'
+
+    # Table with increasing redshifts and corresponding snapshots
+    if (dirz == None):
+        tablez = path+tblz
+    else:
+        tablez = dirz+sim+'/'+tblz
 
     if (not os.path.isfile(tablez)):
         # Generate the table if it doesn't exist
-        tablez = table_z_sn(sim,outdir,env)
+        tablez = table_z_sn(sim,env,dirz=dirz)
 
     # Read the table:
     zzs, lsns = np.loadtxt(tablez, unpack=True)        
@@ -308,27 +333,33 @@ def cenids(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
-    >>> b.table_z_sn(0,
-    'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128',
-                     'cosma')
+    >>> sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128'
+    >>> b.cenids(0,sim1,'cosma')
     """
 
+    # Simulation input
     if (env == 'ari'):
         path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/groups_'+str(snap).zfill(n0)
         root = path+'/eagle_subfind_tab_'+str(snap).zfill(n0)+'.'
     elif (env == 'cosma'):
-        path = dirbahamascosma+sim+'/data/groups_'+str(snap).zfill(n0)
-        print(path) ; sys.exit() ###HERE
-        tablez = path+tblz
+        path1 = dirbahamascosma+sim+'/data/groups_'+str(snap).zfill(n0)
+        paths = glob.glob(path1+'*/')
+        if (len(paths) == 1):
+            path = paths[0]
+        else:
+            print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path+'*/'))
+            sys.exit()
 
+        root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
+
+    # Cycle through the files
     files = glob.glob(root+'*.hdf5')
-    lenf = len(files) ; files = []
+    lenf = len(files)
     if (lenf<1):
         print('STOP(~/python_lib/bahamas): Make sure you can see the path {}'.format(path))
         sys.exit()
 
-    for ii in range(lenf):
-        ff = root+str(ii)+'.hdf5'
+    for ii,ff in enumerate(files):
         stop_if_no_file(ff)
         f = h5py.File(ff, 'r')
         haloes = f['FOF']
@@ -350,15 +381,15 @@ if __name__== "__main__":
 
     if (env == 'ari'):
         sim = 'AGN_TUNED_nu0_L100N256_WMAP9'
-        outdir = '/hpcdata3/arivgonz/bahamas/'
+        dirz = '/hpcdata3/arivgonz/bahamas/'
 
-        print(get_z(-1,sim,outdir,env))
-        print(get_z(26,sim,outdir,env))
+        print(get_z(-1,sim,dirz,env))
+        print(get_z(26,sim,dirz,env))
 
-        snap,zsnap = get_snap(3.2,2.8,3.8,sim,outdir,env)
+        snap,zsnap = get_snap(3.2,2.8,3.8,sim,dirz,env)
         print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
-        print(get_snap(-100.,-200.,-5.,sim,outdir,env))
-        print(get_snap(0.28,0.26,0.3,sim,outdir,env))
+        print(get_snap(-100.,-200.,-5.,sim,dirz,env))
+        print(get_snap(0.28,0.26,0.3,sim,dirz,env))
 
     print(get_zminmaxs([0.]))
     print(get_zminmaxs([0.,1.],dz=0.5))
