@@ -333,8 +333,6 @@ def cenids(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
-    >>> sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128'
-    >>> b.cenids(0,sim1,'cosma')
     """
 
     # Simulation input
@@ -376,6 +374,7 @@ def cenids(snap,sim,env):
     
     return cenids
     
+
 if __name__== "__main__":
     env = 'ari'
 
