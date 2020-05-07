@@ -19,6 +19,52 @@ defaultdz = 0.25
 
 n0 = 3
 
+
+def get_cosmology(sim,env):
+    """
+    Get the cosmology for a simulation
+
+    Parameters
+    -----------
+    sim : string
+        Name of the Bahamas directory.
+    env : string
+        ari or cosma, to use the adecuate paths.
+
+    Returns
+    -----
+    omega0, omegab, lambda0, h0 : floats
+        Cosmological parameters
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_cosmology('AGN_TUNED_nu0_L100N256_WMAP9','ari')
+    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
+    >>> b.get_cosmology(sim,'cosma')
+    """
+
+    # Simulation input
+    if (env == 'ari'):
+        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
+    elif (env == 'cosma'):
+        path = dirbahamascosma+sim+'/data/'
+
+    # Initialize arrays for z and sn
+    files = glob.glob(path+'groups_*/group_tab*')
+    infile = files[0]
+    f = h5py.File(infile, 'r')
+    header = f['Header']
+    #print(list(header.attrs.items()))
+
+    omega0 = header.attrs['Omega0']
+    omegab = header.attrs['OmegaBaryon']
+    lambda0 = header.attrs['OmegaLambda']
+    h0 = header.attrs['HubbleParam']
+
+    return omega0, omegab, lambda0, h0
+
+
 def get_zminmaxs(zz,dz=None):
     """
     Get the previous (min) and next (max) values
