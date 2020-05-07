@@ -57,6 +57,7 @@ def wctime(sims,labels,env,dirplot=None):
     #ax.set_xlim(xmin,xmax) ; ax.set_ylim(ymin,ymax) 
 
     # Loop over all the simulations to be compared
+    lowestz = 999
     for ii, sim in enumerate(sims):
         # Simulation input
         if (env == 'ari'):
@@ -86,22 +87,41 @@ def wctime(sims,labels,env,dirplot=None):
         wc0 = wctime[0]
         wctime = [x - wc0 for x in wctime]
 
+        # Find lowest redshift
+        if (lowestz > float(redshift[-1])): lowestz = float(redshift[-1])
+
         # Set the cosmology for this simulation and calculate the ages
         omega0, omegab, lambda0, h0 = b.get_cosmology(sim,env)
         cosmo.set_cosmology(omega0=omega0,omegab=omegab,lambda0=lambda0,h0=h0,
                             universe="Flat",include_radiation=False)
         age = [cosmo.age_of_universe(x) for x in redshift]
 
-        # Plot wall clock time vs z
+        # Plot wall clock time vs age
         ax.plot(age,wctime,color=cols[ii],label=labels[ii])
 
-    ## Top axis with redshift   NOT WORKING
-    #axz = ax.twiny()
-    #axz.set_ylabel('z')
-    #zs = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
-    #zticks = [cosmo.age_of_universe(x) for x in zs]
-    #axz.set_xticks(zticks)
-    #axz.set_xticklabels(['{:g}'.format(x) for x in zs])
+    # Top axis with redshift
+    zs0 = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
+    zticks0 = [cosmo.age_of_universe(x) for x in zs0]
+    
+    if (lowestz < 0.0001):
+        zs = zs0
+        zticks = zticks0
+    else:
+        xmin, xmax = ax.get_xlim()
+        ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
+        if (ind == 0):
+            zs = [zs0[0],lowestz]
+            zticks = [zticks0[0],min(cosmo.age_of_universe(lowestz),xmax)]
+        elif (ind > 0):
+            zs = zs0[0:ind]
+            zticks = zticks0[0:ind]
+
+    axz = ax.twiny()
+    axz.minorticks_off()
+    axz.set_xticks(zticks)
+    axz.set_xticklabels(['{:g}'.format(x) for x in zs])
+    axz.set_xlim(xmin, xmax)
+    axz.set_xlabel('z')
 
     # Add a legend
     leg = ax.legend(loc=0)
