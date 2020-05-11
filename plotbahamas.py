@@ -141,6 +141,161 @@ def wctime(sims,labels,env,dirplot=None):
     fig.savefig(plotf)
 
     return plotf
+
+def cputime(sims,labels,env,dirplot=None):
+    """
+    Plot the CPU percentages time versus redshift and age
+    a simulation name.
+
+    Parameters
+    -----------
+    sim : list of strings
+        Array with the names of the simulation
+    env : string
+        ari or cosma, to use the adecuate paths
+    dirplot : string
+        Path to plots
+
+    Returns
+    -----
+    plotf : string
+        Path to plot
+
+    Examples
+    ---------
+    >>> import plotbahamas as pb
+    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],['REF'],'ari')
+    >>> pb.wctime(['L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'],['tmax0_125_ntask128'],'cosma')
+    """ 
+
+    # Check that the size of the arrays for the simulations and labels is the same
+    lensims = len(sims)
+    if (len(labels) != lensims):
+        print('WARNING! Labels array does not match Sims array')
+        # Generate labels
+        labels = [x.split('/')[-1] for x in sims]
+
+    # Set up plot variables
+    fig = plt.figure()
+    ax = plt.subplot()
+    cols = get_distinct(lensims)
+    xtit = 'Age (Gyr)'
+    ytit = '%CPU time'
+    ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
+    #ax.set_xlim(xmin,xmax)
+    ax.set_ylim(0.,100.) 
+    plot_lines = [] ; plot_colors = []
+
+    # Properties to be read each step
+    props = ['treegrav','pmgrav','sph','eagle_total']
+    ls = ['-',':','--','-.']
+
+    # Loop over all the simulations to be compared
+    lowestz = 999
+    for ii, sim in enumerate(sims):
+        # Simulation input
+        if (env == 'ari'):
+            dirb = b.dirbahamasari
+            path = dirb+sim+'/Data/EagleSubGroups_5r200/'
+        elif (env == 'cosma'):
+            dirb = b.dirbahamascosma
+        path = dirb+sim+'/data/'
+
+        # Initialize lists
+        redshift = [] 
+        #times = [[] for i in range(len(props))]
+        percentages = [[] for i in range(len(props))]
+
+        # Read file with cpu information
+        infof = path+'cpu.txt'
+        start_time = time.time()
+        icount = 0
+        with open(infof, "r") as ff:
+            for line in ff:
+                if line.strip():
+                    word = line.split()[0]
+                    if (word == 'Step'):
+                        s1 = line.split('z:')[1]
+                        redshift.append(float(s1.split('CPUs')[0]))
+                    elif (word in props):
+                        ind = props.index(word)
+                        #s1 = float(line.split()[1])
+                        #times[ind].append(s1)
+
+                        s1 = line.split()[2]
+                        s2 = float(s1.split('%')[0])
+                        percentages[ind].append(s2)
+
+        # Find lowest redshift
+        if (lowestz > float(redshift[-1])): lowestz = float(redshift[-1])
+
+        # Set the cosmology for this simulation and calculate the ages
+        omega0, omegab, lambda0, h0 = b.get_cosmology(sim,env)
+        cosmo.set_cosmology(omega0=omega0,omegab=omegab,lambda0=lambda0,h0=h0,
+                            universe="Flat",include_radiation=False)
+        age = [cosmo.age_of_universe(x) for x in redshift]
+
+        # Plot properties
+        for jj, jprop in enumerate(props):
+            y = percentages[jj]
+            l1, = ax.plot(age,y,color=cols[ii],linestyle=ls[jj])
+
+            if (ii==0):
+                plot_lines.append(l1)
+        plot_colors.append(l1)
+
+    # Legend
+    legend1 = ax.legend(plot_lines, props, loc=2)
+    legend1.draw_frame(False)
+    for h in legend1.legendHandles:
+        h.set_color('k')
+    plt.gca().add_artist(legend1)
+
+    leg = ax.legend(plot_colors, labels, loc=1,
+                    handlelength=0, handletextpad=0)
+    leg.draw_frame(False)
+    for ii,text in enumerate(leg.get_texts()):
+        text.set_color(cols[ii])
+    for item in leg.legendHandles:
+        item.set_visible(False)
+
+    # Top axis with redshift
+    zs0 = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
+    zticks0 = [cosmo.age_of_universe(x) for x in zs0]
+    
+    if (lowestz < 0.0001):
+        zs = zs0
+        zticks = zticks0
+    else:
+        xmin, xmax = ax.get_xlim()
+        ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
+        if (ind == 0):
+            zs = [zs0[0],lowestz]
+            zticks = [zticks0[0],min(cosmo.age_of_universe(lowestz),xmax)]
+        elif (ind > 0):
+            zs = zs0[0:ind]
+            zticks = zticks0[0:ind]
+
+    axz = ax.twiny()
+    axz.minorticks_off()
+    axz.set_xticks(zticks)
+    axz.set_xticklabels(['{:g}'.format(x) for x in zs])
+    axz.set_xlim(xmin, xmax)
+    axz.set_xlabel('z')
+
+
+    # Path to plot
+    if (dirplot == None):
+        dirp = dirb+'plots/'+sim+'/'
+    else:
+        dirp = dirplot+sim+'/'
+
+    if (not os.path.exists(dirp)):
+        os.makedirs(dirp)
+    plotf = dirp+'cputime.pdf'
+    fig.savefig(plotf)
+
+    return plotf
     
 
 if __name__== "__main__":
@@ -152,5 +307,6 @@ if __name__== "__main__":
         sim3 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask32'
         sims = [sim1, sim2, sim3]
         labels = ['ntask128','ntask64','ntask32']
-        print(wctime(sims,labels,'cosma'))
+        #print(wctime(sims,labels,'cosma'))
+        print(cputime(sims,labels,'cosma'))
 
