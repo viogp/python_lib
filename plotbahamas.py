@@ -14,6 +14,9 @@ import mpl_style
 plt.style.use(mpl_style.style1)
 #print('\n \n')
 
+zs0 = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
+epsz = 0.0001
+
 def wctime(sims,labels,env,dirplot=None):
     """
     Plot the Wall clock time versus redshift and age
@@ -100,10 +103,10 @@ def wctime(sims,labels,env,dirplot=None):
         ax.plot(age,wctime,color=cols[ii],label=labels[ii])
 
     # Top axis with redshift
-    zs0 = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
     zticks0 = [cosmo.age_of_universe(x) for x in zs0]
+    agelz = cosmo.age_of_universe(lowestz)
     
-    if (lowestz < 0.0001):
+    if (lowestz < epsz):
         zs = zs0
         zticks = zticks0
     else:
@@ -111,10 +114,13 @@ def wctime(sims,labels,env,dirplot=None):
         ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
         if (ind == 0):
             zs = [zs0[0],lowestz]
-            zticks = [zticks0[0],min(cosmo.age_of_universe(lowestz),xmax)]
+            zticks = [zticks0[0],min(agelz,xmax)]
         elif (ind > 0):
             zs = zs0[0:ind]
             zticks = zticks0[0:ind]
+            if (agelz < xmax):
+                zs.append(lowestz)
+                zticks.append(agelz)
 
     axz = ax.twiny()
     axz.minorticks_off()
@@ -164,8 +170,8 @@ def cputime(sims,labels,env,dirplot=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],['REF'],'ari')
-    >>> pb.wctime(['L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'],['tmax0_125_ntask128'],'cosma')
+    >>> pb.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],['REF'],'ari')
+    >>> pb.cputime(['L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'],['tmax0_125_ntask128'],'cosma')
     """ 
 
     # Check that the size of the arrays for the simulations and labels is the same
@@ -260,10 +266,10 @@ def cputime(sims,labels,env,dirplot=None):
         item.set_visible(False)
 
     # Top axis with redshift
-    zs0 = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
     zticks0 = [cosmo.age_of_universe(x) for x in zs0]
+    agelz = cosmo.age_of_universe(lowestz)
     
-    if (lowestz < 0.0001):
+    if (lowestz < epsz):
         zs = zs0
         zticks = zticks0
     else:
@@ -271,10 +277,13 @@ def cputime(sims,labels,env,dirplot=None):
         ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
         if (ind == 0):
             zs = [zs0[0],lowestz]
-            zticks = [zticks0[0],min(cosmo.age_of_universe(lowestz),xmax)]
+            zticks = [zticks0[0],min(agelz,xmax)]
         elif (ind > 0):
             zs = zs0[0:ind]
             zticks = zticks0[0:ind]
+            if (agelz < xmax):
+                zs.append(lowestz)
+                zticks.append(agelz)
 
     axz = ax.twiny()
     axz.minorticks_off()
@@ -282,7 +291,6 @@ def cputime(sims,labels,env,dirplot=None):
     axz.set_xticklabels(['{:g}'.format(x) for x in zs])
     axz.set_xlim(xmin, xmax)
     axz.set_xlabel('z')
-
 
     # Path to plot
     if (dirplot == None):
@@ -302,11 +310,11 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask128'
-        sim2 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask64'
-        sim3 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask32'
-        sims = [sim1, sim2, sim3]
-        labels = ['ntask128','ntask64','ntask32']
+        sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128'
+        sim2 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128' 
+
+        sims = [sim1, sim2]
+        labels = ['t$_{max}$=0.05','t$_{max}$=0.125']
         #print(wctime(sims,labels,'cosma'))
         print(cputime(sims,labels,'cosma'))
 
