@@ -14,10 +14,65 @@ import mpl_style
 plt.style.use(mpl_style.style1)
 #print('\n \n')
 
-zs0 = [100.,20,10.,5.,4.,3.,2.,1.,0.5,0.1,0.]
+zs0 = [100.,5.,4.,3.,2.,1.,0.5,0.1,0.]
 epsz = 0.0001
 
-def wctime(sims,labels,env,dirplot=None):
+def get_zticks(lowestz,xmin,xmax):
+    """
+    Get the labels and positions of a secundary x-axis for redshifts, 
+    given the age of the Universe as main x-axis
+
+    Parameters
+    -----------
+    lowestz : float
+        Lowest z read
+    xmin : float
+        Minimum age value of the main x-axis
+    xmax : float
+        Maximum age value of the main x-axis
+
+    Returns
+    -----
+    zs : list of floats
+        Values of z to be used as axis labels
+    zticks : list of floats
+        Position of the ticks, following the main x-axis
+
+    Examples
+    ---------
+    >>> import plotbahamas as pb
+    >>> import Cosmology as cosmo
+    >>> cosmo.set_cosmology()
+    >>> zs, zticks = pb.get_zticks(5.,0.12,12.)
+    >>> print(zs)
+    [100.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.5, 5.0]
+    """ 
+
+    zticks0 = [cosmo.age_of_universe(x) for x in zs0]
+    agelz = cosmo.age_of_universe(lowestz)
+
+    if (lowestz < epsz):
+        zs = zs0
+        zticks = zticks0
+    else:
+        ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
+        if (ind == 0):
+            if (lowestz == zs0[0]):
+                zs = [zs0[0]]
+                zticks = [zticks0[0]]
+            else:
+                zs = [zs0[0],lowestz]
+                zticks = [zticks0[0],min(agelz,xmax)]
+        elif (ind > 0):
+            zs = zs0[0:ind]
+            zticks = zticks0[0:ind]
+            if (agelz < xmax):
+                zs.append(lowestz)
+                zticks.append(agelz)
+
+    return zs,zticks
+
+def wctime(sims,labels,env,dirplot=None,zrange=None):
     """
     Plot the Wall clock time versus redshift and age
     a simulation name.
@@ -30,6 +85,8 @@ def wctime(sims,labels,env,dirplot=None):
         ari or cosma, to use the adecuate paths
     dirplot : string
         Path to plots
+    zrange : list of length 2 with floats
+        zrange = [zmin, zmax], limits in redshift for the plot
 
     Returns
     -----
@@ -57,7 +114,6 @@ def wctime(sims,labels,env,dirplot=None):
     xtit = 'Age (Gyr)'
     ytit = 'Wallclock time (s)'
     ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
-    #ax.set_xlim(xmin,xmax) ; ax.set_ylim(ymin,ymax) 
 
     # Loop over all the simulations to be compared
     lowestz = 999
@@ -102,26 +158,19 @@ def wctime(sims,labels,env,dirplot=None):
         # Plot wall clock time vs age
         ax.plot(age,wctime,color=cols[ii],label=labels[ii])
 
-    # Top axis with redshift
-    zticks0 = [cosmo.age_of_universe(x) for x in zs0]
-    agelz = cosmo.age_of_universe(lowestz)
-    
-    if (lowestz < epsz):
-        zs = zs0
-        zticks = zticks0
-    else:
-        xmin, xmax = ax.get_xlim()
-        ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
-        if (ind == 0):
-            zs = [zs0[0],lowestz]
-            zticks = [zticks0[0],min(agelz,xmax)]
-        elif (ind > 0):
-            zs = zs0[0:ind]
-            zticks = zticks0[0:ind]
-            if (agelz < xmax):
-                zs.append(lowestz)
-                zticks.append(agelz)
+    # If specified, set z range using the last loaded cosmology
+    if zrange is not None:
+        if (len(zrange) == 2):            
+            lowestz = zrange[0]
+            xmax = cosmo.age_of_universe(lowestz)
+            xmin = cosmo.age_of_universe(zrange[1])
+            ax.set_xlim(xmin,xmax)
+        else:
+            print('WARNING (plotbahamas): zrange = [zmin,zmax]')
 
+    # Top axis with redshift
+    xmin, xmax = ax.get_xlim()
+    zs, zticks = get_zticks(lowestz,xmin,xmax)
     axz = ax.twiny()
     axz.minorticks_off()
     axz.set_xticks(zticks)
@@ -148,7 +197,7 @@ def wctime(sims,labels,env,dirplot=None):
 
     return plotf
 
-def cputime(sims,labels,env,dirplot=None):
+def cputime(sims,labels,env,dirplot=None,zrange=None):
     """
     Plot the CPU percentages time versus redshift and age
     a simulation name.
@@ -161,6 +210,8 @@ def cputime(sims,labels,env,dirplot=None):
         ari or cosma, to use the adecuate paths
     dirplot : string
         Path to plots
+    zrange : list of length 2 with floats
+        zrange = [zmin, zmax], limits in redshift for the plot
 
     Returns
     -----
@@ -234,6 +285,7 @@ def cputime(sims,labels,env,dirplot=None):
 
         # Find lowest redshift
         if (lowestz > float(redshift[-1])): lowestz = float(redshift[-1])
+        if (lowestz > zs0[0]): lowestz = zs0[0]
 
         # Set the cosmology for this simulation and calculate the ages
         omega0, omegab, lambda0, h0 = b.get_cosmology(sim,env)
@@ -249,6 +301,16 @@ def cputime(sims,labels,env,dirplot=None):
             if (ii==0):
                 plot_lines.append(l1)
         plot_colors.append(l1)
+
+    # If specified, set z range using the last loaded cosmology
+    if zrange is not None:
+        if (len(zrange) == 2):            
+            lowestz = zrange[0]
+            xmax = cosmo.age_of_universe(lowestz)
+            xmin = cosmo.age_of_universe(zrange[1])
+            ax.set_xlim(xmin,xmax)
+        else:
+            print('WARNING (plotbahamas): zrange = [zmin,zmax]')
 
     # Legend
     legend1 = ax.legend(plot_lines, props, loc=2)
@@ -266,25 +328,8 @@ def cputime(sims,labels,env,dirplot=None):
         item.set_visible(False)
 
     # Top axis with redshift
-    zticks0 = [cosmo.age_of_universe(x) for x in zs0]
-    agelz = cosmo.age_of_universe(lowestz)
-    
-    if (lowestz < epsz):
-        zs = zs0
-        zticks = zticks0
-    else:
-        xmin, xmax = ax.get_xlim()
-        ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
-        if (ind == 0):
-            zs = [zs0[0],lowestz]
-            zticks = [zticks0[0],min(agelz,xmax)]
-        elif (ind > 0):
-            zs = zs0[0:ind]
-            zticks = zticks0[0:ind]
-            if (agelz < xmax):
-                zs.append(lowestz)
-                zticks.append(agelz)
-
+    xmin, xmax = ax.get_xlim()
+    zs, zticks = get_zticks(lowestz,xmin,xmax)
     axz = ax.twiny()
     axz.minorticks_off()
     axz.set_xticks(zticks)
@@ -310,11 +355,12 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128'
-        sim2 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128' 
+        sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask128'
+        sim2 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_047619_ntask128'
+        sim3 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128' 
 
-        sims = [sim1, sim2]
-        labels = ['t$_{max}$=0.05','t$_{max}$=0.125']
-        #print(wctime(sims,labels,'cosma'))
-        print(cputime(sims,labels,'cosma'))
+        sims = [sim1]#, sim2, sim3]
+        labels = ['t$_{max}$=0.01']#,'t$_{max}$=0.05','t$_{max}$=0.125']
+        print(wctime(sims,labels,'cosma'))
+        #print(cputime(sims,labels,'cosma'))
 
