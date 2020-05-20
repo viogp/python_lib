@@ -72,6 +72,7 @@ def get_zticks(lowestz,xmin,xmax):
 
     return zs,zticks
 
+
 def wctime(sims,labels,env,dirplot=None,zrange=None):
     """
     Plot the Wall clock time versus redshift and age
@@ -121,12 +122,7 @@ def wctime(sims,labels,env,dirplot=None,zrange=None):
     lowestz = 999
     for ii, sim in enumerate(sims):
         # Simulation input
-        if (env == 'ari'):
-            dirb = b.dirbahamasari
-            path = dirb+sim+'/Data/EagleSubGroups_5r200/'
-        elif (env == 'cosma'):
-            dirb = b.dirbahamascosma
-        path = dirb+sim+'/data/'
+        path = b.get_path2data(sim,env) #####here
 
         # Read file with wall clock information
         infof = path+'info.txt'
@@ -416,19 +412,8 @@ def mf_sims(redshift,massdef,sims,labels,env,dirplot=None,Testing=False):
     # Loop over all the simulations to be compared
     lowestz = 999
     for ii, sim in enumerate(sims):
-        # Simulation input
-        if (env == 'ari'):
-            dirb = b.dirbahamasari
-            path = dirb+sim+'/Data/EagleSubGroups_5r200/'
-        elif (env == 'cosma'):
-            dirb = b.dirbahamascosma
-        path = dirb+sim+'/data/'
-#
-#        # Initialize lists
-#        redshift = [] 
-#        #times = [[] for i in range(len(props))]
-#        percentages = [[] for i in range(len(props))]
-#
+        files = get_subfind_files(sim,env)
+
 #        # Read file with cpu information
 #        infof = path+'cpu.txt'
 
@@ -522,8 +507,8 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sim1 = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_ntask128'
-        sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_ntask128'
+        sim1 = 'L050N256/WMAP9/Sims/ex'
+        sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ex'
 
         sims = [sim1, sim2]
         labels = ['PMGRID = 512','PMGRID = 1024']

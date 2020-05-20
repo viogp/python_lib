@@ -20,50 +20,6 @@ defaultdz = 0.25
 n0 = 3
 
 
-def get_cosmology(sim,env):
-    """
-    Get the cosmology for a simulation
-
-    Parameters
-    -----------
-    sim : string
-        Name of the Bahamas directory.
-    env : string
-        ari or cosma, to use the adecuate paths.
-
-    Returns
-    -----
-    omega0, omegab, lambda0, h0 : floats
-        Cosmological parameters
-
-    Examples
-    ---------
-    >>> import bahamas as b
-    >>> b.get_cosmology('AGN_TUNED_nu0_L100N256_WMAP9','ari')
-    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
-    >>> b.get_cosmology(sim,'cosma')
-    """
-
-    # Simulation input
-    if (env == 'ari'):
-        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
-    elif (env == 'cosma'):
-        path = dirbahamascosma+sim+'/data/'
-
-    # Initialize arrays for z and sn
-    files = glob.glob(path+'groups_*/group_tab*')
-    infile = files[0]
-    f = h5py.File(infile, 'r')
-    header = f['Header']
-    #print(list(header.attrs.items()))
-
-    omega0 = header.attrs['Omega0']
-    omegab = header.attrs['OmegaBaryon']
-    lambda0 = header.attrs['OmegaLambda']
-    h0 = header.attrs['HubbleParam']
-
-    return omega0, omegab, lambda0, h0
-
 
 def get_zminmaxs(zz,dz=None):
     """
@@ -116,6 +72,119 @@ def get_zminmaxs(zz,dz=None):
     return zmins,zmaxs
 
 
+def get_path2data(sim,env):
+    """
+    Get the path to the directory with the data
+
+    Parameters
+    -----------
+    sims : list of strings
+        Array with the names of the simulation
+    env : string
+        ari or cosma, to use the adecuate paths
+ 
+    Returns
+    -----
+    path2data : string
+       Path to data
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_path2data('L050N256/WMAP9/Sims/ex','cosma')
+    """
+
+    # Simulation input
+    if (env == 'ari'):
+        path2data = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
+    elif (env == 'cosma'):
+        path2data = dirbahamascosma+sim+'/data/'
+
+    return path2data    
+
+
+def get_subfind_files(snap,sim,env):
+    """
+    Get the subfind files
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot number
+    sims : list of strings
+        Array with the names of the simulation
+    env : string
+        ari or cosma, to use the adecuate paths
+ 
+    Returns
+    -----
+    files : array of string
+       Subfind files with full paths
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_subfind_files(8,'L050N256/WMAP9/Sims/ex','cosma')
+    """
+
+    # Simulation input
+    path1 = get_path2data(sim,env)+'groups_'+str(snap).zfill(n0)
+
+    # Get path to subfind files
+    paths = glob.glob(path1+'*/')
+    if (len(paths) == 1):
+        path = paths[0]
+    else:
+        print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
+        sys.exit()
+
+    root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
+    files = glob.glob(root+'*.hdf5')
+
+    return files     
+
+
+def get_cosmology(sim,env):
+    """
+    Get the cosmology for a simulation
+
+    Parameters
+    -----------
+    sim : string
+        Name of the Bahamas directory.
+    env : string
+        ari or cosma, to use the adecuate paths.
+
+    Returns
+    -----
+    omega0, omegab, lambda0, h0 : floats
+        Cosmological parameters
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_cosmology('AGN_TUNED_nu0_L100N256_WMAP9','ari')
+    >>> b.get_cosmology('L050N256/WMAP9/Sims/ex','cosma')
+    """
+
+    # Simulation input
+    path = get_path2data(sim,env)
+
+    # Initialize arrays for z and sn
+    files = glob.glob(path+'groups_*/group_tab*')
+    infile = files[0]
+    f = h5py.File(infile, 'r')
+    header = f['Header']
+    #print(list(header.attrs.items()))
+
+    omega0 = header.attrs['Omega0']
+    omegab = header.attrs['OmegaBaryon']
+    lambda0 = header.attrs['OmegaLambda']
+    h0 = header.attrs['HubbleParam']
+
+    return omega0, omegab, lambda0, h0
+
+
 def table_z_sn(sim,env,dirz=None):
     """
     Produce a table with redshifts and snapshot numbers
@@ -140,15 +209,11 @@ def table_z_sn(sim,env,dirz=None):
     ---------
     >>> import bahamas as b
     >>> b.table_z_sn('AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/','ari')
-    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
-    >>> b.table_z_sn(sim,'cosma')
+    >>> b.table_z_sn('L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
-    if (env == 'ari'):
-        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
-    elif (env == 'cosma'):
-        path = dirbahamascosma+sim+'/data/'
+    path = get_path2data(sim,env)
 
     # Output file
     if (dirz == None):
@@ -226,17 +291,12 @@ def get_z(snap,sim,env,dirz=None):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_z(26,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/','ari')
-    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
-    >>> b.get_z(0,sim,'cosma')
-    >>> 20.0
+    >>> b.get_z(26,'AGN_TUNED_nu0_L100N256_WMAP9','ari',dirz='/hpcdata3/arivgonz/bahamas/')
+    >>> b.get_z(8,'L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
-    if (env == 'ari'):
-        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
-    elif (env == 'cosma'):
-        path = dirbahamascosma+sim+'/data/'
+    path = get_path2data(sim,env)
 
     # Table with increasing redshifts and corresponding snapshots
     if (dirz == None):
@@ -305,19 +365,14 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     ---------
     >>> import bahamas as b
     >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
-    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_125_ntask128'
-    >>> b.get_snap(12.3,12.0,12.6,sim,'cosma')
+    >>> b.get_snap(12.3,12.0,12.6,'L050N256/WMAP9/Sims/ex','cosma')
     >>> (2, 12.5)
-    >>> sim = 'L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_tmax0_01_ntask128'
-    >>> b.get_snap(99.,20.,150.,sim,'cosma')
-    >>> (0, 99.0)
+    >>> b.get_snap(99.,20.,150.,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> (-999.0, -999.0)
     """
 
     # Simulation input
-    if (env == 'ari'):
-        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
-    elif (env == 'cosma'):
-        path = dirbahamascosma+sim+'/data/'
+    path = get_path2data(sim,env)
 
     # Table with increasing redshifts and corresponding snapshots
     if (dirz == None):
@@ -379,25 +434,13 @@ def cenids(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.cenids(8,'L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
-    if (env == 'ari'):
-        path = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/groups_'+str(snap).zfill(n0)
-        root = path+'/eagle_subfind_tab_'+str(snap).zfill(n0)+'.'
-    elif (env == 'cosma'):
-        path1 = dirbahamascosma+sim+'/data/groups_'+str(snap).zfill(n0)
-        paths = glob.glob(path1+'*/')
-        if (len(paths) == 1):
-            path = paths[0]
-        else:
-            print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path+'*/'))
-            sys.exit()
-
-        root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
+    files = get_subfind_files(snap,sim,env)
 
     # Cycle through the files
-    files = glob.glob(root+'*.hdf5')
     lenf = len(files)
     if (lenf<1):
         print('STOP(~/python_lib/bahamas): Make sure you can see the path {}'.format(path))
