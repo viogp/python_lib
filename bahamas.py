@@ -20,7 +20,6 @@ defaultdz = 0.25
 n0 = 3
 
 
-
 def get_zminmaxs(zz,dz=None):
     """
     Get the previous (min) and next (max) values
@@ -70,6 +69,35 @@ def get_zminmaxs(zz,dz=None):
         zmaxs.append(2*zz[-1]-zz[-2]) 
         
     return zmins,zmaxs
+
+
+def get_dirb(env):
+    """
+    Get the Bahamas directory given the environment
+
+    Parameters
+    -----------
+    env : string
+        ari or cosma, to use the adecuate paths
+ 
+    Returns
+    -----
+    dirb : string
+       Bahamas directory
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_dirb('cosma')
+    """
+
+    dirb = None
+    if (env == 'ari'):
+        dirb = dirbahamasari
+    elif (env == 'cosma'):
+        dirb = dirbahamascosma
+
+    return dirb
 
 
 def get_path2data(sim,env):
@@ -225,7 +253,7 @@ def table_z_sn(sim,env,dirz=None):
         tablez = dirz+tblz
 
     # Initialize arrays for z and sn
-    dirs = glob.glob(path+'groups_*')
+    dirs = glob.glob(path+'groups_0*')
     zzs = np.zeros(shape=len(dirs)) ; zzs.fill(-999.)
     sns = np.zeros(shape=len(dirs), dtype=int)
 
@@ -237,13 +265,10 @@ def table_z_sn(sim,env,dirz=None):
             snap = ending
         sns[ii] = int(snap)
 
-        infile = dir+'/eagle_subfind_tab_'+ending+'.0.hdf5'
+        infile = dir+'/group_tab_'+ending+'.0.hdf5'
         if (not os.path.isfile(infile)):
-            print('WARNING: Subfind not ran for {}'.format(dir))
-            infile = dir+'/group_tab_'+ending+'.0.hdf5'
-            if (not os.path.isfile(infile)):
-                print('WARNING: Files missing in {}'.format(dir))
-                continue
+            print('WARNING: Files missing in {}'.format(dir))
+            continue
 
         f = h5py.File(infile, 'r')
         header = f['Header']
@@ -367,8 +392,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
     >>> b.get_snap(12.3,12.0,12.6,'L050N256/WMAP9/Sims/ex','cosma')
     >>> (2, 12.5)
-    >>> b.get_snap(99.,20.,150.,'L050N256/WMAP9/Sims/ex','cosma')
-    >>> (-999.0, -999.0)
+    >>> snap, z_snap = b.get_snap(99.,20.,150.,'L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
