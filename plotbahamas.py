@@ -2,7 +2,6 @@ import sys,os.path
 import numpy as np
 import h5py
 import glob
-import pandas as pd
 import time
 from datetime import datetime
 import Cosmology as cosmo
@@ -99,7 +98,6 @@ def wctime(sims,labels,env,dirplot=None,zrange=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],['REF'],'ari')
     >>> pb.wctime(['L050N256/WMAP9/Sims/ex'],['ntask128'],'cosma')
     """ 
 
@@ -221,7 +219,6 @@ def cputime(sims,labels,env,dirplot=None,zrange=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],['REF'],'ari')
     >>> pb.cputime(['L050N256/WMAP9/Sims/ex'],['ntask128'],'cosma')
     """ 
 

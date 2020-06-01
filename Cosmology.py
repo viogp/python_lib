@@ -98,15 +98,12 @@ def set_cosmology(omega0=None,omegab=None,lambda0=None,h0=None, \
                          [universe=Flat],[include_radion=True])
                          
            Omega_M: total matter density at z=0
-                    (default value is 0.3)
            Omega_b: baryon matter density at z=0
-                    (default value is 0.045)
            Omega_V: vacuum energy density at z=0
                     (default value depends on type of universe;
                     1-(Omega_M+Omega_R) for flat universe, 0 for 
                     open universe)
            h: Hubble parameter at z=0
-              (default value is 0.75)
            universe: specifies desired geomerty of Universe -- only
                      considered if Omega_V not specified
                      (can be "Flat" or "Open"; default value is "Flat")
@@ -114,15 +111,16 @@ def set_cosmology(omega0=None,omegab=None,lambda0=None,h0=None, \
                      -- can be "True" (i.e. set Omega_R = 4.165e-5/(h*h))
                      of "False" (i.e. set Omega_R = 0.0)
                      (default value is False)
+          Default values: Planck18
     """
 
     global WM, WV, WB, WR, WK, h
     if(h0 is None):
-        h = 0.75
+        h = 0.684
     else:
         h = h0    
     if(include_radiation):
-        WR = (4.165e-5)/np.power(h,2)
+        WR = (8.985075e-5)/np.power(h,2)
     else:
         WR = 0.0
     if(omegab is None):
@@ -130,7 +128,7 @@ def set_cosmology(omega0=None,omegab=None,lambda0=None,h0=None, \
     else:
         WB = omegab
     if(omega0 is None):
-        WM = 0.3
+        WM = 0.301
     else:
         WM = omega0
     if(lambda0 is None):
