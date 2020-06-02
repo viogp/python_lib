@@ -116,19 +116,19 @@ def set_cosmology(omega0=None,omegab=None,lambda0=None,h0=None, \
 
     global WM, WV, WB, WR, WK, h
     if(h0 is None):
-        h = 0.684
+        h = 0.674
     else:
         h = h0    
     if(include_radiation):
-        WR = (8.985075e-5)/np.power(h,2)
+        WR = 8.985075e-5
     else:
         WR = 0.0
     if(omegab is None):
-        WB = 0.045
+        WB = 0.0224/(h*h)
     else:
         WB = omegab
     if(omega0 is None):
-        WM = 0.301
+        WM = 0.315
     else:
         WM = omega0
     if(lambda0 is None):
