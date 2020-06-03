@@ -4,6 +4,7 @@ import h5py
 import glob
 import Cosmology as cosmo
 import bahamas as b
+import plotbahamas as pb
 import matplotlib ; matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from distinct_colours import get_distinct
@@ -48,13 +49,24 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     """ 
 
     # Generate labels
-    labels = [x.split('/')[-1] for x in sims]
+    labels = pb.get_simlabels(sims,labels=labels)
 
     # The subfiles to loop over
     nvols = 'All'
     if Testing: nvols = 2
 
-    ## Bins in halo mass
+    # Set up ploting grid 
+    fig = plt.figure()
+    gs = gridspec.GridSpec(3,2)
+
+    ax0 = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    ax2 = plt.subplot(gs[2])
+    ax3 = plt.subplot(gs[3])
+    ax4 = plt.subplot(gs[4])
+    ax5 = plt.subplot(gs[5])
+    
+    # Initialize histograms and needed arrays ###here
     #mmin = 9. ; mmax = 16. ; dm = 0.1
     #edges = np.array(np.arange(mmin,mmax,dm))
     #mhist = edges[1:]-0.5*dm  #; print("mhist={}".format(mhist)) 
