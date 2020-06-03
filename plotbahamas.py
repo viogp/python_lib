@@ -129,8 +129,8 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari',labels=['REF'])
-    >>> pb.wctime(['L050N256/WMAP9/Sims/ex'],'cosma',labels=['ntask128'])
+    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> pb.wctime(['L050N256/WMAP9/Sims/ex'],'cosma')
     """ 
 
     # Check labels
@@ -139,7 +139,7 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
-    cols = get_distinct(lensims)
+    cols = get_distinct(len(sims))
     xtit = 'Age (Gyr)'
     ytit = 'Wallclock time (h)'
     ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
@@ -247,8 +247,8 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari',labels=['REF'])
-    >>> pb.cputime(['L050N256/WMAP9/Sims/ex'],'cosma',labels=['ntask128'])
+    >>> pb.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> pb.cputime(['L050N256/WMAP9/Sims/ex'],'cosma')
     """ 
 
     # Check labels
@@ -398,14 +398,11 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     >>> sims = ['L050N256/WMAP9_PMGRID512/Sims/ex','L050N256/WMAP9_PMGRID1024/Sims/ex'] 
     >>> labels = ['PMGRID=512','PMGRID=1024']
     >>> pb.mf_sims(7.,'Group_M_Mean200',sims,'cosma',labels=labels)
+    >>> pb.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
     """ 
 
     # Check that the size of the arrays for the simulations and labels is the same
-    lensims = len(sims)
-    if (len(labels) != lensims):
-        print('WARNING! Labels array does not match Sims array')
-        # Generate labels
-        labels = [x.split('/')[-1] for x in sims]
+    labels = get_simlabels(sims,labels=labels)
 
     # The subfiles to loop over
     nvols = 'All'
@@ -419,7 +416,7 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
-    cols = get_distinct(lensims)
+    cols = get_distinct(len(sims))
     xtit = '${\\rm log}_{10}(\\rm{M/M_{\odot}}h^{-1})$' 
     ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}M)$'
     ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
