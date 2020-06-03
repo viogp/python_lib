@@ -2,7 +2,6 @@ import sys,os.path
 import numpy as np
 import h5py
 import glob
-import pandas as pd
 import time
 from datetime import datetime
 import Cosmology as cosmo

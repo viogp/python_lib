@@ -120,6 +120,7 @@ def get_path2data(sim,env):
     ---------
     >>> import bahamas as b
     >>> b.get_path2data('L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_path2data('AGN_TUNED_nu0_L100N256_WMAP9','ari')
     """
 
     # Simulation input
@@ -236,7 +237,7 @@ def table_z_sn(sim,env,dirz=None):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.table_z_sn('AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/','ari')
+    >>> b.table_z_sn('AGN_TUNED_nu0_L100N256_WMAP9','ari')
     >>> b.table_z_sn('L050N256/WMAP9/Sims/ex','cosma')
     """
 
@@ -389,7 +390,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','/hpcdata3/arivgonz/bahamas/')
+    >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','ari')
     >>> b.get_snap(12.3,12.0,12.6,'L050N256/WMAP9/Sims/ex','cosma')
     >>> (2, 12.5)
     >>> snap, z_snap = b.get_snap(99.,20.,150.,'L050N256/WMAP9/Sims/ex','cosma')
