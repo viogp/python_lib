@@ -16,6 +16,37 @@ plt.style.use(mpl_style.style1)
 zs0 = [100.,5.,4.,3.,2.,1.,0.5,0.1,0.]
 epsz = 0.0001
 
+def get_simlabels(sims,labels=None):
+    """
+    Check that the arrays sims and inlabels have the same lenght,
+    if not, get labels from the simulation names
+
+    Parameters
+    -----------
+    sims : list of strings
+        Array with the names of the simulation
+    labels : list of strings
+        Array with the labels to be used
+
+    Returns
+    -----
+    outlabels : list of strings
+        Labels for simulations
+
+    Examples
+    ---------
+    >>> import plotbahamas as pb
+    >>> pb.get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9'])
+    """ 
+
+    outlabels = labels
+    # Check that the size of the arrays for the simulations and labels is the same
+    if (labels == None or len(labels) != len(sims)):
+        # Generate labels
+        outlabels = [x.split('/')[-1] for x in sims]        
+
+    return outlabels
+
 def get_zticks(lowestz,xmin,xmax):
     """
     Get the labels and positions of a secundary x-axis for redshifts, 
@@ -72,7 +103,7 @@ def get_zticks(lowestz,xmin,xmax):
     return zs,zticks
 
 
-def wctime(sims,labels,env,dirplot=None,zrange=None):
+def wctime(sims,env,labels=None,dirplot=None,zrange=None):
     """
     Plot the Wall clock time versus redshift and age
     a simulation name.
@@ -81,10 +112,10 @@ def wctime(sims,labels,env,dirplot=None,zrange=None):
     -----------
     sims : list of strings
         Array with the names of the simulation
-    labels : list of strings
-        Array with the labels to be used
     env : string
         ari or cosma, to use the adecuate paths
+    labels : list of strings
+        Array with the labels to be used
     dirplot : string
         Path to plots
     zrange : list of length 2 with floats
@@ -98,15 +129,12 @@ def wctime(sims,labels,env,dirplot=None,zrange=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.wctime(['L050N256/WMAP9/Sims/ex'],['ntask128'],'cosma')
+    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari',labels=['REF'])
+    >>> pb.wctime(['L050N256/WMAP9/Sims/ex'],'cosma',labels=['ntask128'])
     """ 
 
-    # Check that the size of the arrays for the simulations and labels is the same
-    lensims = len(sims)
-    if (len(labels) != lensims):
-        print('WARNING! Labels array does not match Sims array')
-        # Generate labels
-        labels = [x.split('/')[-1] for x in sims]
+    # Check labels
+    labels = get_simlabels(sims,labels=labels)
 
     # Set up plot variables
     fig = plt.figure()
@@ -193,7 +221,7 @@ def wctime(sims,labels,env,dirplot=None,zrange=None):
 
     return plotf
 
-def cputime(sims,labels,env,dirplot=None,zrange=None):
+def cputime(sims,env,labels=None,dirplot=None,zrange=None):
     """
     Plot the CPU percentages time versus redshift and age
     a simulation name.
@@ -202,10 +230,10 @@ def cputime(sims,labels,env,dirplot=None,zrange=None):
     -----------
     sims : list of strings
         Array with the names of the simulation
-    labels : list of strings
-        Array with the labels to be used
     env : string
         ari or cosma, to use the adecuate paths
+    labels : list of strings
+        Array with the labels to be used
     dirplot : string
         Path to plots
     zrange : list of length 2 with floats
@@ -219,20 +247,17 @@ def cputime(sims,labels,env,dirplot=None,zrange=None):
     Examples
     ---------
     >>> import plotbahamas as pb
-    >>> pb.cputime(['L050N256/WMAP9/Sims/ex'],['ntask128'],'cosma')
+    >>> pb.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari',labels=['REF'])
+    >>> pb.cputime(['L050N256/WMAP9/Sims/ex'],'cosma',labels=['ntask128'])
     """ 
 
-    # Check that the size of the arrays for the simulations and labels is the same
-    lensims = len(sims)
-    if (len(labels) != lensims):
-        print('WARNING! Labels array does not match Sims array')
-        # Generate labels
-        labels = [x.split('/')[-1] for x in sims]
+    # Check labels
+    labels = get_simlabels(sims,labels=labels)
 
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
-    cols = get_distinct(lensims)
+    cols = get_distinct(len(sims))
     xtit = 'Age (Gyr)'
     ytit = '%CPU time'
     ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
@@ -341,7 +366,7 @@ def cputime(sims,labels,env,dirplot=None,zrange=None):
 
     return plotf
 
-def mf_sims(zz,massdef,sims,labels,env,dirplot=None,Testing=False):
+def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -353,10 +378,10 @@ def mf_sims(zz,massdef,sims,labels,env,dirplot=None,Testing=False):
         Name of the mass definition to be used
     sims : list of strings
         Array with the names of the simulation
-    labels : list of strings
-        Array with the labels to be used
     env : string
         ari or cosma, to use the adecuate paths
+    labels : list of strings
+        Array with the labels to be used
     dirplot : string
         Path to plots
     Testing : boolean
@@ -372,7 +397,7 @@ def mf_sims(zz,massdef,sims,labels,env,dirplot=None,Testing=False):
     >>> import plotbahamas as pb
     >>> sims = ['L050N256/WMAP9_PMGRID512/Sims/ex','L050N256/WMAP9_PMGRID1024/Sims/ex'] 
     >>> labels = ['PMGRID=512','PMGRID=1024']
-    >>> pb.mf_sims(7.,'Group_M_Mean200',sims,labels,'cosma')
+    >>> pb.mf_sims(7.,'Group_M_Mean200',sims,'cosma',labels=labels)
     """ 
 
     # Check that the size of the arrays for the simulations and labels is the same
@@ -484,5 +509,6 @@ if __name__== "__main__":
         labels = ['PMGRID = 512','PMGRID = 1024']
         #print(wctime(sims,labels,env))
         #print(cputime(sims,labels,env))
-        print(mf_sims(7.,'Group_M_Mean200',sims,labels,env,Testing=True))
+        print(mf_sims(7.,'Group_M_Mean200',sims,env,
+                      labels=labels,Testing=True))
 
