@@ -35,8 +35,8 @@ def get_simlabels(sims,labels=None):
 
     Examples
     ---------
-    >>> import plotbahamas as pb
-    >>> pb.get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9'])
+    >>> import bahamasplot as bp
+    >>> bp.get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9'])
     """ 
 
     outlabels = labels
@@ -70,10 +70,10 @@ def get_zticks(lowestz,xmin,xmax):
 
     Examples
     ---------
-    >>> import plotbahamas as pb
+    >>> import bahamasplot as bp
     >>> import Cosmology as cosmo
     >>> cosmo.set_cosmology()
-    >>> zs, zticks = pb.get_zticks(5.,0.12,12.)
+    >>> zs, zticks = bp.get_zticks(5.,0.12,12.)
     >>> print(zs)
     [100.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.5, 5.0]
     """ 
@@ -128,9 +128,9 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
 
     Examples
     ---------
-    >>> import plotbahamas as pb
-    >>> pb.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
-    >>> pb.wctime(['L050N256/WMAP9/Sims/ex'],'cosma')
+    >>> import bahamasplot as bp
+    >>> bp.wctime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> bp.wctime(['L050N256/WMAP9/Sims/ex'],'cosma')
     """ 
 
     # Check labels
@@ -190,7 +190,7 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
             xmin = cosmo.age_of_universe(zrange[1])
             ax.set_xlim(xmin,xmax)
         else:
-            print('WARNING (plotbahamas): zrange = [zmin,zmax]')
+            print('WARNING (bahamasplot): zrange = [zmin,zmax]')
 
     # Top axis with redshift
     xmin, xmax = ax.get_xlim()
@@ -246,9 +246,9 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 
     Examples
     ---------
-    >>> import plotbahamas as pb
-    >>> pb.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
-    >>> pb.cputime(['L050N256/WMAP9/Sims/ex'],'cosma')
+    >>> import bahamasplot as bp
+    >>> bp.cputime(['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> bp.cputime(['L050N256/WMAP9/Sims/ex'],'cosma')
     """ 
 
     # Check labels
@@ -326,7 +326,7 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
             xmin = cosmo.age_of_universe(zrange[1])
             ax.set_xlim(xmin,xmax)
         else:
-            print('WARNING (plotbahamas): zrange = [zmin,zmax]')
+            print('WARNING (bahamasplot): zrange = [zmin,zmax]')
 
     # Legend
     legend1 = ax.legend(plot_lines, props, loc=2)
@@ -394,11 +394,11 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
 
     Examples
     ---------
-    >>> import plotbahamas as pb
+    >>> import bahamasplot as bp
     >>> sims = ['L050N256/WMAP9_PMGRID512/Sims/ex','L050N256/WMAP9_PMGRID1024/Sims/ex'] 
     >>> labels = ['PMGRID=512','PMGRID=1024']
-    >>> pb.mf_sims(7.,'Group_M_Mean200',sims,'cosma',labels=labels)
-    >>> pb.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> bp.mf_sims(7.,'Group_M_Mean200',sims,'cosma',labels=labels)
+    >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
     """ 
 
     # Check that the size of the arrays for the simulations and labels is the same
@@ -438,7 +438,7 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
         # Get subfind files
         files = b.get_subfind_files(snap,sim,env)
         if (len(files)<1):
-            print('WARNING (plotbahamas): no subfind files at snap={}, {} '.format(snap,sim))
+            print('WARNING (bahamasplot): no subfind files at snap={}, {} '.format(snap,sim))
             continue
         files2plot += len(files)
 
@@ -469,7 +469,7 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
             ax.plot(mhist[ind],np.log10(hmf[ind]),c=cols[ii],label=labels[ii])
 
     if (files2plot<1):
-        print('WARNING (plotbahamas): No mf_sims plot made at z={}'.format(zz))
+        print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
         return ' '
 
     # Legend
