@@ -16,6 +16,16 @@ import sys
 import numpy as np
 
 def percentiles(val,data,weights=None):
+    """
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import stats
+    >>> data = np.array(np.arange(0.,100.,10.))
+    >>> stats.percentiles(0.5,data)
+    >>> 45.0
+    """
+
     if (val <0 or val >1):
         sys.exit('STOP percentiles: 0<val<1')
 
@@ -37,22 +47,65 @@ def percentiles(val,data,weights=None):
         sys.exit('STOP percentiles: problem with weights')
     return percentiles
 
-def perc_2arrays(xbins,xarray,yarray,weights,nmin,val):
-    """ Returns percentiles of yarray over xbins"""
-    xlen = len(xbins)-1
-    perc_2arrays = np.zeros(shape=(xlen)) ; perc_2arrays.fill(-999.)
+def perc_2arrays(xedges,xarray,yarray,val,weights=None,nmin=None):
+    """ 
+    Returns percentiles of yarray over xbins
 
-    if len(xarray) != len(yarray):
+    Parameters
+    ----------
+    xedges : array of floats
+        Bin edges on the x-axis
+    xarray : array of floats
+        Values for the x-axis
+    yarray : array of floats
+        Values for the y-axis
+    val : float from 0 to 1
+        Value used to determine the percentile to be calculated
+    weights : array of floats
+        Weights for the yarray values
+    nmin : integer
+        Minimal number of points to be considered in a bin
+
+    Returns
+    -------
+    apercentile : string of floats
+       Percentiles of the yarray within xbins
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import stats
+    >>> xedges = np.array([0.,1.,2.])
+    >>> xarray = np.array(np.arange(0.,2.,0.1))
+    >>> yarray = np.append(np.array(np.arange(1.,11.,1.)),np.array(np.arange(1.,11.,1.)))
+    >>> stats.perc_2arrays(xedges,xarray,yarray,0.5)
+    >>> array([5.5, 5.5])
+    """
+    xlen = len(xedges)-1
+    apercentile = np.zeros(shape=(xlen)) ;  apercentile.fill(-999.)
+
+    if (len(xarray) != len(yarray)):
         sys.exit('ERROR @ perc_2arrays: The lenght of the input arrays should be equal.')
 
-    for i in range(xlen):
-        ind = np.where((xarray >= xbins[i]) & (xarray < xbins[i+1]))
-        # We require at least nmin points per bin
-        if (np.shape(ind)[1] > nmin): 
-            data = yarray[ind] ; ws = weights[ind]
-            perc_2arrays[i] = percentiles(val,data,weights=ws)
+    if (nmin is None):
+        nmin = 1
 
-    return perc_2arrays
+    for i in range(xlen):
+        ind = np.where((xarray >= xedges[i]) & (xarray < xedges[i+1]))
+        # We require at least nmin points per bin
+        if (np.shape(ind)[1] >= nmin): 
+            data = yarray[ind]
+
+            if (weights is None):
+                apercentile[i] = percentiles(val,data)
+            else:
+                if (len(weights) != len(yarray)):
+                    sys.exit('ERROR @ perc_2arrays: The lenght of the weights array should be equal to the input array.')
+
+                ws = weights[ind]
+                apercentile[i] = percentiles(val,data,weights=ws)
+
+    return apercentile
 
 
 def av_2arrays(xbins,xarray,yarray,weights,nmin):

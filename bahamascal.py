@@ -3,6 +3,7 @@ import numpy as np
 import h5py
 import glob
 import Cosmology as cosmo
+import stats
 import bahamas as b
 import bahamasplot as pb
 import matplotlib ; matplotlib.use('Agg')
@@ -56,7 +57,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     if Testing: nvols = 2
 
     # Set up ploting grid 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(14.,21.))
     gs = matplotlib.gridspec.GridSpec(3,2)
 
     ax0 = plt.subplot(gs[0])
@@ -70,24 +71,27 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     zmins,zmaxs = b.get_zminmaxs([zz])
 
     # Initialize the GSMF arrays and plot
-    mmin = 8.5 ; mmax = 16. ; dm = 0.1
-    edges = np.array(np.arange(mmin,mmax,dm))
-    mhist = edges[1:]-0.5*dm
+    mtype = 'star' 
+    itype = b.ptypes.index(mtype) 
 
-    xtit="${\\rm log}_{10}(M_{*}/h^{-1}{\\rm M}_{\odot})$" 
-    ytit="${\\rm log}_{10}(\phi/h^3{\\rm Mpc}^{-3}{\\rm dex}^{-1})$"  
+    mmin = 8.5 ; mmax = 16. ; dm = 0.1
+    medges = np.array(np.arange(mmin,mmax,dm))
+    mhist = medges[1:]-0.5*dm
+
+    xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$" 
+    ytit="${\\rm log}_{10}(\phi/{\\rm Mpc}^{-3}{\\rm dex}^{-1})$"  
     xmin=10. ; xmax=12.
     ymin=-5. ; ymax=0. 
-    ax0.set_xlim(xmin,xmax) ; ax0.set_ylim(ymin,ymax) 
-    ax0.set_xlabel(xtit) ; ax0.set_ylabel(ytit)
-    ax0.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
+    ax1.set_xlim(xmin,xmax) ; ax1.set_ylim(ymin,ymax) 
+    ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
+    ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
 
     # Initialize the Madau plot
     zmin = 0. ; zmax = 10. ; dz = 1.
-    edges = np.array(np.arange(mmin,mmax,dm))
-    zhist = edges[1:]-0.5*dz
+    zedges = np.array(np.arange(zmin,zmax+dz,dz))
+    zhist = zedges[1:]-0.5*dz
 
-    xtit="Redshift" 
+    xtit="Age(Gyr)" 
     ytit="$\\dot{\\rho}_*({\\rm M}_{\\odot}{\\rm yr}^{-1}{\\rm cMpc}^{-3})$"  
     xmin=zmin ; xmax=zmax
     ymin=0.001 ; ymax=0.4 
@@ -111,8 +115,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Loop over all the simulations to be compared
     files2plot = 0
     for ii, sim in enumerate(sims):
-        #hmf  = np.zeros(shape=(len(mhist)))
         volume = 0.
+        gsmf  = np.zeros(shape=(len(mhist)))
     
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
@@ -127,40 +131,43 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
 
-            # Read the BoxSize in first iteration
+            # Read simulation constants in first iteration
             if (iff == 0):
-                header = f['Header']
-                boxsize = header.attrs['BoxSize']
-    #
-    #        haloes = f['FOF']
-    #        mh = haloes[massdef][:]  #10^10Msun/h
-    #        ind = np.where(mh > 0.)
-    #        lmh = np.log10(mh[ind]) + 10.
-    #
-    #        # HMF
-    #        H, bins_edges = np.histogram(lmh,bins=edges)
-    #        hmf[:] = hmf[:] + H
-    #
+                header = f['Header'] #;print(list(header.attrs.items()))
+                boxsize = header.attrs['BoxSize'] #Mpc/h
+                h0 = header.attrs['HubbleParam'] 
+    
+            subhaloes = f['Subhalo']
+            mass = subhaloes[massdef][:,itype]  #10^10Msun/h
+            ind = np.where(mass > 0.)
+            lm = np.log10(mass[ind]) + 10. - np.log10(h0) #Msun
+    
+            # GSMF
+            H, bins_edges = np.histogram(lm,bins=medges)
+            gsmf[:] = gsmf[:] + H
+    
             if (nvols != 'All'):
                 if (iff>nvols): break
-    #
-    #    print('Side of sim box = {:.2f} Mpc^3/h^3'.format(boxsize)))
-    #    if (boxsize>0.):
-    #volume = np.power(boxsize,3.)
-    #        hmf = hmf/volume/dm  # In Mpc^3/h^3
-    #
-    #        ind = np.where(hmf>0.)
-    #        ax.plot(mhist[ind],np.log10(hmf[ind]),c=cols[ii],label=labels[ii])
+    
+        print('Side of sim box = {:.2f} Mpc^3/h^3'.format(boxsize))
+        if (boxsize<=0.):
+            continue
+        volume = np.power(boxsize/h0,3.) # In Mpc^3
+
+        # GSMF
+        gsmf = gsmf/volume/dm  # In Msun/Mpc^3 
+        ind = np.where(gsmf>0.)
+        ax1.plot(mhist[ind],np.log10(gsmf[ind]))
 
         # Madau plot 
         fil_sfr = b.get_path2data(sim,env)+'sfr.txt'
-        aexp, SFR = np.loadtxt(fil_sfr, usecols=(0,2),unpack=True)
+        aexp, sfr = np.loadtxt(fil_sfr, usecols=(0,2),unpack=True)
         # SFR (total, end) [M0/yr] 
-        xz = (1./aexp) - 1.
+        zval = (1./aexp) - 1.
 
-        #n, bin_edges, binnumber
-
-        #print(xz) ; sys.exit()
+        medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
+        ax5.plot(zhist,medians)
+        print(medians) 
 
     #if (files2plot<1):
     #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
@@ -184,6 +191,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     if (not os.path.exists(dirp)):
         os.makedirs(dirp)
 
+    plt.tight_layout()
     plotf = dirp+'cal_z'+str(zz)+'.pdf'
     fig.savefig(plotf)
 
@@ -201,4 +209,4 @@ if __name__== "__main__":
         sims=['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
         labels = None
         
-    cal_plots(sims,env,labels=labels,Testing=True)
+    print(cal_plots(sims,env,labels=labels,Testing=True))
