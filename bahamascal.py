@@ -70,6 +70,16 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Redshift ranges to look for snapshot, zmin<z<zmax
     zmins,zmaxs = b.get_zminmaxs([zz])
 
+    # Initialize the fgas plot
+    gmin = 12.5 ; gmax = 16. ; dg = 0.1
+    xtit="${\\rm log}_{10}(M_{500}/{\\rm M}_{\odot})$" 
+    ytit="$M_{\\rm gas,500}/M_{500}$"  
+    xmin = 13. ; xmax = 15.2
+    ymin = 0. ; ymax = 0.2
+    ax0.set_xlim(xmin,xmax) ;  ax0.set_ylim(ymin,ymax) 
+    ax0.set_xlabel(xtit) ; ax0.set_ylabel(ytit)
+    ax0.text(xmin+0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))    
+
     # Initialize the GSMF arrays and plot
     mtype = 'star' 
     itype = b.ptypes.index(mtype) 
@@ -80,9 +90,9 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$" 
     ytit="${\\rm log}_{10}(\phi/{\\rm Mpc}^{-3}{\\rm dex}^{-1})$"  
-    xmin=10. ; xmax=12.
-    ymin=-5. ; ymax=0. 
-    ax1.set_xlim(xmin,xmax) ; ax1.set_ylim(ymin,ymax) 
+    xmin = 10. ; xmax = 12.
+    ymin = -5. ; ymax = 0.
+    ax1.set_xlim(xmin,xmax) ;  ax1.set_ylim(ymin,ymax) 
     ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
     ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
 
@@ -93,9 +103,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     xtit="Age(Gyr)" 
     ytit="$\\dot{\\rho}_*({\\rm M}_{\\odot}{\\rm yr}^{-1}{\\rm cMpc}^{-3})$"  
-    xmin=zmin ; xmax=zmax
-    ymin=0.001 ; ymax=0.4 
-    ax5.set_xlim(xmin,xmax) ; ax5.set_ylim(ymin,ymax) 
+    ax5.set_xlim(zmin,zmax) ; ax5.set_ylim(0.001,0.4) 
     ax5.set_xlabel(xtit) ; ax5.set_ylabel(ytit)
     ax5.set_yscale('log')
 
@@ -120,6 +128,22 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
+
+        # Get particle files
+        files = b.get_particle_files(snap,sim,env)
+        if (len(files)<1):
+            print('WARNING (bahamascal): no subfind files at snap={}, {} '.format(snap,sim))
+            continue
+
+        for iff, ff in enumerate(files):
+            f = h5py.File(ff, 'r')
+
+            # Read gas properties of the particles
+            p0 = f['PartType0']
+            groupnum = p0['GroupNumber'][:]
+            subgroupnum = p0['SubGroupNumber'][:]
+            print(np.shape(groupnum)) ; sys.exit()
+
     
         # Get subfind files
         files = b.get_subfind_files(snap,sim,env)
@@ -136,7 +160,20 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 header = f['Header'] #;print(list(header.attrs.items()))
                 boxsize = header.attrs['BoxSize'] #Mpc/h
                 h0 = header.attrs['HubbleParam'] 
-    
+
+            # Read M500 quantities
+            fof = f['FOF']
+            mass = fof['Group_M_Crit500'][:] #10^10Msun/h
+            rad = fof['Group_R_Crit500'][:] #cMpc/h
+            cop = fof['GroupCentreOfPotential'][:,:] #cMpc/h
+            ind = np.where(mass > 0.)
+            m500 = np.log10(mass[ind]) + 10. - np.log10(h0) ; mass=[] #Msun
+            r500 = rad[ind]/h0 ; rad = [] #cMpc
+            cop_x = cop[ind,0]/h0
+            cop_y = cop[ind,1]/h0
+            cop_z = cop[ind,2]/h0 ; cop = []
+
+            # Read the stellar mass
             subhaloes = f['Subhalo']
             mass = subhaloes[massdef][:,itype]  #10^10Msun/h
             ind = np.where(mass > 0.)
@@ -209,4 +246,4 @@ if __name__== "__main__":
         sims=['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
         labels = None
         
-    print(cal_plots(sims,env,labels=labels,Testing=True))
+    print(cal_plots(sims,env,labels=labels,Testing=False))

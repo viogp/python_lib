@@ -132,6 +132,47 @@ def get_path2data(sim,env):
     return path2data    
 
 
+def get_particle_files(snap,sim,env):
+    """
+    Get the particle files
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot number
+    sims : list of strings
+        Array with the names of the simulation
+    env : string
+        ari or cosma, to use the adecuate paths
+ 
+    Returns
+    -----
+    files : array of string
+       Subfind files with full paths
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_particle_files(8,'L050N256/WMAP9/Sims/ex','cosma')
+    """
+
+    # Simulation input
+    path1 = get_path2data(sim,env)+'particledata_'+str(snap).zfill(n0)
+
+    # Get path to subfind files
+    paths = glob.glob(path1+'*/') 
+    if (len(paths) == 1):
+        path = paths[0]
+    else:
+        print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
+        sys.exit()
+
+    root = path+'eagle_subfind_particles_'+str(snap).zfill(n0) 
+    files = glob.glob(root+'*.hdf5')
+
+    return files     
+
+
 def get_subfind_files(snap,sim,env):
     """
     Get the subfind files
