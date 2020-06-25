@@ -142,7 +142,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             p0 = f['PartType0']
             groupnum = p0['GroupNumber'][:]
             subgroupnum = p0['SubGroupNumber'][:]
-            print(np.shape(groupnum)) ; sys.exit()
+            #print(np.shape(groupnum)) ; sys.exit() ###here
 
     
         # Get subfind files

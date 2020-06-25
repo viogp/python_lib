@@ -63,6 +63,7 @@ import numpy as np
 import scipy as sp
 from scipy.constants import c,constants
 from scipy.integrate import romberg
+from astropy.constants import M_sun
 
 WM = None
 WV = None
@@ -78,6 +79,7 @@ zmax = 20.0
 r_comoving = np.zeros(nzmax)
 dz = zmax/float(nzmax) ; redshift = np.arange(0.0,zmax,dz)
 inv_dz = 1.0/dz
+
 Mpc = constants.mega*constants.parsec #10**6*3.08567758131e+16
 H100 = 100.0*constants.kilo/Mpc # in h/s units
 Gyr = constants.giga*constants.year
@@ -86,6 +88,7 @@ DH = c/(100.*constants.kilo) # Hubble Distance in Mpc/h (c is in m/s)
 Mpc2cm = constants.mega*constants.parsec*100.
 zlow = 0.00001 ; dlz = np.log(zmax)/float(nzmax) 
 lredshift = np.arange(np.log(zlow),np.log(zmax),dz)
+
 
 def set_cosmology(omega0=None,omegab=None,lambda0=None,h0=None, \
                       universe="Flat",include_radiation=False):

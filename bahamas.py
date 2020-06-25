@@ -2,6 +2,7 @@ import sys,os.path
 import numpy as np
 import h5py
 import glob
+from astropy import units as u
 from iotools import stop_if_no_file, is_sorted
 #print('\n \n')
 
@@ -18,7 +19,6 @@ tblz = 'snap_z.txt'
 defaultdz = 0.25
 
 n0 = 3
-
 
 def get_zminmaxs(zz,dz=None):
     """
@@ -70,6 +70,68 @@ def get_zminmaxs(zz,dz=None):
         
     return zmins,zmaxs
 
+
+
+def mb2msun(massb,h0):
+    """
+    Provide bahamas masses as M/Msun
+
+    Parameters
+    -----------
+    massb : float
+        Mass in 10^10Msun/h units
+    h0 : float
+        Hubble constant
+
+    Returns
+    -----
+    mass : float
+        M/Msun
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.mb2msun(0.0048,0.7)
+    >>> 68571428.57142857
+    """
+
+    if(massb <= 0):
+        print('WARNING (get_mb2msun): Input mass <= 0, returning -999.')
+        return -999.
+    else:
+        mass = massb*np.power(10.,10.)/h0
+        return mass
+
+
+def mb2lmsun(massb,h0):
+    """
+    Provide bahamas masses as log10(M/Msun)
+
+    Parameters
+    -----------
+    massb : float
+        Mass in 10^10Msun/h units
+    h0 : float
+        Hubble constant
+
+    Returns
+    -----
+    lmass : float
+        log10(M/Msun)
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.mb2lmsun(0.0048,0.7)
+    >>> 7.836143197361331
+    """
+
+    if(massb <= 0):
+        print('WARNING (get_mb2lmsun): Input mass <= 0, returning -999.')
+        return -999.
+    else:
+        lmass = np.log10(massb) + 10. - np.log10(h0)
+        return lmass
 
 def get_dirb(env):
     """
@@ -128,6 +190,8 @@ def get_path2data(sim,env):
         path2data = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
     elif (env == 'cosma'):
         path2data = dirbahamascosma+sim+'/data/'
+    else:
+        sys.exit('get_path2data set to handle env=ari or cosma')
 
     return path2data    
 
@@ -209,6 +273,47 @@ def get_subfind_files(snap,sim,env):
         sys.exit()
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
+    files = glob.glob(root+'*.hdf5')
+
+    return files     
+
+
+def get_particle_files(snap,sim,env): 
+    """
+    Get the particle files
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot number
+    sims : list of strings
+        Array with the names of the simulation
+    env : string
+        ari or cosma, to use the adecuate paths
+ 
+    Returns
+    -----
+    files : array of string
+       Subfind files with full paths
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_particle_files(8,'L050N256/WMAP9/Sims/ex','cosma')
+    """
+
+    # Simulation input
+    path1 = get_path2data(sim,env)+'particledata_'+str(snap).zfill(n0)
+
+    # Get path to the particle files
+    paths = glob.glob(path1+'*/')
+    if (len(paths) == 1):
+        path = paths[0]
+    else:
+        print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
+        sys.exit()
+
+    root = path+'eagle_subfind_particles_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
 
     return files     
@@ -528,7 +633,51 @@ def cenids(snap,sim,env):
         sys.exit()
     
     return cenids
-    
+
+
+def resolution(sim,env):
+    """
+    Get the mass resolution of a simulation
+
+    Parameters
+    -----------
+    sim : string
+        Simulation name
+    env : string
+        ari or cosma, to use the adecuate paths
+
+    Returns
+    -----
+    mdm, mgas : float
+        Mass resolution (Msun) for DM and gas particles
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.resolution('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.resolution('L050N256/WMAP9/Sims/ex','cosma')
+    """
+
+    # Simulation input
+    files = get_particle_files(0,sim,env)
+
+    f= h5py.File(files[0],'r')
+    header=f['Header']
+    masstable = header.attrs['MassTable']
+
+    itype = ptypes.index('DM') 
+    mdm = masstable[itype]
+    if (mdm<0):
+        print('WARNING: negative or 0 input mass, returning -999.')
+        return -999., -999.
+    else:
+        omega0, omegab, lambda0, h0 = get_cosmology(sim,env)
+
+        mdm = mb2msun(mdm,h0)
+
+        mgas = mdm*omegab/(omega0-omegab)
+
+        return mdm,mgas
 
 if __name__== "__main__":
     env = 'ari'
