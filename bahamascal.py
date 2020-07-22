@@ -45,7 +45,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     >>> import bahamascal as bc
     >>> sims = ['L050N256/WMAP9_PMGRID512/Sims/ex','L050N256/WMAP9_PMGRID1024/Sims/ex'] 
     >>> labels = ['PMGRID=512','PMGRID=1024']
-    >>> bc.cal_plots(sims,'cosma')
+    >>> bc.cal_plots(sims,'cosma',labels=labels)
     >>> bc.cal_plots(['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9'],'ari')
     """ 
 
@@ -90,11 +90,29 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$" 
     ytit="${\\rm log}_{10}(\phi/{\\rm Mpc}^{-3}{\\rm dex}^{-1})$"  
-    xmin = 10. ; xmax = 12.
+    xmin = 9. ; xmax = 12.5
     ymin = -5. ; ymax = 0.
     ax1.set_xlim(xmin,xmax) ;  ax1.set_ylim(ymin,ymax) 
     ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
     ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
+
+    # Initialize the SMHM relation plot ###here 
+    xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
+    ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
+    ax2.set_xlim(xmin,xmax) ; ax2.set_ylim(-2,10.) 
+    ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
+
+    # Initialize the sSFR plot (using mass ranges from GSMF)
+    xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
+    ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
+    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(-2,10.) 
+    ax3.set_xlabel(xtit) ; ax3.set_ylabel(ytit)
+
+    # Initialize the passive fraction plot (using mass ranges from GSMF)
+    xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
+    ytit="Passive fraction"   
+    ax4.set_xlim(xmin,xmax) ; ax4.set_ylim(0.,1.) 
+    ax4.set_xlabel(xtit) ; ax4.set_ylabel(ytit)
 
     # Initialize the Madau plot
     zmin = 0. ; zmax = 10. ; dz = 1.
@@ -123,6 +141,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Loop over all the simulations to be compared
     files2plot = 0
     for ii, sim in enumerate(sims):
+        print('Starting with sim{}: {}'.format(ii,sim))
         volume = 0.
         gsmf  = np.zeros(shape=(len(mhist)))
     
@@ -204,7 +223,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
         ax5.plot(zhist,medians)
-        print(medians) 
+        print(medians) ###HERE
 
     #if (files2plot<1):
     #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
@@ -239,7 +258,7 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sims = ['L050N256/WMAP9/Sims/ws_96_84_mu_7_76_dT_7_71_n_24_BH_DensTh_m_2_76_ntask128']
+        sims = ['L050N256/WMAP9/Sims/ws_269_70_mu_3_13_dT_8_15_n_152_beta_2_67_mfof_0_5']
         labels = None
 
     elif (env == 'ari'):

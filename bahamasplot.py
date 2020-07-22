@@ -165,7 +165,7 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
                         s2 = s1.split(']')[0]
                         date = datetime.strptime(s2, '%Y-%m-%d %H:%M:%S.%f')
                         wctime.append(datetime.timestamp(date))
-                        
+
         wc0 = wctime[0]
         wctime = [x - wc0 for x in wctime]
         wctime = [x/3600. for x in wctime]  # From s to hours
@@ -178,9 +178,11 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
         cosmo.set_cosmology(omega0=omega0,omegab=omegab,lambda0=lambda0,h0=h0,
                             universe="Flat",include_radiation=False)
         age = [cosmo.age_of_universe(x) for x in redshift]
-
-        # Plot wall clock time vs age
-        ax.plot(age,wctime,c=cols[ii],label=labels[ii])
+        if (len(wctime) != len(age)):
+            print('WARNING (wctime): problem with ages for sim:{}'.format(sim))
+        else:
+            # Plot wall clock time vs age
+            ax.plot(age,wctime,c=cols[ii],label=labels[ii])
 
     # If specified, set z range using the last loaded cosmology
     if zrange is not None:
@@ -277,7 +279,6 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 
         # Initialize lists
         redshift = [] 
-        #times = [[] for i in range(len(props))]
         percentages = [[] for i in range(len(props))]
 
         # Read file with cpu information
@@ -312,10 +313,13 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
         # Plot properties
         for jj, jprop in enumerate(props):
             y = percentages[jj]
-            l1, = ax.plot(age,y,color=cols[ii],linestyle=ls[jj])
-
-            if (ii==0):
-                plot_lines.append(l1)
+            if (len(y) != len(age)):
+                print('WARNING (cputime): problem with the percentages for sim:{}'.format(sim))
+            else:
+                l1, = ax.plot(age,y,color=cols[ii],linestyle=ls[jj])
+                
+                if (ii==0):
+                    plot_lines.append(l1)
         plot_colors.append(l1)
 
     # If specified, set z range using the last loaded cosmology
