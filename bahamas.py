@@ -9,7 +9,8 @@ from iotools import stop_if_no_file, is_sorted
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
 dirbahamasari = '/hpcdata0/simulations/BAHAMAS/'
-dirobsari = '/hpcdata0/Obs_Data/'
+dirobsari = '/hpcdata3/arivgonz/BAHAMAS/'
+dirobsarilega = '/hpcdata0/Obs_Data/'
 
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
@@ -140,7 +141,7 @@ def get_dirb(env):
     Parameters
     -----------
     env : string
-        ari or cosma, to use the adecuate paths
+        cosma, ari or arilega, to use the adecuate paths
  
     Returns
     -----
@@ -156,6 +157,8 @@ def get_dirb(env):
     dirb = None
     if (env == 'ari'):
         dirb = dirbahamasari
+    elif (env == 'arilega'):
+        dirb = dirobsarilega
     elif (env == 'cosma'):
         dirb = dirbahamascosma
 
@@ -171,7 +174,7 @@ def get_path2data(sim,env):
     sims : list of strings
         Array with the names of the simulation
     env : string
-        ari or cosma, to use the adecuate paths
+        cosma, ari or arilega, to use the adecuate paths
  
     Returns
     -----
@@ -182,16 +185,18 @@ def get_path2data(sim,env):
     ---------
     >>> import bahamas as b
     >>> b.get_path2data('L050N256/WMAP9/Sims/ex','cosma')
-    >>> b.get_path2data('AGN_TUNED_nu0_L100N256_WMAP9','ari')
+    >>> b.get_path2data('AGN_TUNED_nu0_L100N256_WMAP9','arilega')
     """
 
     # Simulation input
     if (env == 'ari'):
-        path2data = dirbahamasari+sim+'/Data/EagleSubGroups_5r200/'
+        path2data = dirbahamasari+sim+'/data/'
+    elif (env == 'arilega'):
+        path2data = dirbahamasarilega+sim+'/Data/EagleSubGroups_5r200/'
     elif (env == 'cosma'):
         path2data = dirbahamascosma+sim+'/data/'
     else:
-        sys.exit('get_path2data set to handle env=ari or cosma')
+        sys.exit('get_path2data set to handle env=cosma, ari or arilega')
 
     return path2data    
 
