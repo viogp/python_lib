@@ -96,7 +96,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
     ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
 
-    # Initialize the SMHM relation plot ###here 
+    # Initialize the SMHM relation plot
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
     ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
     ax2.set_xlim(xmin,xmax) ; ax2.set_ylim(-2,10.) 
@@ -125,19 +125,6 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax5.set_xlabel(xtit) ; ax5.set_ylabel(ytit)
     ax5.set_yscale('log')
 
-    #
-    ## Set up plot variables
-    #fig = plt.figure()
-    #ax = plt.subplot()
-    #cols = get_distinct(lensims)
-    #xtit = '${\\rm log}_{10}(\\rm{M/M_{\odot}}h^{-1})$' 
-    #ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}M)$'
-    #ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
-    #
-    #xmin = 10. ; xmax = 16.
-    #ymin = -6.5 ; ymax = 0.
-    #ax.set_xlim(xmin,xmax) ;  ax.set_ylim(ymin,ymax) 
-    #
     # Loop over all the simulations to be compared
     files2plot = 0
     for ii, sim in enumerate(sims):
@@ -179,6 +166,14 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 header = f['Header'] #;print(list(header.attrs.items()))
                 boxsize = header.attrs['BoxSize'] #Mpc/h
                 h0 = header.attrs['HubbleParam'] 
+                omega0 = header.attrs['Omega0']
+                omegab = header.attrs['OmegaBaryon']
+                lambda0 =header.attrs['OmegaLambda']
+                set_cosmology(omega0=omega0,omegab=omegab, \
+                              lambda0=lambda0,h0=h0,
+                              universe="Flat",include_radiation=False)
+                slim = 1./tHubble(redshift) #1/Gyr
+
 
             # Read M500 quantities
             fof = f['FOF']
@@ -197,6 +192,12 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             mass = subhaloes[massdef][:,itype]  #10^10Msun/h
             ind = np.where(mass > 0.)
             lm = np.log10(mass[ind]) + 10. - np.log10(h0) #Msun
+
+            # Read the SFR 
+            sfr = subhaloes[nom_sfr][:] #Msun/h/yr
+            
+            f.close()
+
     
             # GSMF
             H, bins_edges = np.histogram(lm,bins=medges)
