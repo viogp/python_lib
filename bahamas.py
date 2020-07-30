@@ -8,9 +8,9 @@ from iotools import stop_if_no_file, is_sorted
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
-dirbahamasari = '/hpcdata0/simulations/BAHAMAS/'
-dirobsari = '/hpcdata3/arivgonz/BAHAMAS/'
-dirobsarilega = '/hpcdata0/Obs_Data/'
+dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
+dirbahamasari = '/hpcdata3/arivgonz/BAHAMAS/'
+dirobsari = '/hpcdata0/Obs_Data/'
 
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
@@ -158,7 +158,7 @@ def get_dirb(env):
     if (env == 'ari'):
         dirb = dirbahamasari
     elif (env == 'arilega'):
-        dirb = dirobsarilega
+        dirb = dirbahamasarilega
     elif (env == 'cosma'):
         dirb = dirbahamascosma
 
@@ -529,7 +529,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     dirz : string
         Alternative directory where the table with z and snapshots is.
     env : string
-        ari or cosma, to use the adecuate paths
+        ari, arilega or cosma, to use the adecuate paths
 
     Returns
     -----

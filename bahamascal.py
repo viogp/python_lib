@@ -23,7 +23,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     sims : list of strings
         Array with the names of the simulation
     env : string
-        ari or cosma, to use the adecuate paths
+        cosma, ari or arilega, to use the adecuate paths
     zz : float
         Redshift to make the calibration plot, set to 0 by default.
     massdef : string
@@ -97,9 +97,9 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
 
     # Initialize the SMHM relation plot
-    xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
-    ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
-    ax2.set_xlim(xmin,xmax) ; ax2.set_ylim(-2,10.) 
+    xtit="${\\rm log}_{10}(M_{200c}/{\\rm M}_{\odot})$"
+    ytit="${\\rm log}_{10}(M_{*}/M_{200c})$"
+    ax2.set_xlim(xmin,xmax) ; ax2.set_ylim(-2,1.) 
     ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
 
     # Initialize the sSFR plot (using mass ranges from GSMF)
@@ -256,14 +256,14 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     
 
 if __name__== "__main__":
-    env = 'cosma'
+    env = 'ari'
 
     if (env == 'cosma'):
         sims = ['L050N256/WMAP9/Sims/ws_269_70_mu_3_13_dT_8_15_n_152_beta_2_67_mfof_0_5']
         labels = None
 
     elif (env == 'ari'):
-        sims=['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
+        sims=['L050N256/WMAP9/Sims/ws_269_70_mu_3_13_dT_8_15_n_152_beta_2_67_mfof_0_5']
         labels = None
         
     print(cal_plots(sims,env,labels=labels,Testing=False))
