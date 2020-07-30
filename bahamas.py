@@ -164,6 +164,34 @@ def get_dirb(env):
 
     return dirb
 
+def get_dirobs(env):
+    """
+    Get the directory with observations given the environment
+
+    Parameters
+    -----------
+    env : string
+        cosma, ari or arilega, to use the adecuate paths
+ 
+    Returns
+    -----
+    dirb : string
+       Bahamas directory
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_dirobs('cosma')
+    """
+
+    dirobs = None
+    if (env == 'ari' or env == 'arilega'):
+        dirobs = dirobsari
+    elif (env == 'cosma'):
+        dirobs = dirobscosma
+
+    return dirobs
+
 
 def get_path2data(sim,env):
     """
