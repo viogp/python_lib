@@ -9,11 +9,21 @@ import bahamas as b
 import bahamasplot as pb
 import matplotlib ; matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-from distinct_colours import get_distinct
+#from distinct_colours import get_distinct
 import mpl_style
 plt.style.use(mpl_style.style1)
 #print('\n \n')
 
+def simname(innom,msfof=False):
+    inleg = innom.split('/')[-1]
+    if not msfof:
+        val = '_msfof'
+        if val in inleg:
+            inleg = inleg.split(val)[0]
+        
+    return inleg
+    
+    
 def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
               labels=None,dirplot=None,Testing=False):
     """
@@ -50,6 +60,12 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     >>> bc.cal_plots(['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9'],'ari')
     """ 
 
+    # BAHAMAS variables
+    nom_sfr = 'StarFormationRate' #Msun/yr
+    nom_mass = 'Mass_030kpc' #10^10Msun/h
+    mtype = 'star'
+    itype = b.ptypes.index(mtype)
+    
     # Generate labels
     labels = pb.get_simlabels(sims,labels=labels)
 
@@ -71,7 +87,9 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax3 = plt.subplot(gs[3])
     ax4 = plt.subplot(gs[4])
     ax5 = plt.subplot(gs[5])
-   
+
+    ocol = 'grey'
+    
     # Redshift ranges to look for snapshot, zmin<z<zmax
     zmins,zmaxs = b.get_zminmaxs([zz])
 
@@ -83,12 +101,9 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ymin = 0. ; ymax = 0.2
     ax0.set_xlim(xmin,xmax) ;  ax0.set_ylim(ymin,ymax) 
     ax0.set_xlabel(xtit) ; ax0.set_ylabel(ytit)
-    ax0.text(xmin+0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))    
+    #ax0.text(xmin+0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))    
 
     # Initialize the GSMF arrays and plot
-    mtype = 'star' 
-    itype = b.ptypes.index(mtype) 
-
     mmin = 8.5 ; mmax = 16. ; dm = 0.1
     medges = np.array(np.arange(mmin,mmax,dm))
     mhist = medges[1:]-0.5*dm
@@ -99,7 +114,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ymin = -5. ; ymax = -1.
     ax1.set_xlim(xmin,xmax) ;  ax1.set_ylim(ymin,ymax) 
     ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
-    ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
+    #ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
 
     # Initialize the SMHM relation plot
     xtit="${\\rm log}_{10}(M_{200c}/{\\rm M}_{\odot})$"
@@ -135,8 +150,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     for ii, sim in enumerate(sims):
         print('Starting with sim{}: {}'.format(ii,sim))
         volume = 0.
-        gsmf  = np.zeros(shape=(len(mhist)))
-    
+        ntot, pftot  = [np.zeros(shape=(len(mhist))) for i in range(2)]
+
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
 
@@ -161,7 +176,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 cosmo.set_cosmology(omega0=omega0,omegab=omegab, \
                               lambda0=lambda0,h0=h0,
                               universe="Flat",include_radiation=False)
-                #slim = 1./cosmo.tHubble(redshift) #1/Gyr ##here
+                slim = 1./cosmo.tHubble(z_snap) #1/Gyr 
 
                 # Read gas properties of the particles
                 groupnum = p0['GroupNumber'][:]
@@ -214,14 +229,24 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             lm = np.log10(mass[ind]) + 10. - np.log10(h0) #Msun
 
             # Read the SFR 
-            #sfr = subhaloes[nom_sfr][:] #Msun/h/yr  ###here
+            sfr = subhaloes[nom_sfr][:] #Msun/h/yr
             
             f.close()
-    
-            # GSMF
+
+            # sSFR
+            ssfr = sfr[ind]/(10.*mass[ind]) #1/Gyr
+
+            # Total number of galaxies per stellar bin
             H, bins_edges = np.histogram(lm,bins=medges)
-            gsmf[:] = gsmf[:] + H
-    
+            ntot = ntot + H
+            
+            # Total number of passive galaxies
+            ind = np.where(ssfr<0.3*slim)
+            if (np.shape(ind)[1]>1):
+                H, bins_edges = np.histogram(lm[ind],bins=medges)
+                pftot = pftot + H
+                
+            # Sample a set of subvolumes
             if (nvols != 'All'):
                 if (iff>nvols): break
     
@@ -230,6 +255,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             continue
         volume = np.power(boxsize/h0,3.) # In Mpc^3
 
+        #--------------------------------------------------
         # fgas model
         df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,
                                                partx,party,partz]).T,
@@ -263,9 +289,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         #gas_mass = groups.Mass.sum() ####here
 
         # fgas observations
-
+        
+        #--------------------------------------------------
         # GSMF model
-        gsmf = gsmf/volume/dm  # In Msun/Mpc^3 
+        gsmf = ntot/volume/dm  # In Msun/Mpc^3 
         ind = np.where(gsmf>0.)
         ax1.plot(mhist[ind],np.log10(gsmf[ind]))
 
@@ -282,9 +309,43 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         ind = np.where((p3+dp3)>0)
         herr[ind] = np.log10(p3[ind] + dp3[ind])-3.
         ax1.errorbar(xobs,yobs, yerr=[yobs-lerr,herr-yobs], fmt='o',
-                    ecolor='grey',color='grey',mec='grey',
+                    ecolor=ocol,color=ocol,mec=ocol,
                     label='Baldry*2012, z>0.06')
 
+        if (ii==0): # Obs legend
+            leg = ax1.legend(loc=0) ; leg.draw_frame(False)
+
+        
+        #--------------------------------------------------
+        # Passive fraction 
+        for i in range(len(mhist)):
+            if (gsmf[i]>0.):
+                pftot[i] = pftot[i]/ntot[i]
+            else:
+                pftot[i] = 0.
+
+        ax4.plot(mhist,pftot)
+
+
+        # Obs
+        fobs = diro+'passivef/z0_gilbank10.txt'
+        lm, p, erro = np.loadtxt(fobs, unpack=True)
+        xo = lm + np.log10(0.7)
+        ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
+                     label ='Gilbank+10', fmt = 'o')
+
+        fobs = diro+'passivef/z0_bauer13.txt'
+        lm, p = np.loadtxt(fobs, unpack=True)
+        xo = lm + np.log10(0.7)
+        erro = lm*0.
+        ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
+                    label ='Bauer+10', fmt = '^')
+        
+
+        if (ii==0): # Obs legend
+            leg = ax4.legend(loc=0) ; leg.draw_frame(False)
+
+        #--------------------------------------------------
         # Madau plot 
         fil_sfr = b.get_path2data(sim,env)+'sfr.txt'
         aexp, sfr = np.loadtxt(fil_sfr, usecols=(0,2),unpack=True)
@@ -292,22 +353,26 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         zval = (1./aexp) - 1.
 
         medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
-        ax5.plot(zhist,medians)
+        ax5.plot(zhist,medians,label=simname(sims[ii]))
         print(medians) ###HERE
 
     #if (files2plot<1):
     #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
     #    return ' '
     #
-    ## Legend
-    #ax.annotate('z='+str(zz),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
-    #leg = ax.legend(loc=3, handlelength=0, handletextpad=0)
-    #leg.draw_frame(False)
-    #for ii,text in enumerate(leg.get_texts()):
-    #    text.set_color(cols[ii])
-    #for item in leg.legendHandles:
-    #    item.set_visible(False)
-    #
+    # Legend
+    if (len(sims) == 1):
+        # Title when showing only one sim
+        fig.suptitle(simname(sims[0])+', z='+str(zz))
+    else:
+        leg = ax5.legend(loc=0)
+        #leg = ax5.legend(loc=0, handlelength=0, handletextpad=0)
+        leg.draw_frame(False)
+        #for ii,text in enumerate(leg.get_texts()):
+        #    text.set_color(leg.get_color([ii]))
+        #for item in leg.legendHandles:
+        #    item.set_visible(False)
+    
     # Path to plot
     if (dirplot == None):
         dirp = b.get_dirb(env)+'plots/'+sim+'/'
