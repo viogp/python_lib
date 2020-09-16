@@ -189,6 +189,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             else:
                 # Read gas properties of the particles
                 groupnum    = np.append(groupnum,p0['GroupNumber'][:])
+                # Negative values: particles that don't belong to a halo
                 subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
                 partmass    = np.append(partmass,p0['Mass'][:]*1e10/h0)
                 partx       = np.append(partx,p0['Coordinates'][:,0]/h0) 
@@ -259,31 +260,36 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         # fgas model
         df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,
                                                partx,party,partz]).T,
-                               columns=["groupnum","subgroupnum","partmass",
-                                        "partx","party","partz"])
+                               columns=['groupnum','subgroupnum','partmass',
+                                        'partx','party','partz'])
         groupnum,subgroupnum,partmass,partx,party,partz=[[] for i in range(6)]
+        df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+        df_part.reset_index(inplace=True, drop=True)
 
         df_fof = pd.DataFrame(data=np.vstack([m500,r500,cop_x,cop_y,cop_z]).T,
-                              columns=["m500","r500","cop_x","cop_y","cop_z"])
-        #m500,r500,cop_x,cop_y,cop_z=[[] for i in range(5)]
-        #df_fof.index += 1
-        #df_fof.index.names = ['groupnum']
-        #df_fof.reset_index(inplace=True)
-        #df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
-        #df_part.reset_index(inplace=True, drop=True)
-        #merge = pd.merge(df_part, df_fof, on=['groupnum'])
-        #merge['partx'] = merge.partx - merge.cop_x + boxsize / 2
-        #merge['party'] = merge.party - merge.cop_y + boxsize / 2
-        #merge['partz'] = merge.partz - merge.cop_z + boxsize / 2
-        #merge.x.loc[merge.partx < 0] = merge.partx.loc[merge.x < 0] + boxsize
-        #merge.y.loc[merge.party < 0] = merge.party.loc[merge.y < 0] + boxsize
-        #merge.z.loc[merge.partz < 0] = merge.partz.loc[merge.z < 0] + boxsize
-        #
-        #merge = merge.loc[merge.m500 > 1e13]
-        #merge['distance'] = (((boxsize / 2) - merge.partx) ** 2 + 
-        #                     ((boxsize / 2) - merge.party) ** 2 + 
-        #                     ((boxsize / 2) - merge.partz) ** 2) ** 0.5
-        #merge['inside_r500'] = merge.distance <= merge.r500
+                              columns=['m500','r500','cop_x','cop_y','cop_z'])
+        m500,r500,cop_x,cop_y,cop_z=[[] for i in range(5)]
+        df_fof.index += 1
+        df_fof.index.names = ['groupnum']
+        df_fof.reset_index(inplace=True)
+
+        # Wrap particles #here: unclear why the lack of correction for x,y,z>boxsize
+        merge = pd.merge(df_part, df_fof, on=['groupnum'])
+        merge['partx'] = merge.partx - merge.cop_x + boxsize / 2
+        merge['party'] = merge.party - merge.cop_y + boxsize / 2
+        merge['partz'] = merge.partz - merge.cop_z + boxsize / 2
+
+        merge.partx.loc[merge.partx < 0] = merge.partx.loc[merge.partx < 0] + boxsize
+        merge.party.loc[merge.party < 0] = merge.party.loc[merge.party < 0] + boxsize
+        merge.partz.loc[merge.partz < 0] = merge.partz.loc[merge.partz < 0] + boxsize
+
+        # Groups and clusters
+        merge = merge.loc[merge.m500 > 1e13] 
+        merge['distance'] = (((boxsize / 2) - merge.partx) ** 2 + 
+                             ((boxsize / 2) - merge.party) ** 2 + 
+                             ((boxsize / 2) - merge.partz) ** 2) ** 0.5
+        #print(min(merge.distance.values),max(merge.distance.values)) 
+        #here #merge['inside_r500'] = merge.distance <= merge.r500
         #merge = merge.loc[merge.inside_r500 == True]
         #groups = merge.groupby(['groupnum'], as_index=False)
         #gas_mass = groups.Mass.sum() ####here
