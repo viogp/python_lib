@@ -94,7 +94,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     zmins,zmaxs = b.get_zminmaxs([zz])
 
     # Initialize the fgas plot
-    gmin = 12.5 ; gmax = 16. ; dg = 0.1
+    gmin = 13. ; gmax = 16. ; dg = 0.2
+    gedges = np.array(np.arange(gmin,gmax+dg,dg))
+    ghist = gedges[1:]-0.5*dg
+
     xtit="${\\rm log}_{10}(M_{500}/{\\rm M}_{\odot})$" 
     ytit="$M_{\\rm gas,500}/M_{500}$"  
     xmin = 13. ; xmax = 15.2
@@ -163,7 +166,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
-            p0 = f['PartType0']
+            p0 = f['PartType0'] # Gas particles (0:gas, 1:DM, 4: stars, 5:BH)
 
             if (iff == 0):
                 # Read simulation constants in first iteration
@@ -273,27 +276,44 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         df_fof.index.names = ['groupnum']
         df_fof.reset_index(inplace=True)
 
-        # Wrap particles #here: unclear why the lack of correction for x,y,z>boxsize
         merge = pd.merge(df_part, df_fof, on=['groupnum'])
-        merge['partx'] = merge.partx - merge.cop_x + boxsize / 2
-        merge['party'] = merge.party - merge.cop_y + boxsize / 2
-        merge['partz'] = merge.partz - merge.cop_z + boxsize / 2
+        
+        # Positions of gas particles relative to the center of the group
+        lbox2 = boxsize/2.
+        merge['partx'] = merge.partx - merge.cop_x
+        merge['party'] = merge.party - merge.cop_y
+        merge['partz'] = merge.partz - merge.cop_z
 
-        merge.partx.loc[merge.partx < 0] = merge.partx.loc[merge.partx < 0] + boxsize
-        merge.party.loc[merge.party < 0] = merge.party.loc[merge.party < 0] + boxsize
-        merge.partz.loc[merge.partz < 0] = merge.partz.loc[merge.partz < 0] + boxsize
+        # Correct for periodic boundary conditions (for gal. in groups)
+        merge.partx.loc[merge.partx < -lbox2] = merge.partx.loc[merge.partx < -lbox2] + boxsize
+        merge.party.loc[merge.party < -lbox2] = merge.party.loc[merge.party < -lbox2] + boxsize
+        merge.partz.loc[merge.partz < -lbox2] = merge.partz.loc[merge.partz < -lbox2] + boxsize
 
-        # Groups and clusters
+        merge.partx.loc[merge.partx >= lbox2] = merge.partx.loc[merge.partx >= lbox2] - boxsize
+        merge.party.loc[merge.party >= lbox2] = merge.party.loc[merge.party >= lbox2] - boxsize
+        merge.partz.loc[merge.partz >= lbox2] = merge.partz.loc[merge.partz >= lbox2] - boxsize
+
+        # Distances within groups and clusters
         merge = merge.loc[merge.m500 > 1e13] 
-        merge['distance'] = (((boxsize / 2) - merge.partx) ** 2 + 
-                             ((boxsize / 2) - merge.party) ** 2 + 
-                             ((boxsize / 2) - merge.partz) ** 2) ** 0.5
-        #print(min(merge.distance.values),max(merge.distance.values)) 
-        #here #merge['inside_r500'] = merge.distance <= merge.r500
-        #merge = merge.loc[merge.inside_r500 == True]
-        #groups = merge.groupby(['groupnum'], as_index=False)
-        #gas_mass = groups.Mass.sum() ####here
+        merge['distance'] = (merge.partx**2 + 
+                             merge.party**2 + 
+                             merge.partz**2) ** 0.5
 
+        # Gas mass enclosed in r500
+        merge['inside_r500'] = merge.distance <= merge.r500
+        merge = merge.loc[merge.inside_r500 == True]
+        groups = merge.groupby(['groupnum'], as_index=False)
+        massinr500 = groups.partmass.sum()
+        massinr500.rename(columns={'partmass':})
+    df.rename(columns={'A': 'a'} ####here
+        print(gas_mass.partmass.values) ; sys.exit()
+        final = pd.merge(gas_mass, df_fof, on=['groupnum'])
+        print(final.gas_mass.values) ; sys.exit()
+
+        # Plot median gas_mass(within r500)/m500 vs m500
+        print(10**gedges, final.m500) ; sys.exit()
+        medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
+        
         # fgas observations
         
         #--------------------------------------------------
@@ -360,7 +380,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
         ax5.plot(zhist,medians,label=simname(sims[ii]))
-        print(medians) ###HERE
+        #print(medians) ###HERE
 
     #if (files2plot<1):
     #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
