@@ -303,19 +303,35 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         merge['inside_r500'] = merge.distance <= merge.r500
         merge = merge.loc[merge.inside_r500 == True]
         groups = merge.groupby(['groupnum'], as_index=False)
-        massinr500 = groups.partmass.sum()
-        massinr500.rename(columns={'partmass':})
-    df.rename(columns={'A': 'a'} ####here
-        print(gas_mass.partmass.values) ; sys.exit()
-        final = pd.merge(gas_mass, df_fof, on=['groupnum'])
-        print(final.gas_mass.values) ; sys.exit()
+        massinr500 = groups.partmass.sum() # partmass now = gas mass
+        final = pd.merge(massinr500, df_fof, on=['groupnum'])
 
         # Plot median gas_mass(within r500)/m500 vs m500
-        print(10**gedges, final.m500) ; sys.exit()
-        medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
+        mass500 = np.log10(final.m500.values)
+        gas_mh = 10**(np.log10(final.partmass.values)-mass500)
+        medians = stats.perc_2arrays(gedges,mass500,gas_mh,0.5,nmin=5)
+        ind = np.where(medians > 0.)
+        if (np.shape(ind)[1] > 0):
+            ax0.plot(ghist[ind],medians[ind])
         
-        # fgas observations
-        
+        # Plot individual cases where there's not enough data
+        gind = np.where(medians == -999.)
+        if (np.shape(gind)[1] > 0):
+            val = gedges[gind[0][0]]
+            ind = np.where(mass500 > val)
+            ax0.scatter(mass500[ind],gas_mh[ind], s=40, zorder=10)
+
+        # fgas observations (1E13 Msun)
+        file = diro+'calibration/all_fgas.txt'
+        om500, omin, omax, ofgas, ofmax, ofmin = np.loadtxt(file, usecols=[0,1,2,3,4,5], unpack=True)
+        ox = np.log10(om500) + 13.
+        oxmin = np.log(omin) + 13.
+        oxmax = np.log(omax) + 13.
+        #ax0.errorbar(ox, ofgas, yerr=[ofmin,ofmax], xerr=[oxmin,oxmax],
+        #             fmt='o',ecolor=ocol,color=ocol,mec=ocol,alpha=0.75)
+        ax0.errorbar(ox, ofgas, yerr=[ofmin,ofmax],
+                     fmt='o',ecolor=ocol,color=ocol,mec=ocol,alpha=0.75)
+
         #--------------------------------------------------
         # GSMF model
         gsmf = ntot/volume/dm  # In Msun/Mpc^3 
