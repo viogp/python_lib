@@ -122,13 +122,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Initialize the SMHM relation plot
     xtit="${\\rm log}_{10}(M_{200c}/{\\rm M}_{\odot})$"
     ytit="${\\rm log}_{10}(M_{*}/M_{200c})$"
-    ax2.set_xlim(xmin,xmax) ; ax2.set_ylim(-2,1.) 
+    ax2.set_xlim(10.,14.) ; ax2.set_ylim(-3,0.) 
     ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
 
     # Initialize the sSFR plot (using mass ranges from GSMF)
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
     ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
-    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(-2,10.) 
+    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(-2,5.) 
     ax3.set_xlabel(xtit) ; ax3.set_ylabel(ytit)
 
     # Initialize the passive fraction plot (using mass ranges from GSMF)
@@ -153,17 +153,22 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     for ii, sim in enumerate(sims):
         print('Starting with sim{}: {}'.format(ii,sim))
         volume = 0.
-        ntot, pftot  = [np.zeros(shape=(len(mhist))) for i in range(2)]
 
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
 
+        # Get the indexes for centrals
+        cenids = b.cenids(snap,sim,env)
+        
         # Get particle files
         files = b.get_particle_files(snap,sim,env)
         if (len(files)<1):
             print('WARNING (bahamascal): no subfind files at snap={}, {} '.format(snap,sim))
             continue
 
+        # Look over all the files
+        ntot, pftot, pfcen, pfsat  = [np.zeros(shape=(len(mhist))) for i in range(4)]
+        istart = 0
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
             p0 = f['PartType0'] # Gas particles (0:gas, 1:DM, 4: stars, 5:BH)
@@ -210,45 +215,85 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
+            fof = f['FOF'] ; subhaloes = f['Subhalo']
+            
+            # Stellar mass
+            mass1 = subhaloes[massdef][:,itype]  #10^10Msun/h
+            lm1 = np.zeros(shape=len(mass1)) ; lm1.fill(-999.)
+            ind = np.where(mass1 > 0.)
+            lm1[ind] = np.log10(mass1[ind]) + 10. - np.log10(h0) #Msun
+            
+            # sSFR
+            sfr1  = subhaloes[nom_sfr][:] #Msun/h/yr
+            ssfr1 = np.zeros(shape=len(sfr1)) ; ssfr1.fill(-999.)
+            ssfr1[ind] = sfr1[ind]/(10.*mass1[ind]) #1/Gyr
 
-            # Read M500 quantities
-            fof = f['FOF']
+            totlen = len(mass1)
+            mass1 = [] ;sfr1 = []
+                
+            # Read other quantities
             if (iff == 0):
+                lm    = lm1
+                ssfr  = ssfr1
+                m200  = fof['Group_M_Crit200'][:]*1e10/h0      #Msun
                 m500  = fof['Group_M_Crit500'][:]*1e10/h0      #Msun
                 r500  = fof['Group_R_Crit500'][:]/h0           #cMpc
                 cop_x = fof['GroupCentreOfPotential'][:,0]/h0  #cMpc
                 cop_y = fof['GroupCentreOfPotential'][:,1]/h0  #cMpc
                 cop_z = fof['GroupCentreOfPotential'][:,2]/h0  #cMpc
             else:
+                lm    = np.append(lm,lm1)
+                ssfr  = np.append(ssfr,ssfr1)
+                m200  = np.append(m200,fof['Group_M_Crit200'][:]*1e10/h0)
                 m500  = np.append(m500,fof['Group_M_Crit500'][:]*1e10/h0)
                 r500  = np.append(r500,fof['Group_R_Crit500'][:]/h0)
                 cop_x = np.append(cop_x,fof['GroupCentreOfPotential'][:,0]/h0)
                 cop_y = np.append(cop_y,fof['GroupCentreOfPotential'][:,1]/h0)
                 cop_z = np.append(cop_z,fof['GroupCentreOfPotential'][:,2]/h0)
-                
-            # Read the stellar mass
-            subhaloes = f['Subhalo']
-            mass = subhaloes[massdef][:,itype]  #10^10Msun/h
-            ind = np.where(mass > 0.)
-            lm = np.log10(mass[ind]) + 10. - np.log10(h0) #Msun
 
-            # Read the SFR 
-            sfr = subhaloes[nom_sfr][:] #Msun/h/yr
             
             f.close()
 
-            # sSFR
-            ssfr = sfr[ind]/(10.*mass[ind]) #1/Gyr
-
             # Total number of galaxies per stellar bin
-            H, bins_edges = np.histogram(lm,bins=medges)
+            H, bins_edges = np.histogram(lm1,bins=medges)
             ntot = ntot + H
             
             # Total number of passive galaxies
-            ind = np.where(ssfr<0.3*slim)
+            ind = np.where((ssfr1<=0.3*slim) & (ssfr1 != -999.))
             if (np.shape(ind)[1]>1):
-                H, bins_edges = np.histogram(lm[ind],bins=medges)
+                H, bins_edges = np.histogram(lm1[ind],bins=medges)
                 pftot = pftot + H
+
+            # Get central indices
+            iglob = np.arange(totlen) + istart
+            icen = np.intersect1d(iglob,cenids) - istart
+            istart = istart + totlen
+            if (len(icen)>=1):
+                if(icen[-1]>totlen-1):
+                    print('STOP: something wrong with central index')
+
+                # Passive central galaxies
+                lmp = lm1[icen]
+                ssfrp = ssfr1[icen]
+                ind = np.where((ssfrp<=0.3*slim) & (ssfrp != -999.))
+                if (np.shape(ind)[1]>1):
+                    H, bins_edges = np.histogram(lmp[ind],bins=medges) 
+                    pfcen = pfcen + H
+
+            # Get satellite indices
+            if (len(icen)>1):
+                isat = np.array([i for i in range(totlen) if i not in icen],dtype=int)
+            else:
+                isat = np.arange(totlen)
+
+            if (len(isat)>=1):
+                # Passive satellite galaxies
+                lmp = lm1[isat]
+                ssfrp = ssfr1[isat]
+                ind = np.where((ssfrp<=0.3*slim) & (ssfrp != -999.))
+                if (np.shape(ind)[1]>1):
+                    H, bins_edges = np.histogram(lmp[ind],bins=medges) 
+                    pfsat = pfsat + H
                 
             # Sample a set of subvolumes
             if (nvols != 'All'):
@@ -357,18 +402,67 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         if (ii==0): # Obs legend
             leg = ax1.legend(loc=0) ; leg.draw_frame(False)
 
+
+        #--------------------------------------------------
+        # SMHM-relation model
+        if (len(cenids)>=1):
+            if(cenids[-1]>len(lm)-1):
+                print('STOP: something wrong with central index')
+
+            lmc = lm[cenids]
+            mhc = m200[cenids]
+            ind = np.where((lmc > 0) & (mhc > 0))
+            x = np.log10(mhc[ind])
+            y = 10**(lmc[ind] - x)            
+            medians = stats.perc_2arrays(medges,x,y,0.5,nmin=5)
+            ind = np.where(medians != -999.)
+            if (np.shape(ind)[1] > 0):
+                ax2.plot(mhist[ind],np.log10(medians[ind]))
         
+            ## Plot individual cases where there's not enough data
+            #if (np.shape(ind)[1] < len(medians)):
+            #    val = medges[ind[0][-1]+1]
+            #    iind = np.where(x >= val)
+            #    ax2.scatter(x[iind], np.log10(y[iind]), s=40, zorder=10)
+
+        
+        #--------------------------------------------------
+        # sSFR model
+        ind = np.where(ssfr>0.3*slim)
+        medians = stats.perc_2arrays(medges,lm[ind],ssfr[ind],0.5,nmin=5)
+        ind = np.where(medians != -999.)
+        if (np.shape(ind)[1] > 0):
+            ax3.plot(mhist[ind],np.log10(medians[ind]))
+
+        # Plot individual cases where there's not enough data
+        if (np.shape(ind)[1] < len(medians)):
+            val = medges[ind[0][-1]+1]
+            iind = np.where((lm >= val) & (ssfr>0.3*slim))
+            ax3.scatter(lm[iind],np.log10(ssfr[iind]), s=40, zorder=10)
+
+        # Obs
+        fobs = diro+'passivef/z0_gilbank10.txt'
+        #ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
+        #             label ='Gilbank+10', fmt = 'o')
+        #if (ii==0): # Obs legend
+        #    leg = ax4.legend(loc=0) ; leg.draw_frame(False)
+
+                    
         #--------------------------------------------------
         # Passive fraction 
         for i in range(len(mhist)):
-            if (gsmf[i]>0.):
+            if (ntot[i]>5.):
                 pftot[i] = pftot[i]/ntot[i]
+                pfcen[i] = pfcen[i]/ntot[i]
+                pfsat[i] = pfsat[i]/ntot[i]
             else:
-                pftot[i] = 0.
-
+                pftot[i] = -999.
+                pfcen[i] = -999. ; pfsat[i] = -999.
         ax4.plot(mhist,pftot)
-
-
+        if(len(sims)==1):
+            ax4.plot(mhist,pfcen,linestyle='--')
+            ax4.plot(mhist,pfsat,linestyle=':')
+            
         # Obs
         fobs = diro+'passivef/z0_gilbank10.txt'
         lm, p, erro = np.loadtxt(fobs, unpack=True)
