@@ -7,6 +7,7 @@ import Cosmology as cosmo
 import stats
 import bahamas as b
 import bahamasplot as pb
+from scipy.interpolate import interp1d
 import matplotlib ; matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 #from distinct_colours import get_distinct
@@ -25,7 +26,7 @@ def simname(innom,msfof=False):
     
     
 def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
-              labels=None,dirplot=None,Testing=False):
+              ndatbin=5,labels=None,dirplot=None,Testing=False):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -39,6 +40,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         Redshift to make the calibration plot, set to 0 by default.
     massdef : string
         Name of the stellar mass definition to be used
+    ndatbin : integer
+        Minimum number of data points per bin to calculate medians or means.
     labels : list of strings
         Array with the labels to be used
     dirplot : string
@@ -65,9 +68,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     nom_mass = 'Mass_030kpc' #10^10Msun/h
     mtype = 'star'
     itype = b.ptypes.index(mtype)
-    
-    # Generate labels
-    labels = pb.get_simlabels(sims,labels=labels)
+
+    if (labels == None):
+        # Generate labels
+        labels = pb.get_simlabels(sims,labels=labels)
 
     # The subfiles to loop over
     nvols = 'All'
@@ -107,13 +111,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     #ax0.text(xmin+0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))    
 
     # Initialize the GSMF arrays and plot
-    mmin = 8.5 ; mmax = 16. ; dm = 0.1
+    mmin = 8.5 ; mmax = 16. ; dm = 0.2
     medges = np.array(np.arange(mmin,mmax,dm))
     mhist = medges[1:]-0.5*dm
 
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$" 
     ytit="${\\rm log}_{10}(\phi/{\\rm Mpc}^{-3}{\\rm dex}^{-1})$"  
-    xmin = 9. ; xmax = 12.5
+    xmin = 9. ; xmax = 12.2
     ymin = -5. ; ymax = -1.
     ax1.set_xlim(xmin,xmax) ;  ax1.set_ylim(ymin,ymax) 
     ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
@@ -121,14 +125,14 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     # Initialize the SMHM relation plot
     xtit="${\\rm log}_{10}(M_{200c}/{\\rm M}_{\odot})$"
-    ytit="${\\rm log}_{10}(M_{*}/M_{200c})$"
-    ax2.set_xlim(10.,14.) ; ax2.set_ylim(-3,0.) 
+    ytit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"  #ytit="${\\rm log}_{10}(M_{*}/M_{200c})$"
+    ax2.set_xlim(10.5,14.) ; ax2.set_ylim(8.,xmax) #; ax2.set_ylim(-3,0.) 
     ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
 
     # Initialize the sSFR plot (using mass ranges from GSMF)
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
     ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
-    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(-2,5.) 
+    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(-2,1.) 
     ax3.set_xlabel(xtit) ; ax3.set_ylabel(ytit)
 
     # Initialize the passive fraction plot (using mass ranges from GSMF)
@@ -157,9 +161,6 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
 
-        # Get the indexes for centrals
-        cenids = b.cenids(snap,sim,env)
-        
         # Get particle files
         files = b.get_particle_files(snap,sim,env)
         if (len(files)<1):
@@ -205,7 +206,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 partz       = np.append(partz,p0['Coordinates'][:,2]/h0)
                 
             f.close()
-    
+
         # Get subfind files
         files = b.get_subfind_files(snap,sim,env)
         if (len(files)<1):
@@ -216,6 +217,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
             fof = f['FOF'] ; subhaloes = f['Subhalo']
+
+            snum1  = subhaloes['SubGroupNumber'][:]
             
             # Stellar mass
             mass1 = subhaloes[massdef][:,itype]  #10^10Msun/h
@@ -227,14 +230,16 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             sfr1  = subhaloes[nom_sfr][:] #Msun/h/yr
             ssfr1 = np.zeros(shape=len(sfr1)) ; ssfr1.fill(-999.)
             ssfr1[ind] = sfr1[ind]/(10.*mass1[ind]) #1/Gyr
-
-            totlen = len(mass1)
+            
             mass1 = [] ;sfr1 = []
-                
+            
             # Read other quantities
             if (iff == 0):
                 lm    = lm1
                 ssfr  = ssfr1
+                snum  = snum1
+                gnum  = subhaloes['GroupNumber'][:]
+
                 m200  = fof['Group_M_Crit200'][:]*1e10/h0      #Msun
                 m500  = fof['Group_M_Crit500'][:]*1e10/h0      #Msun
                 r500  = fof['Group_R_Crit500'][:]/h0           #cMpc
@@ -244,66 +249,57 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             else:
                 lm    = np.append(lm,lm1)
                 ssfr  = np.append(ssfr,ssfr1)
+                snum  = np.append(snum,snum1)
+                gnum  = np.append(gnum,subhaloes['GroupNumber'][:])
+                
                 m200  = np.append(m200,fof['Group_M_Crit200'][:]*1e10/h0)
                 m500  = np.append(m500,fof['Group_M_Crit500'][:]*1e10/h0)
                 r500  = np.append(r500,fof['Group_R_Crit500'][:]/h0)
                 cop_x = np.append(cop_x,fof['GroupCentreOfPotential'][:,0]/h0)
                 cop_y = np.append(cop_y,fof['GroupCentreOfPotential'][:,1]/h0)
                 cop_z = np.append(cop_z,fof['GroupCentreOfPotential'][:,2]/h0)
-
             
             f.close()
-
+            
             # Total number of galaxies per stellar bin
             H, bins_edges = np.histogram(lm1,bins=medges)
             ntot = ntot + H
             
             # Total number of passive galaxies
-            ind = np.where((ssfr1<=0.3*slim) & (ssfr1 != -999.))
+            ind = np.where((ssfr1 <= 0.3*slim) &
+                           (ssfr1 > -999.)  & (lm1 > -999.))
             if (np.shape(ind)[1]>1):
                 H, bins_edges = np.histogram(lm1[ind],bins=medges)
                 pftot = pftot + H
 
-            # Get central indices
-            iglob = np.arange(totlen) + istart
-            icen = np.intersect1d(iglob,cenids) - istart
-            istart = istart + totlen
-            if (len(icen)>=1):
-                if(icen[-1]>totlen-1):
-                    print('STOP: something wrong with central index')
+            # Passive central galaxies
+            ind = np.where((ssfr1 <= 0.3*slim) & (snum1 == 0) &
+                           (ssfr1 > -999.)  & (lm1 > -999.)) 
+            if (np.shape(ind)[1] > 0): 
+                H, bins_edges = np.histogram(lm1[ind],bins=medges) 
+                pfcen = pfcen + H
 
-                # Passive central galaxies
-                lmp = lm1[icen]
-                ssfrp = ssfr1[icen]
-                ind = np.where((ssfrp<=0.3*slim) & (ssfrp != -999.))
-                if (np.shape(ind)[1]>1):
-                    H, bins_edges = np.histogram(lmp[ind],bins=medges) 
-                    pfcen = pfcen + H
-
-            # Get satellite indices
-            if (len(icen)>1):
-                isat = np.array([i for i in range(totlen) if i not in icen],dtype=int)
-            else:
-                isat = np.arange(totlen)
-
-            if (len(isat)>=1):
-                # Passive satellite galaxies
-                lmp = lm1[isat]
-                ssfrp = ssfr1[isat]
-                ind = np.where((ssfrp<=0.3*slim) & (ssfrp != -999.))
-                if (np.shape(ind)[1]>1):
-                    H, bins_edges = np.histogram(lmp[ind],bins=medges) 
-                    pfsat = pfsat + H
+            # Passive satellite galaxies
+            ind = np.where((ssfr1 <= 0.3*slim) & (snum1 > 0) &
+                           (ssfr1 > -999.)  & (lm1 > -999.))
+            if (np.shape(ind)[1] > 0): 
+                H, bins_edges = np.histogram(lm1[ind],bins=medges) 
+                pfsat = pfsat + H
                 
             # Sample a set of subvolumes
             if (nvols != 'All'):
                 if (iff>nvols): break
-    
+
         print('Side of sim box = {:.2f} Mpc^3/h^3'.format(boxsize))
         if (boxsize<=0.):
             continue
         volume = np.power(boxsize/h0,3.) # In Mpc^3
 
+        if (len(sims) == 1):
+            # Number density for ngal galaxies within the given box
+            ngal = 100. ;  ndlim = ngal/volume
+            print('* Number density for {} gal. = {:.2e}'.format(ngal,ndlim))
+        
         #--------------------------------------------------
         # fgas model
         df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,
@@ -322,7 +318,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         df_fof.reset_index(inplace=True)
 
         merge = pd.merge(df_part, df_fof, on=['groupnum'])
-        
+
         # Positions of gas particles relative to the center of the group
         lbox2 = boxsize/2.
         merge['partx'] = merge.partx - merge.cop_x
@@ -354,17 +350,24 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         # Plot median gas_mass(within r500)/m500 vs m500
         mass500 = np.log10(final.m500.values)
         gas_mh = 10**(np.log10(final.partmass.values)-mass500)
-        medians = stats.perc_2arrays(gedges,mass500,gas_mh,0.5,nmin=5)
-        ind = np.where(medians > 0.)
+
+        if (len(sims) == 1): #Quartiles
+            per1 = stats.perc_2arrays(gedges,mass500,gas_mh,0.1,nmin=ndatbin)
+            per9 = stats.perc_2arrays(gedges,mass500,gas_mh,0.9,nmin=ndatbin)
+            ind = np.where((per1 != -999.) & (per9 != -999.))
+            if (np.shape(ind)[1] > 0):
+                ax0.fill_between(ghist[ind],per1[ind],per9[ind],alpha=0.2)
+        
+        medians = stats.perc_2arrays(gedges,mass500,gas_mh,0.5,nmin=ndatbin)
+        ind = np.where(medians != -999.)
         if (np.shape(ind)[1] > 0):
             ax0.plot(ghist[ind],medians[ind])
-        
-        # Plot individual cases where there's not enough data
-        gind = np.where(medians == -999.)
-        if (np.shape(gind)[1] > 0):
-            val = gedges[gind[0][0]]
-            ind = np.where(mass500 > val)
-            ax0.scatter(mass500[ind],gas_mh[ind], s=40, zorder=10)
+
+            if (np.shape(ind)[1] < len(medians)):
+                # Plot individual cases where there's not enough data
+                val = gedges[ind[0][-1]+1]
+                ind = np.where(mass500 >= val)
+                ax0.scatter(mass500[ind], gas_mh[ind], s=40, zorder=10)
 
         # fgas observations (1E13 Msun)
         file = diro+'calibration/all_fgas.txt'
@@ -400,56 +403,121 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                     label='Baldry*2012, z>0.06')
 
         if (ii==0): # Obs legend
-            leg = ax1.legend(loc=0) ; leg.draw_frame(False)
+            leg = ax1.legend(loc=3) ; leg.draw_frame(False)
 
+        if (len(sims)==1):
+            # Find the stellar mass corresponding to ndlim
+            x = np.cumsum(gsmf[::-1])[::-1]
+            y=medges[:-1]
+            if (ndlim >= min(x) and ndlim <= max(x)):
+                f = interp1d(x,y)
+                m_ndlim = f(ndlim)
+            elif (ndlim > max(x)):
+                m_ndlim = -999.
+            elif (ndlim < min(x)):
+                m_ndlim = 999.
+            print('* Stellar mass corresponding to ndlim = {:.4f}'.format(m_ndlim)) 
+
+            # Region where there are two few massive objects
+            if (m_ndlim < xmax):
+                ax1.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
 
         #--------------------------------------------------
         # SMHM-relation model
-        if (len(cenids)>=1):
-            if(cenids[-1]>len(lm)-1):
-                print('STOP: something wrong with central index')
+        ind = np.where((snum==0) & (lm>-999.))
+        if (np.shape(ind)[1]>0):
+            lmc = lm[ind]
+            mhc = m200[gnum[ind]-1]
+            
+            ind = np.where(mhc > 0.)
+            if (np.shape(ind)[1]>0):
+                x = np.log10(mhc[ind])
+                #y = 10**(lmc[ind] - x)
+                y = 10**(lmc[ind])
 
-            lmc = lm[cenids]
-            mhc = m200[cenids]
-            ind = np.where((lmc > 0) & (mhc > 0))
-            x = np.log10(mhc[ind])
-            y = 10**(lmc[ind] - x)            
-            medians = stats.perc_2arrays(medges,x,y,0.5,nmin=5)
-            ind = np.where(medians != -999.)
-            if (np.shape(ind)[1] > 0):
-                ax2.plot(mhist[ind],np.log10(medians[ind]))
-        
-            ## Plot individual cases where there's not enough data
-            #if (np.shape(ind)[1] < len(medians)):
-            #    val = medges[ind[0][-1]+1]
-            #    iind = np.where(x >= val)
-            #    ax2.scatter(x[iind], np.log10(y[iind]), s=40, zorder=10)
+                if (len(sims) == 1): #Quartiles
+                    per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
+                    per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
 
-        
+                    ind = np.where((per1 != -999.) & (per9 != -999.))
+                    if (np.shape(ind)[1] > 0):
+                        ax2.fill_between(mhist[ind],
+                                         np.log10(per1[ind]),
+                                         np.log10(per9[ind]),alpha=0.2)
+
+                # Median values
+                medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
+                ind = np.where(medians != -999.)
+                if (np.shape(ind)[1] > 0):
+                    ax2.plot(mhist[ind],np.log10(medians[ind])) #here
+            
+                    if (np.shape(ind)[1] < len(medians)):
+                        # Plot individual cases where there's not enough data
+                        val = medges[ind[0][-1]+1]
+                        ind = np.where(x >= val)
+                        ax2.scatter(x[ind], np.log10(y[ind]), s=40, zorder=10)
+
         #--------------------------------------------------
+        # sSFR Obs
+        fobs = diro+'calibration/G2010.dat'
+        lgmstar, vmax, compl, sfr_oii, sfr_haBD, sn = np.loadtxt(fobs, unpack=True,
+                                                                 usecols=[8,9,10,11,14,30])
+        weight = 1.0 / vmax / compl
+        weight = weight / 0.7**3     # convert to units of  h**3 Mpc**-3
+        weight[ vmax <= 0.0 ] = 0.0
+
+        lg_ms =  lgmstar[weight>0]
+        
+        lgssfr = np.log10( sfr_haBD) - lgmstar + 9.0
+        lgssfr[sn<2.5] = np.log10(0.3*slim)
+        lg_ssfr = lgssfr[weight>0]
+
+        w = weight[weight > 0]
+        ok =  (10**lg_ssfr > 0.3*slim)
+        x = lg_ms[ok] ; y = 10**lg_ssfr[ok]
+        
+        per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
+        per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
+        medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
+
+        ind = np.where(medians != -999.)
+        if (np.shape(ind)[1] > 0): #here: ndatbin=10?, errorbars in log?
+            ax3.errorbar(medges[ind], np.log10(medians[ind]),
+                         yerr=[np.log10(medians[ind]-per1[ind]),np.log10(medians[ind]-per9[ind]),
+                                        marker='*', color=ocol, label='Gilbank et al. 2010')
+
+        if (ii==0): # Obs legend
+            leg = ax3.legend(loc=3) ; leg.draw_frame(False)
+
         # sSFR model
         ind = np.where(ssfr>0.3*slim)
-        medians = stats.perc_2arrays(medges,lm[ind],ssfr[ind],0.5,nmin=5)
+        x = lm[ind] ; y = ssfr[ind]
+        
+        if (len(sims) == 1): #Quartiles
+            per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
+            per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
+            ind = np.where((per1 != -999.) & (per9 != -999.))
+            if (np.shape(ind)[1] > 0):
+                ax3.fill_between(mhist[ind],np.log10(per1[ind]),
+                                 np.log10(per9[ind]),alpha=0.2)
+        
+        medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
         ind = np.where(medians != -999.)
         if (np.shape(ind)[1] > 0):
             ax3.plot(mhist[ind],np.log10(medians[ind]))
 
-        # Plot individual cases where there's not enough data
-        if (np.shape(ind)[1] < len(medians)):
-            val = medges[ind[0][-1]+1]
-            iind = np.where((lm >= val) & (ssfr>0.3*slim))
-            ax3.scatter(lm[iind],np.log10(ssfr[iind]), s=40, zorder=10)
-
-        # Obs
-        fobs = diro+'passivef/z0_gilbank10.txt'
-        #ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
-        #             label ='Gilbank+10', fmt = 'o')
-        #if (ii==0): # Obs legend
-        #    leg = ax4.legend(loc=0) ; leg.draw_frame(False)
-
+            if (np.shape(ind)[1] < len(medians)):
+                # Plot individual cases where there's not enough data
+                val = medges[ind[0][-1]+1]
+                ind = np.where(x >= val)
+                ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10)
                     
         #--------------------------------------------------
-        # Passive fraction 
+        # Passive fraction
+
+        # Region where there are two few massive objects #here
+        #ax4.axvspan(i, xmax+.5, facecolor='0.2', alpha=0.5)
+        
         for i in range(len(mhist)):
             if (ntot[i]>5.):
                 pftot[i] = pftot[i]/ntot[i]
