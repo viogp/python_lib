@@ -266,22 +266,21 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             ntot = ntot + H
             
             # Total number of passive galaxies
-            ind = np.where((ssfr1 <= 0.3*slim) &
-                           (ssfr1 > -999.)  & (lm1 > -999.))
+            ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.))
             if (np.shape(ind)[1]>1):
                 H, bins_edges = np.histogram(lm1[ind],bins=medges)
                 pftot = pftot + H
 
             # Passive central galaxies
-            ind = np.where((ssfr1 <= 0.3*slim) & (snum1 == 0) &
-                           (ssfr1 > -999.)  & (lm1 > -999.)) 
+            ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
+                           (snum1 == 0))
             if (np.shape(ind)[1] > 0): 
                 H, bins_edges = np.histogram(lm1[ind],bins=medges) 
                 pfcen = pfcen + H
 
             # Passive satellite galaxies
-            ind = np.where((ssfr1 <= 0.3*slim) & (snum1 > 0) &
-                           (ssfr1 > -999.)  & (lm1 > -999.))
+            ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
+                           (snum1 > 0))
             if (np.shape(ind)[1] > 0): 
                 H, bins_edges = np.histogram(lm1[ind],bins=medges) 
                 pfsat = pfsat + H
@@ -481,10 +480,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
 
         ind = np.where(medians != -999.)
-        if (np.shape(ind)[1] > 0): #here: ndatbin=10?, errorbars in log?
-            ax3.errorbar(medges[ind], np.log10(medians[ind]),
-                         yerr=[np.log10(medians[ind]-per1[ind]),np.log10(medians[ind]-per9[ind]),
-                                        marker='*', color=ocol, label='Gilbank et al. 2010')
+        #if (np.shape(ind)[1] > 0): #here: ndatbin=10?, errorbars in log?
+        #    ax3.errorbar(medges[ind], np.log10(medians[ind]),
+        #                 yerr=[np.log10(medians[ind]-per1[ind]),np.log10(medians[ind]-per9[ind]),
+        #                       marker='*', color=ocol, label='Gilbank et al. 2010')
 
         if (ii==0): # Obs legend
             leg = ax3.legend(loc=3) ; leg.draw_frame(False)
@@ -514,22 +513,22 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                     
         #--------------------------------------------------
         # Passive fraction
-
-        # Region where there are two few massive objects #here
-        #ax4.axvspan(i, xmax+.5, facecolor='0.2', alpha=0.5)
-        
         for i in range(len(mhist)):
-            if (ntot[i]>5.):
+            if (ntot[i]>ndatbin):
                 pftot[i] = pftot[i]/ntot[i]
                 pfcen[i] = pfcen[i]/ntot[i]
                 pfsat[i] = pfsat[i]/ntot[i]
             else:
                 pftot[i] = -999.
                 pfcen[i] = -999. ; pfsat[i] = -999.
-        ax4.plot(mhist,pftot)
-        if(len(sims)==1):
-            ax4.plot(mhist,pfcen,linestyle='--')
-            ax4.plot(mhist,pfsat,linestyle=':')
+
+        ind = np.where(pftot>-999.)
+        if (np.shape(ind)[1]>1):
+            ax4.plot(mhist[ind],pftot[ind])
+
+            if(len(sims)==1):
+                ax4.plot(mhist[ind],pfcen[ind],linestyle='--')
+                ax4.plot(mhist[ind],pfsat[ind],linestyle=':')
             
         # Obs
         fobs = diro+'passivef/z0_gilbank10.txt'
@@ -548,6 +547,11 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         if (ii==0): # Obs legend
             leg = ax4.legend(loc=0) ; leg.draw_frame(False)
+
+        if (len(sims)==1):
+            # Region where there are two few massive objects
+            if (m_ndlim < xmax):
+                ax4.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
 
         #--------------------------------------------------
         # Madau plot 

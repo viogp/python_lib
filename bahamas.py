@@ -668,7 +668,7 @@ def cenids(snap,sim,env):
     return cenids
 
 
-def resolution(sim,env):
+def resolution(sim,env,verbose=True):
     """
     Get the mass resolution of a simulation
 
@@ -678,6 +678,8 @@ def resolution(sim,env):
         Simulation name
     env : string
         ari or cosma, to use the adecuate paths
+    verbose : boolean
+        True to print the resolution
 
     Returns
     -----
@@ -710,25 +712,29 @@ def resolution(sim,env):
 
         mgas = mdm*omegab/(omega0-omegab)
 
+        if (verbose):
+            print('Particle resolution of sim.: {}'.format(sim))
+            print('mdm (Msun) = {:.2e}, mgas (Msun)=mb= {:.2e}'.format(mdm,mgas))
+        
         return mdm,mgas
 
 if __name__== "__main__":
     env = 'ari'
 
     if (env == 'ari'):
-        sim = 'AGN_TUNED_nu0_L100N256_WMAP9'
-        dirz = '/hpcdata3/arivgonz/bahamas/'
+        sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-        print(get_z(-1,sim,dirz,env))
-        print(get_z(26,sim,dirz,env))
-
-        snap,zsnap = get_snap(3.2,2.8,3.8,sim,dirz,env)
-        print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
-        print(get_snap(-100.,-200.,-5.,sim,dirz,env))
-        print(get_snap(0.28,0.26,0.3,sim,dirz,env))
-
-    print(get_zminmaxs([0.]))
-    print(get_zminmaxs([0.,1.],dz=0.5))
-    print(get_zminmaxs([0.,1.]))
-    print(get_zminmaxs([0.,1.,0.5]))
+        #print(get_z(-1,sim,dirz,env))
+        #print(get_z(26,sim,dirz,env))
+        #
+        #snap,zsnap = get_snap(3.2,2.8,3.8,sim,dirz,env)
+        #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+        #print(get_snap(-100.,-200.,-5.,sim,dirz,env))
+        #print(get_snap(0.28,0.26,0.3,sim,dirz,env))
+        print(resolution(sim,env))
+        
+    #print(get_zminmaxs([0.]))
+    #print(get_zminmaxs([0.,1.],dz=0.5))
+    #print(get_zminmaxs([0.,1.]))
+    #print(get_zminmaxs([0.,1.,0.5]))
 
