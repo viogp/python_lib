@@ -24,9 +24,43 @@ def simname(innom,msfof=False):
         
     return inleg
     
-    
+def compare_dsims(sims,envs,massdefs,highres=True):
+    """
+    Add default Bahamas sims to compare with new runs
+
+    Parameters
+    -----------
+    sims : list of strings
+        Array with the names of the simulation
+    envs : list of string
+        cosma, ari or arilega, to use the adecuate paths
+    highres : boolean
+        True or False for including the HighRes Bahamas or not
+
+    Returns
+    -----
+    sims : list of strings
+        Updated array with the names of the simulations
+    envs : list of string
+        Updated array with the arilega of the default simularions
+    """ 
+
+    if (envs[0] == 'ari'):
+        sims.insert(0,'AGN_TUNED_nu0_L400N1024_WMAP9')
+        envs.insert(0,'arilega')
+        #here convert the massdef into Mass_030kpc
+        if (highres):
+            sims.insert(0,'HIRES/AGN_RECAL_nu0_L100N512_WMAP9')
+            envs.insert(0,'arilega')
+
+        return sims,envs
+    else:
+        print('WARNING (bahamascal): Comparisson with default Bahamas to be done within ARI')
+        return sims,envs
+
 def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
-              ndatbin=5,labels=None,dirplot=None,Testing=False):
+              ndatbin=5,labels=None,dirplot=None,
+              compare_default=False,Testing=False):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -42,10 +76,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         Name of the stellar mass definition to be used
     ndatbin : integer
         Minimum number of data points per bin to calculate medians or means.
+
     labels : list of strings
         Array with the labels to be used
     dirplot : string
         Path to plots
+    compare_default : boolean
+        True or False for comparing with published Bahamas runs. Need to be in ari env.
     Testing : boolean
         True or False for testing with few subfiles
 
@@ -80,6 +117,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Observations
     diro = b.get_dirobs(env)
     dircalo = diro+'calibration/'
+
+    # Comparison with published Bahamas if in ari env.
+    nsims = len(sims)
+    envs = [env for i in range(nsims)]
+    #here deal with massdefs
+    if (compare_default):
+        sims, envs = compare_dsims(sims,envs)
 
     # Set up ploting grid 
     fig = plt.figure(figsize=(14.,21.))
@@ -155,7 +199,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Loop over all the simulations to be compared
     files2plot = 0
     for ii, sim in enumerate(sims):
-        print('Starting with sim{}: {}'.format(ii,sim))
+        env = envs[ii] 
+        print('Starting with sim{}: {} ({})'.format(ii,sim,env))
         volume = 0.
 
         # Get the closest snapshot to the input redshift
@@ -215,10 +260,11 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         files2plot += len(files)
     
         for iff, ff in enumerate(files):
-            f = h5py.File(ff, 'r')
+            f = h5py.File(ff, 'r') ; print(ff) ; sys.exit() 
             fof = f['FOF'] ; subhaloes = f['Subhalo']
 
-            snum1  = subhaloes['SubGroupNumber'][:]
+            if (env != 'arilega'):
+                snum1  = subhaloes['SubGroupNumber'][:]
             
             # Stellar mass
             mass1 = subhaloes[massdef][:,itype]  #10^10Msun/h
@@ -237,7 +283,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             if (iff == 0):
                 lm    = lm1
                 ssfr  = ssfr1
-                snum  = snum1
+                if (env != 'arilega'): snum  = snum1
                 gnum  = subhaloes['GroupNumber'][:]
 
                 m200  = fof['Group_M_Crit200'][:]*1e10/h0      #Msun
@@ -249,7 +295,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             else:
                 lm    = np.append(lm,lm1)
                 ssfr  = np.append(ssfr,ssfr1)
-                snum  = np.append(snum,snum1)
+                if (env != 'arilega'): snum  = np.append(snum,snum1)
                 gnum  = np.append(gnum,subhaloes['GroupNumber'][:])
                 
                 m200  = np.append(m200,fof['Group_M_Crit200'][:]*1e10/h0)
@@ -271,19 +317,20 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 H, bins_edges = np.histogram(lm1[ind],bins=medges)
                 pftot = pftot + H
 
-            # Passive central galaxies
-            ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
-                           (snum1 == 0))
-            if (np.shape(ind)[1] > 0): 
-                H, bins_edges = np.histogram(lm1[ind],bins=medges) 
-                pfcen = pfcen + H
+            if (env != 'arilega'):
+                # Passive central galaxies
+                ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
+                               (snum1 == 0))
+                if (np.shape(ind)[1] > 0): 
+                    H, bins_edges = np.histogram(lm1[ind],bins=medges) 
+                    pfcen = pfcen + H
 
-            # Passive satellite galaxies
-            ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
-                           (snum1 > 0))
-            if (np.shape(ind)[1] > 0): 
-                H, bins_edges = np.histogram(lm1[ind],bins=medges) 
-                pfsat = pfsat + H
+                # Passive satellite galaxies
+                ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
+                               (snum1 > 0))
+                if (np.shape(ind)[1] > 0): 
+                    H, bins_edges = np.histogram(lm1[ind],bins=medges) 
+                    pfsat = pfsat + H
                 
             # Sample a set of subvolumes
             if (nvols != 'All'):
@@ -294,7 +341,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             continue
         volume = np.power(boxsize/h0,3.) # In Mpc^3
 
-        if (len(sims) == 1):
+        if (nsims == 1 and env != 'arilega'):
             # Number density for ngal galaxies within the given box
             ngal = 100. ;  ndlim = ngal/volume
             print('* Number density for {} gal. = {:.2e}'.format(ngal,ndlim))
@@ -350,7 +397,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         mass500 = np.log10(final.m500.values)
         gas_mh = 10**(np.log10(final.partmass.values)-mass500)
 
-        if (len(sims) == 1): #Quartiles
+        if (nsims == 1 and env != 'arilega'): #Quartiles
             per1 = stats.perc_2arrays(gedges,mass500,gas_mh,0.1,nmin=ndatbin)
             per9 = stats.perc_2arrays(gedges,mass500,gas_mh,0.9,nmin=ndatbin)
             ind = np.where((per1 != -999.) & (per9 != -999.))
@@ -404,7 +451,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         if (ii==0): # Obs legend
             leg = ax1.legend(loc=3) ; leg.draw_frame(False)
 
-        if (len(sims)==1):
+        if (nsims == 1 and env != 'arilega'):
             # Find the stellar mass corresponding to ndlim
             x = np.cumsum(gsmf[::-1])[::-1]
             y=medges[:-1]
@@ -434,7 +481,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 #y = 10**(lmc[ind] - x)
                 y = 10**(lmc[ind])
 
-                if (len(sims) == 1): #Quartiles
+                if (nsims == 1 and env != 'arilega'): #Quartiles
                     per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
                     per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
 
@@ -492,7 +539,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         ind = np.where(ssfr>0.3*slim)
         x = lm[ind] ; y = ssfr[ind]
         
-        if (len(sims) == 1): #Quartiles
+        if (nsims == 1 and env != 'arilega'): #Quartiles
             per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
             per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
             ind = np.where((per1 != -999.) & (per9 != -999.))
@@ -526,7 +573,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         if (np.shape(ind)[1]>1):
             ax4.plot(mhist[ind],pftot[ind])
 
-            if(len(sims)==1):
+            if(nsims == 1):
                 ax4.plot(mhist[ind],pfcen[ind],linestyle='--')
                 ax4.plot(mhist[ind],pfsat[ind],linestyle=':')
             
@@ -548,7 +595,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         if (ii==0): # Obs legend
             leg = ax4.legend(loc=0) ; leg.draw_frame(False)
 
-        if (len(sims)==1):
+        if (nsims == 1 and env != 'arilega'):
             # Region where there are two few massive objects
             if (m_ndlim < xmax):
                 ax4.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
@@ -569,7 +616,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     #    return ' '
     #
     # Legend
-    if (len(sims) == 1):
+    if (nsims == 1 and env != 'arilega'):
         # Title when showing only one sim
         fig.suptitle(simname(sims[0])+', z='+str(zz))
     else:
