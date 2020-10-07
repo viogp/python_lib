@@ -15,6 +15,10 @@ import mpl_style
 plt.style.use(mpl_style.style1)
 #print('\n \n')
 
+dcol = 'k'
+dsty = ['-','--']
+dbig = [3,3]
+
 def simname(innom,msfof=False):
     inleg = innom.split('/')[-1]
     if not msfof:
@@ -34,6 +38,8 @@ def compare_dsims(sims,envs,massdefs,highres=True):
         Array with the names of the simulation
     envs : list of string
         cosma, ari or arilega, to use the adecuate paths
+    massdefs : list of strings
+        Array with mass definition names
     highres : boolean
         True or False for including the HighRes Bahamas or not
 
@@ -41,22 +47,28 @@ def compare_dsims(sims,envs,massdefs,highres=True):
     -----
     sims : list of strings
         Updated array with the names of the simulations
-    envs : list of string
+    envs : list of strings
         Updated array with the arilega of the default simularions
+    massdefs : list of strings
+        Updated array with mass names
     """ 
 
     if (envs[0] == 'ari'):
-        sims.insert(0,'AGN_TUNED_nu0_L400N1024_WMAP9')
-        envs.insert(0,'arilega')
-        #here convert the massdef into Mass_030kpc
+        massd = 'Mass_'+massdefs[0].split('/')[-1]
+        
         if (highres):
             sims.insert(0,'HIRES/AGN_RECAL_nu0_L100N512_WMAP9')
             envs.insert(0,'arilega')
+            massdefs.insert(0,massd)
 
-        return sims,envs
+        sims.insert(0,'AGN_TUNED_nu0_L400N1024_WMAP9')
+        envs.insert(0,'arilega')
+        massdefs.insert(0,massd)
+
+        return sims,envs,massdefs
     else:
         print('WARNING (bahamascal): Comparisson with default Bahamas to be done within ARI')
-        return sims,envs
+        return sims,envs,massdefs
 
 def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
               ndatbin=5,labels=None,dirplot=None,
@@ -121,9 +133,11 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Comparison with published Bahamas if in ari env.
     nsims = len(sims)
     envs = [env for i in range(nsims)]
+    massdefs = [massdef for i in range(nsims)]
+
     #here deal with massdefs
     if (compare_default):
-        sims, envs = compare_dsims(sims,envs)
+        sims, envs, massdefs = compare_dsims(sims,envs,massdefs)
 
     # Set up ploting grid 
     fig = plt.figure(figsize=(14.,21.))
@@ -137,7 +151,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax5 = plt.subplot(gs[5])
 
     ocol = 'grey'
-    
+    cm = plt.get_cmap('tab10') # Colour map to draw colours from
+
     # Redshift ranges to look for snapshot, zmin<z<zmax
     zmins,zmaxs = b.get_zminmaxs([zz])
 
@@ -199,9 +214,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     # Loop over all the simulations to be compared
     files2plot = 0
     for ii, sim in enumerate(sims):
-        env = envs[ii] 
-        print('Starting with sim{}: {} ({})'.format(ii,sim,env))
+        env = envs[ii] ; massdef = massdefs[ii] 
+        print('Starting with sim{}: {} ({}, {})'.format(ii,sim,env,massdef))
         volume = 0.
+        col = cm(1.*ii/nsims) 
 
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
@@ -260,7 +276,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         files2plot += len(files)
     
         for iff, ff in enumerate(files):
-            f = h5py.File(ff, 'r') ; print(ff) ; sys.exit() 
+            f = h5py.File(ff, 'r') 
             fof = f['FOF'] ; subhaloes = f['Subhalo']
 
             if (env != 'arilega'):
@@ -347,6 +363,18 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             print('* Number density for {} gal. = {:.2e}'.format(ngal,ndlim))
         
         #--------------------------------------------------
+        # fgas observations (1E13 Msun)
+        file = diro+'calibration/all_fgas.txt'
+        om500, omin, omax, ofgas, ofmax, ofmin = np.loadtxt(file, usecols=[0,1,2,3,4,5], unpack=True)
+        ox = np.log10(om500) + 13.
+        oxmin = np.log(omin) + 13.
+        oxmax = np.log(omax) + 13.
+        #ax0.errorbar(ox, ofgas, yerr=[ofmin,ofmax], xerr=[oxmin,oxmax],
+        #             fmt='o',ecolor=ocol,color=ocol,mec=ocol,alpha=0.75)
+        ax0.errorbar(ox, ofgas, yerr=[ofmin,ofmax],
+                     fmt='o',ecolor=ocol,color=ocol,mec=ocol,alpha=0.75)
+
+        
         # fgas model
         df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,
                                                partx,party,partz]).T,
@@ -402,36 +430,20 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             per9 = stats.perc_2arrays(gedges,mass500,gas_mh,0.9,nmin=ndatbin)
             ind = np.where((per1 != -999.) & (per9 != -999.))
             if (np.shape(ind)[1] > 0):
-                ax0.fill_between(ghist[ind],per1[ind],per9[ind],alpha=0.2)
+                ax0.fill_between(ghist[ind],per1[ind],per9[ind],alpha=0.2,color=col)
         
         medians = stats.perc_2arrays(gedges,mass500,gas_mh,0.5,nmin=ndatbin)
         ind = np.where(medians != -999.)
         if (np.shape(ind)[1] > 0):
-            ax0.plot(ghist[ind],medians[ind])
+            ax0.plot(ghist[ind],medians[ind],color=col)
 
             if (np.shape(ind)[1] < len(medians)):
                 # Plot individual cases where there's not enough data
                 val = gedges[ind[0][-1]+1]
                 ind = np.where(mass500 >= val)
-                ax0.scatter(mass500[ind], gas_mh[ind], s=40, zorder=10)
-
-        # fgas observations (1E13 Msun)
-        file = diro+'calibration/all_fgas.txt'
-        om500, omin, omax, ofgas, ofmax, ofmin = np.loadtxt(file, usecols=[0,1,2,3,4,5], unpack=True)
-        ox = np.log10(om500) + 13.
-        oxmin = np.log(omin) + 13.
-        oxmax = np.log(omax) + 13.
-        #ax0.errorbar(ox, ofgas, yerr=[ofmin,ofmax], xerr=[oxmin,oxmax],
-        #             fmt='o',ecolor=ocol,color=ocol,mec=ocol,alpha=0.75)
-        ax0.errorbar(ox, ofgas, yerr=[ofmin,ofmax],
-                     fmt='o',ecolor=ocol,color=ocol,mec=ocol,alpha=0.75)
+                ax0.scatter(mass500[ind], gas_mh[ind], s=40, zorder=10,color=col)
 
         #--------------------------------------------------
-        # GSMF model
-        gsmf = ntot/volume/dm  # In Msun/Mpc^3 
-        ind = np.where(gsmf>0.)
-        ax1.plot(mhist[ind],np.log10(gsmf[ind]))
-
         # GSMF observations
         file = diro+'gsmf/baldry_2012_z0_cha.txt'
         xobs, p3, dp3 = np.loadtxt(file, usecols=[0,1,2], unpack=True)
@@ -446,11 +458,20 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         herr[ind] = np.log10(p3[ind] + dp3[ind])-3.
         ax1.errorbar(xobs,yobs, yerr=[yobs-lerr,herr-yobs], fmt='o',
                     ecolor=ocol,color=ocol,mec=ocol,
-                    label='Baldry*2012, z>0.06')
+                    label='Baldry+2012, z>0.06')
 
         if (ii==0): # Obs legend
             leg = ax1.legend(loc=3) ; leg.draw_frame(False)
 
+        # GSMF model
+        gsmf = ntot/volume/dm  # In Msun/Mpc^3 
+        ind = np.where(gsmf>0.)
+        if (env == 'arilega'):
+            ax1.plot(mhist[ind],np.log10(gsmf[ind]),
+                     color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
+        else:
+            ax1.plot(mhist[ind],np.log10(gsmf[ind]),color=col)
+            
         if (nsims == 1 and env != 'arilega'):
             # Find the stellar mass corresponding to ndlim
             x = np.cumsum(gsmf[::-1])[::-1]
@@ -468,40 +489,42 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             if (m_ndlim < xmax):
                 ax1.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
 
+            
         #--------------------------------------------------
         # SMHM-relation model
-        ind = np.where((snum==0) & (lm>-999.))
-        if (np.shape(ind)[1]>0):
-            lmc = lm[ind]
-            mhc = m200[gnum[ind]-1]
-            
-            ind = np.where(mhc > 0.)
-            if (np.shape(ind)[1]>0):
-                x = np.log10(mhc[ind])
-                #y = 10**(lmc[ind] - x)
-                y = 10**(lmc[ind])
-
-                if (nsims == 1 and env != 'arilega'): #Quartiles
-                    per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
-                    per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
-
-                    ind = np.where((per1 != -999.) & (per9 != -999.))
-                    if (np.shape(ind)[1] > 0):
-                        ax2.fill_between(mhist[ind],
-                                         np.log10(per1[ind]),
-                                         np.log10(per9[ind]),alpha=0.2)
-
-                # Median values
-                medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
-                ind = np.where(medians != -999.)
-                if (np.shape(ind)[1] > 0):
-                    ax2.plot(mhist[ind],np.log10(medians[ind])) #here
-            
-                    if (np.shape(ind)[1] < len(medians)):
-                        # Plot individual cases where there's not enough data
-                        val = medges[ind[0][-1]+1]
-                        ind = np.where(x >= val)
-                        ax2.scatter(x[ind], np.log10(y[ind]), s=40, zorder=10)
+        if(env != 'arilega'):
+           ind = np.where((snum==0) & (lm>-999.))
+           if (np.shape(ind)[1]>0):
+               lmc = lm[ind]
+               mhc = m200[gnum[ind]-1]
+               
+               ind = np.where(mhc > 0.)
+               if (np.shape(ind)[1]>0):
+                   x = np.log10(mhc[ind])
+                   #y = 10**(lmc[ind] - x)
+                   y = 10**(lmc[ind])
+           
+                   if (nsims == 1 and env != 'arilega'): #Quartiles
+                       per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
+                       per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
+           
+                       ind = np.where((per1 != -999.) & (per9 != -999.))
+                       if (np.shape(ind)[1] > 0):
+                           ax2.fill_between(mhist[ind],
+                                            np.log10(per1[ind]),
+                                            np.log10(per9[ind]),alpha=0.2,color=col)
+           
+                   # Median values
+                   medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
+                   ind = np.where(medians != -999.)
+                   if (np.shape(ind)[1] > 0):
+                       ax2.plot(mhist[ind],np.log10(medians[ind]),color=col) #here
+               
+                       if (np.shape(ind)[1] < len(medians)):
+                           # Plot individual cases where there's not enough data
+                           val = medges[ind[0][-1]+1]
+                           ind = np.where(x >= val)
+                           ax2.scatter(x[ind], np.log10(y[ind]), s=40, zorder=10,color=col)
 
         #--------------------------------------------------
         # sSFR Obs
@@ -544,40 +567,36 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
             ind = np.where((per1 != -999.) & (per9 != -999.))
             if (np.shape(ind)[1] > 0):
-                ax3.fill_between(mhist[ind],np.log10(per1[ind]),
-                                 np.log10(per9[ind]),alpha=0.2)
+                if (env == 'arilega'):
+                    ax3.fill_between(mhist[ind],np.log10(per1[ind]),
+                                     np.log10(per9[ind]),alpha=0.2,
+                                     color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
+                else:
+                    ax3.fill_between(mhist[ind],np.log10(per1[ind]),
+                                     np.log10(per9[ind]),alpha=0.2,color=col)
         
         medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
         ind = np.where(medians != -999.)
         if (np.shape(ind)[1] > 0):
-            ax3.plot(mhist[ind],np.log10(medians[ind]))
+            if (env == 'arilega'):
+                ax3.plot(mhist[ind],np.log10(medians[ind]),label=simname(sims[ii]),
+                         color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
+            else:
+                ax3.plot(mhist[ind],np.log10(medians[ind]),
+                         label=simname(sims[ii]),color=col)
 
             if (np.shape(ind)[1] < len(medians)):
                 # Plot individual cases where there's not enough data
                 val = medges[ind[0][-1]+1]
                 ind = np.where(x >= val)
-                ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10)
+                if (env == 'arilega'):
+                    ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,
+                                color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
+                else:
+                    ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,color=col)
                     
-        #--------------------------------------------------
-        # Passive fraction
-        for i in range(len(mhist)):
-            if (ntot[i]>ndatbin):
-                pftot[i] = pftot[i]/ntot[i]
-                pfcen[i] = pfcen[i]/ntot[i]
-                pfsat[i] = pfsat[i]/ntot[i]
-            else:
-                pftot[i] = -999.
-                pfcen[i] = -999. ; pfsat[i] = -999.
-
-        ind = np.where(pftot>-999.)
-        if (np.shape(ind)[1]>1):
-            ax4.plot(mhist[ind],pftot[ind])
-
-            if(nsims == 1):
-                ax4.plot(mhist[ind],pfcen[ind],linestyle='--')
-                ax4.plot(mhist[ind],pfsat[ind],linestyle=':')
-            
-        # Obs
+        #--------------------------------------------------           
+        # Obs Passive fraction
         fobs = diro+'passivef/z0_gilbank10.txt'
         lm, p, erro = np.loadtxt(fobs, unpack=True)
         xo = lm + np.log10(0.7)
@@ -589,7 +608,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         xo = lm + np.log10(0.7)
         erro = lm*0.
         ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
-                    label ='Bauer+10', fmt = '^')
+                    label ='Bauer+11', fmt = '^')
         
 
         if (ii==0): # Obs legend
@@ -600,33 +619,52 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             if (m_ndlim < xmax):
                 ax4.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
 
-        #--------------------------------------------------
-        # Madau plot 
-        fil_sfr = b.get_path2data(sim,env)+'sfr.txt'
-        aexp, sfr = np.loadtxt(fil_sfr, usecols=(0,2),unpack=True)
-        # SFR (total, end) [M0/yr] 
-        zval = (1./aexp) - 1.
+        # Model Passive fraction
+        for i in range(len(mhist)):
+            if (ntot[i]>ndatbin):
+                pftot[i] = pftot[i]/ntot[i]
+                pfcen[i] = pfcen[i]/ntot[i]
+                pfsat[i] = pfsat[i]/ntot[i]
+            else:
+                pftot[i] = -999.
+                pfcen[i] = -999. ; pfsat[i] = -999.
 
-        medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
-        ax5.plot(zhist,medians,label=simname(sims[ii]))
-        #print(medians) ###HERE
+        ind = np.where(pftot>-999.)
+        if (np.shape(ind)[1]>1):
+            if (env == 'arilega'):
+                ax4.plot(mhist[ind],pftot[ind],
+                         color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
+            else:
+                ax4.plot(mhist[ind],pftot[ind],color=col)
+
+            if(nsims == 1):
+                ax4.plot(mhist[ind],pfcen[ind],linestyle='--',color=col)
+                ax4.plot(mhist[ind],pfsat[ind],linestyle=':',color=col)
+
+        #--------------------------------------------------
+        # Madau plot
+        if (env != 'arilega'):
+            fil_sfr = b.get_path2data(sim,env)+'sfr.txt'
+            aexp, sfr = np.loadtxt(fil_sfr, usecols=(0,2),unpack=True)
+            # SFR (total, end) [M0/yr] 
+            zval = (1./aexp) - 1.
+            
+            medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
+            ax5.plot(zhist,medians,label=simname(sims[ii]),color=col)
+            #print(medians) ###HERE
 
     #if (files2plot<1):
     #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
     #    return ' '
     #
-    # Legend
-    if (nsims == 1 and env != 'arilega'):
-        # Title when showing only one sim
-        fig.suptitle(simname(sims[0])+', z='+str(zz))
-    else:
-        leg = ax5.legend(loc=0)
-        #leg = ax5.legend(loc=0, handlelength=0, handletextpad=0)
-        leg.draw_frame(False)
-        #for ii,text in enumerate(leg.get_texts()):
-        #    text.set_color(leg.get_color([ii]))
-        #for item in leg.legendHandles:
-        #    item.set_visible(False)
+
+    leg = ax3.legend(loc=0)
+    #leg = ax3.legend(loc=0, handlelength=0, handletextpad=0)
+    leg.draw_frame(False)
+    #for ii,text in enumerate(leg.get_texts()):
+    #    text.set_color(leg.get_color([ii]))
+    #for item in leg.legendHandles:
+    #    item.set_visible(False)
     
     # Path to plot
     if (dirplot == None):
