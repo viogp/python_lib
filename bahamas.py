@@ -668,7 +668,7 @@ def cenids(snap,sim,env):
     return cenids
 
 
-def resolution(sim,env,verbose=True):
+def resolution(sim,snap,env,verbose=True):
     """
     Get the mass resolution of a simulation
 
@@ -676,6 +676,9 @@ def resolution(sim,env,verbose=True):
     -----------
     sim : string
         Simulation name
+    snap : integer
+        Snapshot number to look (should be the same for all but 
+        different simulation)
     env : string
         ari or cosma, to use the adecuate paths
     verbose : boolean
@@ -689,12 +692,12 @@ def resolution(sim,env,verbose=True):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.resolution('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.resolution('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
     >>> b.resolution('L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
-    files = get_particle_files(0,sim,env)
+    files = get_particle_files(snap,sim,env) #here
 
     f= h5py.File(files[0],'r')
     header=f['Header']
@@ -722,6 +725,9 @@ if __name__== "__main__":
     env = 'ari'
 
     if (env == 'ari'):
+        print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9',31,'arilega'))
+        print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9',31,'arilega'))
+
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
         #print(get_z(-1,sim,dirz,env))
@@ -731,8 +737,8 @@ if __name__== "__main__":
         #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
         #print(get_snap(-100.,-200.,-5.,sim,dirz,env))
         #print(get_snap(0.28,0.26,0.3,sim,dirz,env))
-        print(resolution(sim,env))
-        
+        print(resolution(sim,17,env))
+
     #print(get_zminmaxs([0.]))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_zminmaxs([0.,1.]))

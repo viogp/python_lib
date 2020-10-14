@@ -16,6 +16,19 @@ plt.style.use(mpl_style.style1)
 zs0 = [100.,5.,4.,3.,2.,1.,0.5,0.1,0.]
 epsz = 0.0001
 
+def logformat(y,pos):
+    '''
+    To be used as follows:
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(myLogFormat))
+    (https://stackoverflow.com/questions/21920233/matplotlib-log-scale-tick-label-number-formatting/33213196)
+    '''
+    # Find the number of decimal places required
+    decimalplaces = int(np.maximum(-np.log10(y),0))     # =0 for numbers >=1
+    # Insert that number into a format string
+    formatstring = '{{:.{:1d}f}}'.format(decimalplaces)
+    # Return the formatted tick label
+    return formatstring.format(y)
+
 def get_simlabels(sims,labels=None):
     """
     Check that the arrays sims and inlabels have the same lenght,
@@ -43,8 +56,51 @@ def get_simlabels(sims,labels=None):
     # Check that the size of the arrays for the simulations and labels is the same
     if (labels == None or len(labels) != len(sims)):
         # Generate labels
-        outlabels = [x.split('/')[-1] for x in sims]        
+        labels1 = [x.split('/')[-1] for x in sims]        
 
+        outlabels = labels1 ; newlabel = ''
+        for ii,label in enumerate(labels1):
+            val = '_msfof'
+            if val in label:
+                label = label.split(val)[0]
+
+            val = '_beta_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\beta=$'+l1
+                label = label.split(val)[0]
+
+            val = '_BH'
+            if val in label:
+                label = label.split(val)[0]
+            
+            val = '_n_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$n=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = '_dT_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\Delta T=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = '_mu_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\mu=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = 'ws_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel='$v_{\\rm wind}=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            if (newlabel != ''):    
+                outlabels[ii] = newlabel
+        
     return outlabels
 
 def get_zticks(lowestz,xmin,xmax):
@@ -503,13 +559,16 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sim1 = 'L050N256/WMAP9/Sims/ex'
-        sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ex'
+        #sim1 = 'L050N256/WMAP9/Sims/ex'
+        #sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ex'
 
-        sims = [sim1, sim2]
-        labels = ['PMGRID = 512','PMGRID = 1024']
+        #sims = [sim1, sim2]
+        #labels = ['PMGRID = 512','PMGRID = 1024']
         #print(wctime(sims,labels,env))
         #print(cputime(sims,labels,env))
-        print(mf_sims(7.,'Group_M_Mean200',sims,env,
-                      labels=labels,Testing=True))
+        #print(mf_sims(7.,'Group_M_Mean200',sims,env,
+        #              labels=labels,Testing=True))
 
+        print(get_simlabels(['L050N256/WMAP9/Sims/ws_106_66_mu_5_70_dT_7_49_n_24_BH_beta_3_20_msfof_1_93e11',
+                             'AGN_TUNED_nu0_L100N256_WMAP9',
+                             'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',]))

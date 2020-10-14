@@ -6,28 +6,24 @@ import pandas as pd
 import Cosmology as cosmo
 import stats
 import bahamas as b
-import bahamasplot as pb
+import bahamasplot as bp
 from scipy.interpolate import interp1d
 import matplotlib ; matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+import matplotlib.ticker as ticker
 #from distinct_colours import get_distinct
 import mpl_style
 plt.style.use(mpl_style.style1)
 #print('\n \n')
 
+npart = 100 # Minimal number of particles to trust an attribute
+npartsf = 1. # Minimal number of SF particles to trust an attribute
+
+lw = 4
 dcol = 'k'
 dsty = ['-','--']
 dbig = [3,3]
 
-def simname(innom,msfof=False):
-    inleg = innom.split('/')[-1]
-    if not msfof:
-        val = '_msfof'
-        if val in inleg:
-            inleg = inleg.split(val)[0]
-        
-    return inleg
-    
 def compare_dsims(sims,envs,massdefs,highres=True):
     """
     Add default Bahamas sims to compare with new runs
@@ -120,7 +116,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     if (labels == None):
         # Generate labels
-        labels = pb.get_simlabels(sims,labels=labels)
+        labels = bp.get_simlabels(sims,labels=labels)
 
     # The subfiles to loop over
     nvols = 'All'
@@ -190,8 +186,9 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     # Initialize the sSFR plot (using mass ranges from GSMF)
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
-    ytit="${\\rm log}_{10}({\\rm sSFR}/{\\rm Gyr}^{-1})$"
-    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(-2,1.) 
+    ytit="${\\rm log}_{10}({\\rm SFR}/M_{*}/{\\rm Gyr}^{-1})$"
+    ymin_ssfr = -2 ; ymax_ssfr = 1.
+    ax3.set_xlim(xmin,xmax) ; ax3.set_ylim(ymin_ssfr,ymax_ssfr) 
     ax3.set_xlabel(xtit) ; ax3.set_ylabel(ytit)
 
     # Initialize the passive fraction plot (using mass ranges from GSMF)
@@ -201,23 +198,24 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax4.set_xlabel(xtit) ; ax4.set_ylabel(ytit)
 
     # Initialize the Madau plot
-    zmin = 0. ; zmax = 10. ; dz = 1.
-    zedges = np.array(np.arange(zmin,zmax+dz,dz))
-    zhist = zedges[1:]-0.5*dz
+    zedges = np.logspace(0, 1, num=15)
+    zhist = (zedges[1:]+zedges[:-1])/2
 
-    xtit="Age(Gyr)" 
+    xtit="1+z" 
     ytit="$\\dot{\\rho}_*({\\rm M}_{\\odot}{\\rm yr}^{-1}{\\rm cMpc}^{-3})$"  
-    ax5.set_xlim(zmin,zmax) ; ax5.set_ylim(0.001,0.4) 
+    ax5.set_xlim(1,11) ; ax5.set_ylim(0.001,0.4) 
     ax5.set_xlabel(xtit) ; ax5.set_ylabel(ytit)
-    ax5.set_yscale('log')
-
+    ax5.set_xscale('log') ; ax5.set_yscale('log')
+    ax5.xaxis.set_major_formatter(ticker.FuncFormatter(bp.logformat)) 
+    ax5.yaxis.set_major_formatter(ticker.FuncFormatter(bp.logformat)) 
+    
     # Loop over all the simulations to be compared
-    files2plot = 0
+    files2plot = 0 ; cols =[]
     for ii, sim in enumerate(sims):
         env = envs[ii] ; massdef = massdefs[ii] 
         print('Starting with sim{}: {} ({}, {})'.format(ii,sim,env,massdef))
         volume = 0.
-        col = cm(1.*ii/nsims) 
+        col = cm(1.*ii/nsims) ; cols.append(col)
 
         # Get the closest snapshot to the input redshift
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
@@ -228,8 +226,12 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             print('WARNING (bahamascal): no subfind files at snap={}, {} '.format(snap,sim))
             continue
 
+        # Get mass resolution
+        mdm,mgas = b.resolution(sim,snap,env)
+        
         # Look over all the files
-        ntot, pftot, pfcen, pfsat  = [np.zeros(shape=(len(mhist))) for i in range(4)]
+        ntot, pftot, pfcen, pfsat, pfres  = [np.full((len(mhist)),0.) for i in range(5)]
+
         istart = 0
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
@@ -274,7 +276,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             print('WARNING (bahamascal): no subfind files at snap={}, {} '.format(snap,sim))
             continue
         files2plot += len(files)
-    
+
+        minsfr = 1e10
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r') 
             fof = f['FOF'] ; subhaloes = f['Subhalo']
@@ -293,8 +296,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             ssfr1 = np.zeros(shape=len(sfr1)) ; ssfr1.fill(-999.)
             ssfr1[ind] = sfr1[ind]/(10.*mass1[ind]) #1/Gyr
             
-            mass1 = [] ;sfr1 = []
-            
+            ind = np.where(sfr1>0.)
+            if (np.shape(ind)[1] > 0.):
+                sfGyr = sfr1[ind]*10.**9/h0  #Msun/Gyr
+                if (minsfr > min(sfGyr)): minsfr = min(sfGyr)            
+
+            mass1 = [] ; sfr1 = [] ; sfGyr = []
+                
             # Read other quantities
             if (iff == 0):
                 lm    = lm1
@@ -332,7 +340,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             if (np.shape(ind)[1]>1):
                 H, bins_edges = np.histogram(lm1[ind],bins=medges)
                 pftot = pftot + H
-
+            
             if (env != 'arilega'):
                 # Passive central galaxies
                 ind = np.where((ssfr1 <= 0.3*slim) & (ssfr1 > -999.) &
@@ -361,7 +369,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             # Number density for ngal galaxies within the given box
             ngal = 100. ;  ndlim = ngal/volume
             print('* Number density for {} gal. = {:.2e}'.format(ngal,ndlim))
-        
+
         #--------------------------------------------------
         # fgas observations (1E13 Msun)
         file = diro+'calibration/all_fgas.txt'
@@ -465,13 +473,22 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         # GSMF model
         gsmf = ntot/volume/dm  # In Msun/Mpc^3 
-        ind = np.where(gsmf>0.)
-        if (env == 'arilega'):
-            ax1.plot(mhist[ind],np.log10(gsmf[ind]),
-                     color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
-        else:
-            ax1.plot(mhist[ind],np.log10(gsmf[ind]),color=col)
-            
+        sels = [((gsmf>0) & (mhist >= np.log10(npart*mgas)) & (ntot>=ndatbin)),
+                ((gsmf>0) & (mhist >= np.log10(npart*mgas)) & (ntot<=ndatbin)),
+                ((gsmf>0) & (mhist <= np.log10(npart*mgas)))]
+        lsty = ['-','-.',':']
+        for isel,sel in enumerate(sels):
+            ind = np.where(sel)
+            x = mhist[ind] ; y = np.log10(gsmf[ind])
+            if (env == 'arilega'):
+                if (isel==0):
+                    styl = dsty[isel]
+                else:
+                    styl = lsty[isel]
+                ax1.plot(x,y,color=dcol,linestyle=styl,linewidth=dbig[ii])
+            else:
+                ax1.plot(x,y,color=col,linestyle=lsty[isel])
+
         if (nsims == 1 and env != 'arilega'):
             # Find the stellar mass corresponding to ndlim
             x = np.cumsum(gsmf[::-1])[::-1]
@@ -488,7 +505,6 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             # Region where there are two few massive objects
             if (m_ndlim < xmax):
                 ax1.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
-
             
         #--------------------------------------------------
         # SMHM-relation model
@@ -516,29 +532,38 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
            
                    # Median values
                    medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
-                   ind = np.where(medians != -999.)
+                   ind = np.where((medians != -999.) & (mhist >= np.log10(npart*mdm)))
                    if (np.shape(ind)[1] > 0):
                        ax2.plot(mhist[ind],np.log10(medians[ind]),color=col) #here
-               
+                       
                        if (np.shape(ind)[1] < len(medians)):
                            # Plot individual cases where there's not enough data
                            val = medges[ind[0][-1]+1]
                            ind = np.where(x >= val)
                            ax2.scatter(x[ind], np.log10(y[ind]), s=40, zorder=10,color=col)
 
+                   ind1 = np.where((medians != -999.) & (mhist <= np.log10(npart*mdm)))
+                   if (np.shape(ind1)[1] > 0):
+                       ind = ind1 #ind1.append(ind[0][0]) #here
+                       ax2.plot(mhist[ind],np.log10(medians[ind]),color=col,linestyle=':')
+                           
         #--------------------------------------------------
         # sSFR Obs
         fobs = diro+'calibration/G2010.dat'
-        lgmstar, vmax, compl, sfr_oii, sfr_haBD, sn = np.loadtxt(fobs, unpack=True,
-                                                                 usecols=[8,9,10,11,14,30])
-        weight = 1.0 / vmax / compl
-        weight = weight / 0.7**3     # convert to units of  h**3 Mpc**-3
-        weight[ vmax <= 0.0 ] = 0.0
+        lgmstar, vmax, compl, sfr_haBD, sn = np.loadtxt(fobs, unpack=True,
+                                                                 usecols=[8,9,10,14,30])
+        hobs = 0.7
+        corrsf = 1.49/1.57 # Kroupa to Chabrier IMF
+        corrm = 0.74/0.81
 
-        lg_ms =  lgmstar[weight>0]
-        
-        lgssfr = np.log10( sfr_haBD) - lgmstar + 9.0
-        lgssfr[sn<2.5] = np.log10(0.3*slim)
+        weight = np.zeros(shape=(len(vmax)))
+        ind = np.where((vmax>0) & (compl>0))
+        if (np.shape(ind)[1]>0):
+            weight[ind] = 1.0 / (vmax[ind]/hobs**3) / compl[ind]
+
+        lg_ms =  lgmstar[weight>0] + np.log10(corrm)
+        lgssfr = np.log10(sfr_haBD) + np.log10(corrsf) - lgmstar + 9.0
+        lgssfr[sn<2.5] = -999.        
         lg_ssfr = lgssfr[weight>0]
 
         w = weight[weight > 0]
@@ -550,14 +575,25 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
 
         ind = np.where(medians != -999.)
-        #if (np.shape(ind)[1] > 0): #here: ndatbin=10?, errorbars in log?
-        #    ax3.errorbar(medges[ind], np.log10(medians[ind]),
-        #                 yerr=[np.log10(medians[ind]-per1[ind]),np.log10(medians[ind]-per9[ind]),
-        #                       marker='*', color=ocol, label='Gilbank et al. 2010')
+        if (np.shape(ind)[1] > 0): 
+            ax3.errorbar(medges[ind], np.log10(medians[ind]),
+                         yerr=[np.log10(medians[ind])-np.log10(medians[ind]-per1[ind]),
+                               np.log10(medians[ind]+per9[ind])-np.log10(medians[ind])],
+                         fmt='*', color=ocol)
 
         if (ii==0): # Obs legend
-            leg = ax3.legend(loc=3) ; leg.draw_frame(False)
+            ax3.text(xmin+(xmax-xmin)*0.05,
+                     ymin_ssfr+(ymax_ssfr-ymin_ssfr)*0.05,
+                     r'* Gilbank et al. 2010, H$_{\alpha}$',{'color': ocol})
 
+        # sSFR limit used
+        ax3.plot([xmin-1,xmax+1],[np.log10(0.3*slim),np.log10(0.3*slim)],color=ocol)
+
+        if (nsims == 1 and env != 'arilega'):
+            # Region where resolution might affect the results
+            if (m_ndlim < xmax):
+                ax4.axhspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
+        
         # sSFR model
         ind = np.where(ssfr>0.3*slim)
         x = lm[ind] ; y = ssfr[ind]
@@ -576,41 +612,49 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                                      np.log10(per9[ind]),alpha=0.2,color=col)
         
         medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
-        ind = np.where(medians != -999.)
+        ind = np.where((medians != -999.) & (mhist >= np.log10(npart*mgas)))
         if (np.shape(ind)[1] > 0):
             if (env == 'arilega'):
-                ax3.plot(mhist[ind],np.log10(medians[ind]),label=simname(sims[ii]),
+                ax3.plot(mhist[ind],np.log10(medians[ind]),label=labels[ii],
                          color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
             else:
                 ax3.plot(mhist[ind],np.log10(medians[ind]),
-                         label=simname(sims[ii]),color=col)
+                         label=labels[ii],color=col)
 
             if (np.shape(ind)[1] < len(medians)):
                 # Plot individual cases where there's not enough data
                 val = medges[ind[0][-1]+1]
                 ind = np.where(x >= val)
                 if (env == 'arilega'):
-                    ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,
-                                color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
+                    ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,color=dcol)
                 else:
                     ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,color=col)
-                    
+
+
+        ind = np.where((medians != -999.) & (mhist <= np.log10(npart*mgas)))
+        if (np.shape(ind)[1] > 0):
+            if (env == 'arilega'):
+                ax3.plot(mhist[ind],np.log10(medians[ind]),label=labels[ii],
+                         color=dcol,linestyle=':',linewidth=dbig[ii])
+            else:
+                ax3.plot(mhist[ind],np.log10(medians[ind]),
+                         label=labels[ii],color=col,linestyle=':')
+
         #--------------------------------------------------           
         # Obs Passive fraction
         fobs = diro+'passivef/z0_gilbank10.txt'
-        lm, p, erro = np.loadtxt(fobs, unpack=True)
-        xo = lm + np.log10(0.7)
+        lmo, p, erro = np.loadtxt(fobs, unpack=True)
+        xo = lmo + np.log10(0.7)
         ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
                      label ='Gilbank+10', fmt = 'o')
 
         fobs = diro+'passivef/z0_bauer13.txt'
-        lm, p = np.loadtxt(fobs, unpack=True)
-        xo = lm + np.log10(0.7)
-        erro = lm*0.
+        lmo, p = np.loadtxt(fobs, unpack=True)
+        xo = lmo + np.log10(0.7)
+        erro = lmo*0.
         ax4.errorbar(xo,p, yerr=erro, color=ocol, ecolor=ocol,
                     label ='Bauer+11', fmt = '^')
         
-
         if (ii==0): # Obs legend
             leg = ax4.legend(loc=0) ; leg.draw_frame(False)
 
@@ -620,13 +664,22 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 ax4.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
 
         # Model Passive fraction
+
+        # Accounting for resolution
+        ind = np.where((ssfr <= 0.3*slim) & (ssfr > -999.) &
+                       (lm >= np.log10(npartsf*minsfr/(0.3*slim))))
+        if (np.shape(ind)[1]>1):
+            H, bins_edges = np.histogram(lm[ind],bins=medges)
+            pfres = pfres + H
+
         for i in range(len(mhist)):
             if (ntot[i]>ndatbin):
+                pfres[i] = pfres[i]/ntot[i]
                 pftot[i] = pftot[i]/ntot[i]
                 pfcen[i] = pfcen[i]/ntot[i]
                 pfsat[i] = pfsat[i]/ntot[i]
             else:
-                pftot[i] = -999.
+                pftot[i] = -999. ; pfres[i] = -999.
                 pfcen[i] = -999. ; pfsat[i] = -999.
 
         ind = np.where(pftot>-999.)
@@ -635,36 +688,56 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 ax4.plot(mhist[ind],pftot[ind],
                          color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
             else:
-                ax4.plot(mhist[ind],pftot[ind],color=col)
+                ax4.plot(mhist[ind],pftot[ind],linestyle=':',linewidth=lw,color=col)
+                iind = np.where(pfres > 0.)
+                ax4.plot(mhist[iind[0][1:]],pfres[iind[0][1:]],linestyle='-',linewidth=lw,color=col)
 
             if(nsims == 1):
-                ax4.plot(mhist[ind],pfcen[ind],linestyle='--',color=col)
-                ax4.plot(mhist[ind],pfsat[ind],linestyle=':',color=col)
+                ax4.plot(mhist[ind],pfcen[ind],linestyle='-',color=col)
+                ax4.plot(mhist[ind],pfsat[ind],linestyle='--',color=col)
 
         #--------------------------------------------------
-        # Madau plot
+        # Madau plot: obs
+        filo = dircalo + 'sfr_burgarella2013.txt' # SFRD_Tot [10^-2 M_sun yr^-1 Mpc^-3]
+        hobs = 0.7
+        corrcosmo = np.log10(h0) - np.log10(hobs)
+        z,rhostar,err = np.loadtxt(filo, usecols=(0,10,11), unpack=True)
+        corr = 0.76/1.20 # From Salpeter to Chabrier (Table B1, Lacey 2016)
+        lrhostar = np.log10(rhostar * 1e-2 * corr) + corrcosmo 
+        err = err*1e-2*corr
+        ax5.errorbar(1+z, 10**lrhostar, yerr=err, fmt='o', color=ocol, label='Burgarella+2013')
+
+        if (ii==0): # Obs legend
+            leg = ax5.legend(loc=0) ; leg.draw_frame(False)
+        
+        # Madau plot: model
         if (env != 'arilega'):
-            fil_sfr = b.get_path2data(sim,env)+'sfr.txt'
+            fil_sfr = b.get_path2data(sim,env)+'sfr.txt' # SFR(total, end)[M0/yr]
             aexp, sfr = np.loadtxt(fil_sfr, usecols=(0,2),unpack=True)
-            # SFR (total, end) [M0/yr] 
-            zval = (1./aexp) - 1.
+            zval = (1./aexp) #1+z
+
+            per1 = stats.perc_2arrays(zedges,zval,sfr/volume,0.1,nmin=ndatbin)
+            per9 = stats.perc_2arrays(zedges,zval,sfr/volume,0.9,nmin=ndatbin)
+            ind = np.where((per1 != -999.) & (per9 != -999.))
+            if (np.shape(ind)[1] > 0):
+                ax5.fill_between(zhist[ind],per1[ind],per9[ind],alpha=0.2,color=col)
             
-            medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5)
-            ax5.plot(zhist,medians,label=simname(sims[ii]),color=col)
-            #print(medians) ###HERE
+            medians = stats.perc_2arrays(zedges,zval,sfr/volume,0.5,nmin=ndatbin)
+            ax5.plot(zhist,medians,label=labels[ii],linewidth=lw,color=col)
+
 
     #if (files2plot<1):
     #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
     #    return ' '
     #
 
-    leg = ax3.legend(loc=0)
-    #leg = ax3.legend(loc=0, handlelength=0, handletextpad=0)
+    #leg = ax3.legend(loc=0,fontsize='small')
+    leg = ax3.legend(loc=0,fontsize='small', handlelength=0, handletextpad=0)
     leg.draw_frame(False)
-    #for ii,text in enumerate(leg.get_texts()):
-    #    text.set_color(leg.get_color([ii]))
-    #for item in leg.legendHandles:
-    #    item.set_visible(False)
+    for ii,text in enumerate(leg.get_texts()):
+        text.set_color(cols[ii])
+    for item in leg.legendHandles:
+        item.set_visible(False)
     
     # Path to plot
     if (dirplot == None):
