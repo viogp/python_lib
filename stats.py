@@ -152,3 +152,49 @@ def n_gt_x(xedges,array):
         y[i] = np.shape(ind)[1]
 
     return y
+
+def is_sorted(arr):
+    '''
+    Return:
+    sorted : boolean
+       True if the list is sorted
+    '''
+    sorted = all(arr[i] <= arr[i+1] for i in range(len(arr)-1))
+    return sorted
+    
+def get_interval(val,low,high):
+    '''
+    Get the index, i, of the interval where low[i]<val<high[i]
+    
+    Parameters:
+    val : int or float
+        Value
+    low : array of int or floats
+        Array of the low edges of the intervals
+    high : array of int or floats
+        Array of the high edges of the intervals
+
+    Returns:
+    ind : integer
+       Index of the interval the value belongs to or -999 if outside
+    '''
+
+    ind = -999
+    
+    if (len(low) != len(high)):
+        return ind
+
+    if (val == high[-1] and val >= low[-1]):
+        ind = len(high) -1
+    else:
+        linds = np.where(val >= low)
+        hinds = np.where(val < high)
+
+        if (np.shape(linds)[1]>0 and np.shape(hinds)[1]>0):
+            lind = linds[0]
+            hind = hinds[0]
+            common = list(set(lind).intersection(hind))
+            if (len(common)==1):
+                ind = common[0]
+
+    return ind

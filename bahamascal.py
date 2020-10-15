@@ -67,7 +67,7 @@ def compare_dsims(sims,envs,massdefs,highres=True):
         return sims,envs,massdefs
 
 def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
-              ndatbin=5,labels=None,dirplot=None,
+              ndatbin=5,labels=None,dirplot=None,smhm=False,
               compare_default=False,Testing=False):
     """
     Compare the halo mass function of different simulations at a given z
@@ -84,11 +84,12 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         Name of the stellar mass definition to be used
     ndatbin : integer
         Minimum number of data points per bin to calculate medians or means.
-
     labels : list of strings
         Array with the labels to be used
     dirplot : string
         Path to plots
+    smhm : boolean
+        True to show the Stellar Mass-Halo Mass relation, False for the SFRf
     compare_default : boolean
         True or False for comparing with published Bahamas runs. Need to be in ari env.
     Testing : boolean
@@ -178,12 +179,22 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     ax1.set_xlabel(xtit) ; ax1.set_ylabel(ytit)
     #ax1.text(xmax-0.15*(xmax-xmin),ymax-0.05*(ymax-ymin), 'z='+str(zz))
 
-    # Initialize the SMHM relation plot
-    xtit="${\\rm log}_{10}(M_{200c}/{\\rm M}_{\odot})$"
-    ytit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"  #ytit="${\\rm log}_{10}(M_{*}/M_{200c})$"
-    ax2.set_xlim(10.5,14.) ; ax2.set_ylim(8.,xmax) #; ax2.set_ylim(-3,0.) 
-    ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
-
+    if smhm:
+        # Initialize the SMHM relation plot
+        xtit="${\\rm log}_{10}(M_{200c}/{\\rm M}_{\odot})$"
+        ytit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"  #ytit="${\\rm log}_{10}(M_{*}/M_{200c})$"
+        ax2.set_xlim(10.5,14.) ; ax2.set_ylim(8.,xmax) #; ax2.set_ylim(-3,0.) 
+        ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
+    else:
+        # Initialize the SFR function plot
+        smin = 7. ; smax = 14. ; ds = 0.1
+        sedges = np.array(np.arange(smin,smax,ds))
+        shist = sedges[1:]-0.5*ds
+        xtit = "${\\rm log}_{10}(SFR/{\\rm M}_{\odot}{\\rm Gyr}^{-1})$"
+        ytit = "${\\rm log}_{10}(\Phi/{\\rm Mpc}^{-3} {\\rm dlog}_{10}SFR)$" 
+        ax2.set_xlim(8.,11.5) ; ax2.set_ylim(-6,-1) 
+        ax2.set_xlabel(xtit) ; ax2.set_ylabel(ytit)
+        
     # Initialize the sSFR plot (using mass ranges from GSMF)
     xtit="${\\rm log}_{10}(M_{*}/{\\rm M}_{\odot})$"
     ytit="${\\rm log}_{10}({\\rm SFR}/M_{*}/{\\rm Gyr}^{-1})$"
@@ -231,6 +242,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         
         # Look over all the files
         ntot, pftot, pfcen, pfsat, pfres  = [np.full((len(mhist)),0.) for i in range(5)]
+        sftot  = np.full((len(shist)),0.)
 
         istart = 0
         for iff, ff in enumerate(files):
@@ -301,6 +313,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 sfGyr = sfr1[ind]*10.**9/h0  #Msun/Gyr
                 if (minsfr > min(sfGyr)): minsfr = min(sfGyr)            
 
+            # Total number of galaxies per SFR bin
+            ind = np.where(sfr1)
+            if (np.shape(ind)[1] > 0.):
+                val = np.log10(sfr1[ind]) - np.log10(h0) + 9.
+                H, bins_edges = np.histogram(val,bins=sedges)
+                sftot = sftot + H
+                
             mass1 = [] ; sfr1 = [] ; sfGyr = []
                 
             # Read other quantities
@@ -331,7 +350,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             
             f.close()
             
-            # Total number of galaxies per stellar bin
+            # Total number of galaxies per stellar mass bin
             H, bins_edges = np.histogram(lm1,bins=medges)
             ntot = ntot + H
             
@@ -507,8 +526,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 ax1.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
             
         #--------------------------------------------------
-        # SMHM-relation model
-        if(env != 'arilega'):
+        if smhm and (env != 'arilega'):
+            # SMHM-relation model
            ind = np.where((snum==0) & (lm>-999.))
            if (np.shape(ind)[1]>0):
                lmc = lm[ind]
@@ -546,7 +565,40 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                    if (np.shape(ind1)[1] > 0):
                        ind = ind1 #ind1.append(ind[0][0]) #here
                        ax2.plot(mhist[ind],np.log10(medians[ind]),color=col,linestyle=':')
-                           
+        elif(not smhm):
+            # Obs SFR function
+            rootobs = diro+'sfrf/gruppioni_2015_z'
+            tailobs = '_cha.txt'
+            hobs = 0.71
+            zobs1 = np.array([0.0,0.3,0.45,0.6,0.8,1.0,1.2,1.7,2.0,2.5,3.0])
+            zobs2 = np.array([0.3,0.45,0.6,0.8,1.0,1.2,1.7,2.0,2.5,3.0,4.2])
+            iiz = stats.get_interval(zz,zobs1,zobs2)
+            if (iiz >= 0):
+                fobs = rootobs+str(zobs1[iiz])+'-'+str(zobs2[iiz])+tailobs
+                oleg = 'Gruppionni+2015, '+str(zobs1[iiz])+'$\leq z \leq$'+str(zobs2[iiz])
+                sl,sh,po,erro = np.loadtxt(fobs,unpack=True)
+                xobs = (sl+9.+sh+9.)/2.
+                ax2.errorbar(xobs, po, erro, fmt='o', label=oleg,
+                             ecolor=ocol, color=ocol, mec=ocol)
+                if (ii==0): # Obs legend
+                    leg = ax2.legend(loc=0) ; leg.draw_frame(False)
+            
+            # Model SFR function
+            sfrf = sftot/volume/ds  # In Msun/Gyr
+            sels = [(sfrf>0)]
+            lsty = ['-','-.',':']
+            for isel,sel in enumerate(sels):
+                ind = np.where(sel)
+                x = shist[ind] ; y = np.log10(sfrf[ind])
+                if (env == 'arilega'):
+                    if (isel==0):
+                        styl = dsty[isel]
+                    else:
+                        styl = lsty[isel]
+                    ax2.plot(x,y,color=dcol,linestyle=styl,linewidth=dbig[ii])
+                else:
+                    ax2.plot(x,y,color=col,linestyle=lsty[isel])
+
         #--------------------------------------------------
         # sSFR Obs
         fobs = diro+'calibration/G2010.dat'
@@ -574,12 +626,13 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
         medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
 
+        lerr = (medians-per1)*np.log10(np.exp(1))/medians
+        herr = (per9-medians)*np.log10(np.exp(1))/medians
+        
         ind = np.where(medians != -999.)
         if (np.shape(ind)[1] > 0): 
             ax3.errorbar(medges[ind], np.log10(medians[ind]),
-                         yerr=[np.log10(medians[ind])-np.log10(medians[ind]-per1[ind]),
-                               np.log10(medians[ind]+per9[ind])-np.log10(medians[ind])],
-                         fmt='*', color=ocol)
+                         yerr=[lerr[ind],herr[ind]],fmt='*', color=ocol)
 
         if (ii==0): # Obs legend
             ax3.text(xmin+(xmax-xmin)*0.05,
