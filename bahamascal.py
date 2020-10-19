@@ -238,7 +238,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             continue
 
         # Get mass resolution
-        mdm,mgas = b.resolution(sim,snap,env)
+        mdm,mgas = b.resolution(sim,env)
+
+        # Get the minimal theoretical SFR
+        minsfrth = b.get_min_sfr(sim,env) #Msun/Gyr
         
         # Look over all the files
         ntot, pftot, pfcen, pfsat, pfres  = [np.full((len(mhist)),0.) for i in range(5)]
@@ -582,7 +585,12 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                              ecolor=ocol, color=ocol, mec=ocol)
                 if (ii==0): # Obs legend
                     leg = ax2.legend(loc=0) ; leg.draw_frame(False)
-            
+
+            if (nsims == 1 and env != 'arilega'):
+                # Region where there are two few massive objects
+                if (m_ndlim < xmax):
+                    ax2.axvspan(smin,np.log10(minsfrth), facecolor='0.2', alpha=0.3)
+                    
             # Model SFR function
             sfrf = sftot/volume/ds  # In Msun/Gyr
             sels = [(sfrf>0)]
@@ -717,10 +725,10 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 ax4.axvspan(m_ndlim, xmax+1, facecolor='0.2', alpha=0.3)
 
         # Model Passive fraction
-
+        
         # Accounting for resolution
         ind = np.where((ssfr <= 0.3*slim) & (ssfr > -999.) &
-                       (lm >= np.log10(npartsf*minsfr/(0.3*slim))))
+                       (lm >= np.log10(npartsf*minsfrth/(0.3*slim))))
         if (np.shape(ind)[1]>1):
             H, bins_edges = np.histogram(lm[ind],bins=medges)
             pfres = pfres + H

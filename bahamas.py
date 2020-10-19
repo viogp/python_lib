@@ -2,7 +2,7 @@ import sys,os.path
 import numpy as np
 import h5py
 import glob
-from astropy import units as u
+from astropy import constants as const
 from iotools import stop_if_no_file, is_sorted
 #print('\n \n')
 
@@ -20,6 +20,7 @@ tblz = 'snap_z.txt'
 defaultdz = 0.25
 
 n0 = 3
+
 
 def get_zminmaxs(zz,dz=None):
     """
@@ -668,7 +669,7 @@ def cenids(snap,sim,env):
     return cenids
 
 
-def resolution(sim,snap,env,verbose=True):
+def resolution(sim,env,zz=0.,verbose=True):
     """
     Get the mass resolution of a simulation
 
@@ -676,11 +677,10 @@ def resolution(sim,snap,env,verbose=True):
     -----------
     sim : string
         Simulation name
-    snap : integer
-        Snapshot number to look (should be the same for all but 
-        different simulation)
     env : string
         ari or cosma, to use the adecuate paths
+    zz : float
+        Redshift to look (should be the same for all)
     verbose : boolean
         True to print the resolution
 
@@ -696,8 +696,10 @@ def resolution(sim,snap,env,verbose=True):
     >>> b.resolution('L050N256/WMAP9/Sims/ex','cosma')
     """
 
+    snap, z_snap = get_snap(zz,-999.,999.,sim,env)
+    
     # Simulation input
-    files = get_particle_files(snap,sim,env) #here
+    files = get_particle_files(snap,sim,env)
 
     f= h5py.File(files[0],'r')
     header=f['Header']
@@ -721,12 +723,67 @@ def resolution(sim,snap,env,verbose=True):
         
         return mdm,mgas
 
+
+def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
+    '''
+    Get the minimum star formation rate, following eq 1 in Schaye et al. 2015
+
+    Parameters
+    -----------
+    sim : string
+        Simulation name
+    env : string
+        ari or cosma, to use the adecuate paths
+    zz : float
+        Redshift to read files
+    A : float
+        Kennicutt-Schmidt's law constant in Msun yr^-1 kpc^-2 units
+    gamma : float
+        Ratio of specific heats
+    fg : float
+        Mass fraction in gas
+    n : float
+        Index of the Kennicutt-Schmidt's law
+    verbose : boolean
+        True to print the resolution
+
+    Returns
+    -----
+    minsfr : float
+        Minimum theoretical star formation rate in Msun/yr units
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_min_sfr('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
+    '''
+
+    nH   = 0.1  # cm^-3  #Read this from input #here
+    Teos = 8000 # K      #Read this from input #here
+    
+    mdm, mgas = resolution(sim,env,verbose=False)
+
+    apc = A/1e6 # Msun yr^-1 pc^-2
+
+    nHm = nH * 100.**3 # m^-3
+    P = nHm*const.k_B.value*Teos
+    
+    gp_si = np.sqrt(gamma*fg*P/const.G.value)
+    gp = gp_si*const.pc.value**2/const.M_sun.value
+
+    minsfr = mgas*apc*np.power(gp,n-1)*10**9
+    if verbose:
+        print(' * Min. theoretical log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(minsfr)))
+    
+    return minsfr
+
+
 if __name__== "__main__":
     env = 'ari'
 
     if (env == 'ari'):
-        print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9',31,'arilega'))
-        print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9',31,'arilega'))
+        #print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9','arilega'))
+        #print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9','arilega'))
 
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
@@ -737,7 +794,8 @@ if __name__== "__main__":
         #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
         #print(get_snap(-100.,-200.,-5.,sim,dirz,env))
         #print(get_snap(0.28,0.26,0.3,sim,dirz,env))
-        print(resolution(sim,17,env))
+        #print(resolution(sim,env))
+        print(np.log10(get_min_sfr(sim,env))+9.)
 
     #print(get_zminmaxs([0.]))
     #print(get_zminmaxs([0.,1.],dz=0.5))

@@ -153,14 +153,6 @@ def n_gt_x(xedges,array):
 
     return y
 
-def is_sorted(arr):
-    '''
-    Return:
-    sorted : boolean
-       True if the list is sorted
-    '''
-    sorted = all(arr[i] <= arr[i+1] for i in range(len(arr)-1))
-    return sorted
     
 def get_interval(val,low,high):
     '''
