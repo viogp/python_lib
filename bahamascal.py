@@ -111,7 +111,6 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     # BAHAMAS variables
     nom_sfr = 'StarFormationRate' #Msun/yr
-    nom_mass = 'Mass_030kpc' #10^10Msun/h
     mtype = 'star'
     itype = b.ptypes.index(mtype)
 
@@ -132,7 +131,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     envs = [env for i in range(nsims)]
     massdefs = [massdef for i in range(nsims)]
 
-    #here deal with massdefs
+    # Deal with massdefs
     if (compare_default):
         sims, envs, massdefs = compare_dsims(sims,envs,massdefs)
 
@@ -224,7 +223,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     files2plot = 0 ; cols =[]
     for ii, sim in enumerate(sims):
         env = envs[ii] ; massdef = massdefs[ii] 
-        print('Starting with sim{}: {} ({}, {})'.format(ii,sim,env,massdef))
+        print('------------------------------')
+        print('# Starting with sim{}: {} ({}, {})'.format(ii,sim,env,massdef))
         volume = 0.
         col = cm(1.*ii/nsims) ; cols.append(col)
 
@@ -249,7 +249,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         istart = 0
         for iff, ff in enumerate(files):
-            f = h5py.File(ff, 'r')
+            f = h5py.File(ff, 'r') 
             p0 = f['PartType0'] # Gas particles (0:gas, 1:DM, 4: stars, 5:BH)
 
             if (iff == 0):
@@ -305,7 +305,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             lm1 = np.zeros(shape=len(mass1)) ; lm1.fill(-999.)
             ind = np.where(mass1 > 0.)
             lm1[ind] = np.log10(mass1[ind]) + 10. - np.log10(h0) #Msun
-            
+
             # sSFR
             sfr1  = subhaloes[nom_sfr][:] #Msun/h/yr
             ssfr1 = np.zeros(shape=len(sfr1)) ; ssfr1.fill(-999.)
@@ -817,7 +817,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     
 
 if __name__== "__main__":
-    env = 'cosma'
+    env = 'arilega'
 
     if (env == 'cosma'):
         sims = ['L050N256/WMAP9/Sims/ws_108_35_mu_6_20_dT_8_13_n_74_BH_beta_1_20_msfof_1_93e11']
@@ -826,5 +826,9 @@ if __name__== "__main__":
     elif (env == 'ari'):
         sims=['L050N256/WMAP9/Sims/ws_269_70_mu_3_13_dT_8_15_n_152_beta_2_67_mfof_0_5']
         labels = None
+
+    else:
+        sims=['HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
+        labels = None
         
-    print(cal_plots(sims,env,labels=labels,Testing=True))
+    print(cal_plots(sims,env,labels=labels,massdef='Mass_030kpc',Testing=True))
