@@ -16,7 +16,7 @@ import mpl_style
 plt.style.use(mpl_style.style1)
 #print('\n \n')
 
-npart = 100 # Minimal number of particles to trust an attribute
+npart = 20 # Minimal number of particles to trust an attribute
 npartsf = 1. # Minimal number of SF particles to trust an attribute
 
 lw = 4
@@ -24,7 +24,7 @@ dcol = 'k'
 dsty = ['-','--']
 dbig = [3,3]
 
-def compare_dsims(sims,envs,massdefs,highres=True):
+def compare_dsims(sims,envs,massdefs,labels,highres=False,Testing=False):
     """
     Add default Bahamas sims to compare with new runs
 
@@ -36,8 +36,12 @@ def compare_dsims(sims,envs,massdefs,highres=True):
         cosma, ari or arilega, to use the adecuate paths
     massdefs : list of strings
         Array with mass definition names
+    labels : list of strings
+        Array with simulation labels
     highres : boolean
         True or False for including the HighRes Bahamas or not
+    Testing : boolean
+        True or False for Testing with only highres
 
     Returns
     -----
@@ -47,24 +51,31 @@ def compare_dsims(sims,envs,massdefs,highres=True):
         Updated array with the arilega of the default simularions
     massdefs : list of strings
         Updated array with mass names
+    labels : list of strings
+        Updated array with labels
     """ 
 
     if (envs[0] == 'ari'):
         massd = 'Mass_'+massdefs[0].split('/')[-1]
         
-        if (highres):
-            sims.insert(0,'HIRES/AGN_RECAL_nu0_L100N512_WMAP9')
+        if (highres or Testing):
+            sim = 'AGN_RECAL_nu0_L100N512_WMAP9'
+            sims.insert(0,'HIRES/'+sim)
             envs.insert(0,'arilega')
             massdefs.insert(0,massd)
+            labels.insert(0,sim)
 
-        sims.insert(0,'AGN_TUNED_nu0_L400N1024_WMAP9')
-        envs.insert(0,'arilega')
-        massdefs.insert(0,massd)
+        if (not Testing):
+            sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+            sims.insert(0,sim)
+            envs.insert(0,'arilega')
+            massdefs.insert(0,massd)
+            labels.insert(0,sim)
 
-        return sims,envs,massdefs
+        return sims,envs,massdefs,labels
     else:
         print('WARNING (bahamascal): Comparisson with default Bahamas to be done within ARI')
-        return sims,envs,massdefs
+        return sims,envs,massdefs,labels
 
 def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
               ndatbin=5,labels=None,dirplot=None,smhm=False,
@@ -133,7 +144,9 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     # Deal with massdefs
     if (compare_default):
-        sims, envs, massdefs = compare_dsims(sims,envs,massdefs)
+        highres = True
+        sims, envs, massdefs, labels = compare_dsims(sims,envs,massdefs,labels,
+                                                     highres=highres,Testing=Testing)
 
     # Set up ploting grid 
     fig = plt.figure(figsize=(14.,21.))
@@ -249,7 +262,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         istart = 0
         for iff, ff in enumerate(files):
-            f = h5py.File(ff, 'r') 
+            f = h5py.File(ff, 'r') #; print(ff)
             p0 = f['PartType0'] # Gas particles (0:gas, 1:DM, 4: stars, 5:BH)
 
             if (iff == 0):
@@ -496,20 +509,26 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         # GSMF model
         gsmf = ntot/volume/dm  # In Msun/Mpc^3 
         sels = [((gsmf>0) & (mhist >= np.log10(npart*mgas)) & (ntot>=ndatbin)),
-                ((gsmf>0) & (mhist >= np.log10(npart*mgas)) & (ntot<=ndatbin)),
-                ((gsmf>0) & (mhist <= np.log10(npart*mgas)))]
+                ((gsmf>0) & (mhist >= np.log10(npart*mgas)) & (ntot<ndatbin)),
+                ((gsmf>0) & (mhist < np.log10(npart*mgas)))]
         lsty = ['-','-.',':']
         for isel,sel in enumerate(sels):
-            ind = np.where(sel)
-            x = mhist[ind] ; y = np.log10(gsmf[ind])
-            if (env == 'arilega'):
-                if (isel==0):
-                    styl = dsty[isel]
+            ind = np.where(sel)[0]
+            if (len(ind) > 1):
+                if (isel == 1 and ind[0]>0):
+                    ind = np.insert(ind,0,ind[0]-1)
+                if (isel == 2 and ind[-1]<len(mhist)):
+                    ind = np.append(ind,ind[-1]+1)
+
+                x = mhist[ind] ; y = np.log10(gsmf[ind])
+                if (env == 'arilega'):
+                    if (isel==0):
+                        styl = dsty[ii]
+                    else:
+                        styl = lsty[isel]
+                    ax1.plot(x,y,color=dcol,linestyle=styl,linewidth=dbig[ii])
                 else:
-                    styl = lsty[isel]
-                ax1.plot(x,y,color=dcol,linestyle=styl,linewidth=dbig[ii])
-            else:
-                ax1.plot(x,y,color=col,linestyle=lsty[isel])
+                    ax1.plot(x,y,color=col,linestyle=lsty[isel])
 
         if (nsims == 1 and env != 'arilega'):
             # Find the stellar mass corresponding to ndlim
@@ -593,19 +612,27 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                     
             # Model SFR function
             sfrf = sftot/volume/ds  # In Msun/Gyr
-            sels = [(sfrf>0)]
+            sels = [((sfrf>0) & (shist >= np.log10(npartsf*minsfrth)) & (sftot>=ndatbin)),
+                    ((sfrf>0) & (shist >= np.log10(npartsf*minsfrth)) & (sftot<=ndatbin)),
+                    ((sfrf>0) & (shist <= np.log10(npartsf*minsfrth)))]
             lsty = ['-','-.',':']
             for isel,sel in enumerate(sels):
-                ind = np.where(sel)
-                x = shist[ind] ; y = np.log10(sfrf[ind])
-                if (env == 'arilega'):
-                    if (isel==0):
-                        styl = dsty[isel]
+                ind = np.where(sel)[0]
+                if (len(ind) > 1):
+                    if (isel == 1 and ind[0]>0):
+                        ind = np.insert(ind,0,ind[0]-1)
+                    if (isel == 2 and ind[-1]<len(mhist)):
+                        ind = np.append(ind,ind[-1]+1)
+                        
+                    x = shist[ind] ; y = np.log10(sfrf[ind])
+                    if (env == 'arilega'):
+                        if (isel==0):
+                            styl = dsty[ii]
+                        else:
+                            styl = lsty[isel]
+                        ax2.plot(x,y,color=dcol,linestyle=styl,linewidth=dbig[ii])
                     else:
-                        styl = lsty[isel]
-                    ax2.plot(x,y,color=dcol,linestyle=styl,linewidth=dbig[ii])
-                else:
-                    ax2.plot(x,y,color=col,linestyle=lsty[isel])
+                        ax2.plot(x,y,color=col,linestyle=lsty[isel])
 
         #--------------------------------------------------
         # sSFR Obs
@@ -648,7 +675,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                      r'* Gilbank et al. 2010, H$_{\alpha}$',{'color': ocol})
 
         # sSFR limit used
-        ax3.plot([xmin-1,xmax+1],[np.log10(0.3*slim),np.log10(0.3*slim)],color=ocol)
+        ax3.axhline(y=np.log10(0.3*slim),color=ocol)
 
         if (nsims == 1 and env != 'arilega'):
             # Region where resolution might affect the results
@@ -663,6 +690,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             per1 = stats.perc_2arrays(medges,x,y,0.1,nmin=ndatbin)
             per9 = stats.perc_2arrays(medges,x,y,0.9,nmin=ndatbin)
             ind = np.where((per1 != -999.) & (per9 != -999.))
+
             if (np.shape(ind)[1] > 0):
                 if (env == 'arilega'):
                     ax3.fill_between(mhist[ind],np.log10(per1[ind]),
@@ -792,13 +820,21 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
     #    return ' '
     #
 
+    # Color for text in legend
+    tcols = cols
+    if compare_default:
+        if (not Testing): tcols.insert(0,dcol)
+        if highres:
+            tcols.insert(0,dcol)
+
     #leg = ax3.legend(loc=0,fontsize='small')
     leg = ax3.legend(loc=0,fontsize='small', handlelength=0, handletextpad=0)
     leg.draw_frame(False)
     for ii,text in enumerate(leg.get_texts()):
-        text.set_color(cols[ii])
-    for item in leg.legendHandles:
-        item.set_visible(False)
+        text.set_color(tcols[ii])
+    if (not compare_default):
+        for item in leg.legendHandles:
+            item.set_visible(False)
     
     # Path to plot
     if (dirplot == None):
