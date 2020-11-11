@@ -17,7 +17,7 @@ plt.style.use(mpl_style.style1)
 #print('\n \n')
 
 npart = 20 # Minimal number of particles to trust an attribute
-npartsf = 1. # Minimal number of SF particles to trust an attribute
+npartsf = 20. # Minimal number of SF particles to trust an attribute
 
 lw = 4
 dcol = 'k'
@@ -613,17 +613,18 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             # Model SFR function
             sfrf = sftot/volume/ds  # In Msun/Gyr
             sels = [((sfrf>0) & (shist >= np.log10(npartsf*minsfrth)) & (sftot>=ndatbin)),
-                    ((sfrf>0) & (shist >= np.log10(npartsf*minsfrth)) & (sftot<=ndatbin)),
-                    ((sfrf>0) & (shist <= np.log10(npartsf*minsfrth)))]
+                    ((sfrf>0) & (shist >= np.log10(npartsf*minsfrth)) & (sftot<ndatbin)),
+                    ((sfrf>0) & (shist < np.log10(npartsf*minsfrth)))]
             lsty = ['-','-.',':']
+
             for isel,sel in enumerate(sels):
                 ind = np.where(sel)[0]
                 if (len(ind) > 1):
                     if (isel == 1 and ind[0]>0):
                         ind = np.insert(ind,0,ind[0]-1)
-                    if (isel == 2 and ind[-1]<len(mhist)):
+                    if (isel == 2 and ind[-1]<len(shist)):
                         ind = np.append(ind,ind[-1]+1)
-                        
+
                     x = shist[ind] ; y = np.log10(sfrf[ind])
                     if (env == 'arilega'):
                         if (isel==0):
@@ -719,9 +720,11 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 else:
                     ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,color=col)
 
+        ind = np.where((medians != -999.) & (mhist <= np.log10(npart*mgas)))[0]
+        if (len(ind) > 0):
+            if (ind[-1]<len(mhist)):
+                ind = np.append(ind,ind[-1]+1)
 
-        ind = np.where((medians != -999.) & (mhist <= np.log10(npart*mgas)))
-        if (np.shape(ind)[1] > 0):
             if (env == 'arilega'):
                 ax3.plot(mhist[ind],np.log10(medians[ind]),label=labels[ii],
                          color=dcol,linestyle=':',linewidth=dbig[ii])
@@ -857,14 +860,13 @@ if __name__== "__main__":
 
     if (env == 'cosma'):
         sims = ['L050N256/WMAP9/Sims/ws_108_35_mu_6_20_dT_8_13_n_74_BH_beta_1_20_msfof_1_93e11']
-        labels = None
+        print(cal_plots(sims,env,Testing=True))
 
     elif (env == 'ari'):
         sims=['L050N256/WMAP9/Sims/ws_269_70_mu_3_13_dT_8_15_n_152_beta_2_67_mfof_0_5']
-        labels = None
+        print(cal_plots(sims,env,compare_default=True,Testing=True))
 
-    else:
-        sims=['HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
-        labels = None
-        
-    print(cal_plots(sims,env,labels=labels,massdef='Mass_030kpc',Testing=True))
+    elif (env == 'arilega'):
+        sims=['AGN_TUNED_nu0_L400N1024_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
+        print(cal_plots(sims,env,massdef='Mass_030kpc',Testing=True))
+
