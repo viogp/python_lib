@@ -521,7 +521,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                     ind = np.append(ind,ind[-1]+1)
 
                 x = mhist[ind] ; y = np.log10(gsmf[ind])
-                if (env == 'arilega'):
+                if (compare_default and env == 'arilega'):
                     if (isel==0):
                         styl = dsty[ii]
                     else:
@@ -626,7 +626,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                         ind = np.append(ind,ind[-1]+1)
 
                     x = shist[ind] ; y = np.log10(sfrf[ind])
-                    if (env == 'arilega'):
+                    if (compare_default and env == 'arilega'):
                         if (isel==0):
                             styl = dsty[ii]
                         else:
@@ -693,7 +693,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             ind = np.where((per1 != -999.) & (per9 != -999.))
 
             if (np.shape(ind)[1] > 0):
-                if (env == 'arilega'):
+                if (compare_default and env == 'arilega'):
                     ax3.fill_between(mhist[ind],np.log10(per1[ind]),
                                      np.log10(per9[ind]),alpha=0.2,
                                      color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
@@ -704,7 +704,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         medians = stats.perc_2arrays(medges,x,y,0.5,nmin=ndatbin)
         ind = np.where((medians != -999.) & (mhist >= np.log10(npart*mgas)))
         if (np.shape(ind)[1] > 0):
-            if (env == 'arilega'):
+            if (compare_default and env == 'arilega'):
                 ax3.plot(mhist[ind],np.log10(medians[ind]),label=labels[ii],
                          color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
             else:
@@ -715,7 +715,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 # Plot individual cases where there's not enough data
                 val = medges[ind[0][-1]+1]
                 ind = np.where(x >= val)
-                if (env == 'arilega'):
+                if (compare_default and env == 'arilega'):
                     ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,color=dcol)
                 else:
                     ax3.scatter(x[ind],np.log10(y[ind]), s=40, zorder=10,color=col)
@@ -725,7 +725,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             if (ind[-1]<len(mhist)):
                 ind = np.append(ind,ind[-1]+1)
 
-            if (env == 'arilega'):
+            if (compare_default and env == 'arilega'):
                 ax3.plot(mhist[ind],np.log10(medians[ind]),label=labels[ii],
                          color=dcol,linestyle=':',linewidth=dbig[ii])
             else:
@@ -776,7 +776,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         ind = np.where(pftot>-999.)
         if (np.shape(ind)[1]>1):
-            if (env == 'arilega'):
+            if (compare_default and env == 'arilega'):
                 ax4.plot(mhist[ind],pftot[ind],
                          color=dcol,linestyle=dsty[ii],linewidth=dbig[ii])
             else:
@@ -868,5 +868,5 @@ if __name__== "__main__":
 
     elif (env == 'arilega'):
         sims=['AGN_TUNED_nu0_L400N1024_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9']
-        print(cal_plots(sims,env,massdef='Mass_030kpc',Testing=True))
+        print(cal_plots(sims,env,massdef='Mass_030kpc',Testing=False,dirplot='/hpcdata3/arivgonz/BAHAMAS/plots/'))
 
