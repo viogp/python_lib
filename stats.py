@@ -212,5 +212,5 @@ def chi2(obs,model,err):
     '''
     val = 0.
     for i,iobs in enumerate(obs):
-	val = val + (iobs-model[i])**2/(err[i]*err[i])
+        val = val + (iobs-model[i])**2/(err[i]*err[i])
     return val
