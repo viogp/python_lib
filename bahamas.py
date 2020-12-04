@@ -9,8 +9,8 @@ from iotools import stop_if_no_file, is_sorted
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
 dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
-dirbahamasari = '/hpcdata3/arivgonz/BAHAMAS/'
-dirobsari = '/hpcdata3/arivgonz/Obs_Data/' #'/hpcdata0/Obs_Data/'
+dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
+dirobsari = '/hpcdata0/Obs_Data/'
 
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
