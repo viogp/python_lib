@@ -435,6 +435,10 @@ def table_z_sn(sim,env,dirz=None):
 
     # Initialize arrays for z and sn
     dirs = glob.glob(path+'groups_0*')
+    if (len(dirs) < 1) :
+        print('STOP (bahamas.table_z_sn): {} not containing expected files'.format(path))
+        exit()
+        
     zzs = np.zeros(shape=len(dirs)) ; zzs.fill(-999.)
     sns = np.zeros(shape=len(dirs), dtype=int)
 
