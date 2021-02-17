@@ -44,6 +44,8 @@ List of functions:
   omegav(z): return vacuum density at z.
   omegar(z): return radiation density at z.
 
+  ndeg2nV(ndeg,z1,z2,area,verbose=False): Transforms number of objects per deg2 to number density (N/V). 
+
   emission_line_flux(luminosity_data,z): returns flux from luminosity
   emission_line_luminosity(flux_data,z): returns luminosity from flux
 
@@ -676,7 +678,10 @@ def ndeg2nV(ndeg,z1,z2,area,verbose=False):
     > 0.0002671477226063551
     '''
 
-    vol = comoving_volume(z2) - comoving_volume(z1)
+    if (z1<0.001):
+        vol = comoving_volume(z2)
+    else:
+        vol = comoving_volume(z2) - comoving_volume(z1)
     nV = ndeg*area/vol
 
     if verbose:
