@@ -1,4 +1,4 @@
-import sys,os.path
+import os.path
 import numpy as np
 import h5py
 import glob
@@ -52,7 +52,7 @@ def get_zminmaxs(zz,dz=None):
     # Check that the input list is sorted
     if(zz != sorted(zz)):
         print('STOP (get_zminmaxs): Sort the redshift list')
-        sys.exit()
+        exit()
         return -999.,-999.
     
     if (dz is not None):
@@ -135,6 +135,7 @@ def mb2lmsun(massb,h0):
         lmass = np.log10(massb) + 10. - np.log10(h0)
         return lmass
 
+    
 def get_dirb(env):
     """
     Get the Bahamas directory given the environment
@@ -225,7 +226,7 @@ def get_path2data(sim,env):
     elif (env == 'cosma'):
         path2data = dirbahamascosma+sim+'/data/'
     else:
-        sys.exit('get_path2data set to handle env=cosma, ari or arilega')
+        exit('get_path2data set to handle env=cosma, ari or arilega')
 
     return path2data    
 
@@ -263,7 +264,7 @@ def get_particle_files(snap,sim,env):
         path = paths[0]
     else:
         print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        sys.exit()
+        exit()
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0) 
     files = glob.glob(root+'*.hdf5')
@@ -304,7 +305,7 @@ def get_subfind_files(snap,sim,env):
         path = paths[0]
     else:
         print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        sys.exit()
+        exit()
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
@@ -345,7 +346,7 @@ def get_particle_files(snap,sim,env):
         path = paths[0]
     else:
         print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        sys.exit()
+        exit()
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
@@ -653,7 +654,7 @@ def cenids(snap,sim,env):
     lenf = len(files)
     if (lenf<1):
         print('STOP(~/python_lib/bahamas): Make sure you can see the path {}'.format(path))
-        sys.exit()
+        exit()
 
     for ii,ff in enumerate(files):
         stop_if_no_file(ff)
@@ -668,7 +669,7 @@ def cenids(snap,sim,env):
     sorted = is_sorted(cenids)
     if (not sorted):
         print('STOP(bahamas/cenids): central indexes not sorted')
-        sys.exit()
+        exit()
     
     return cenids
 
@@ -782,6 +783,109 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
         print('  Min. theoretical log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(minsfr)))
     
     return minsfr
+
+
+def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
+    '''
+    Calculate the halo mass function and write it into a file
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot number to calculate the HMF
+    massdef : string
+        Name of the mass definition to be used
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma, to use the adecuate paths
+    mmin : float
+        Mimimum mass to be considered
+    mmax : float
+        Maximum mass to be considered
+    dm : float
+        Intervale step for the HMF
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+
+    Returns
+    -----
+    outfile : string
+        Path to file with: 
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_hmf(31,'Group_M_Mean200','HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
+    '''
+    
+    # The subfiles to loop over
+    nvols = 'All'
+    if Testing: nvols = 2
+
+    # Bins in halo mass
+    edges = np.array(np.arange(mmin,mmax,dm))
+    mhist = edges[1:]-0.5*dm
+    nh  = np.zeros(shape=(len(mhist)))
+
+    elow  = edges[:-1]
+    ehigh = edges[1:]
+    
+    # Get subfind files
+    files = get_subfind_files(snap,sim,env)
+    if (len(files)<1):
+        print('WARNING (get_hmf): no subfind files at snap={}, {} '.format(snap,sim))
+        return None
+    
+    # Loop over the files
+    volume = 0.
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r')
+        # Read volume in first iteration
+        if (iff == 0):
+            header = f['Header']
+            volume = np.power(header.attrs['BoxSize'],3.)
+
+        haloes = f['FOF']
+        mh = haloes[massdef][:]  #10^10Msun/h
+        ind = np.where(mh > 0.)
+        lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
+
+        # HMF
+        H, bins_edges = np.histogram(lmh,bins=edges)
+        nh[:] = nh[:] + H
+
+        if (nvols != 'All'):
+            if (iff>nvols): break
+
+    # Output only bins with haloes
+    indh = np.where(nh > 0) 
+    tofile = np.array([mhist[indh], elow[indh], ehigh[indh], nh[indh]],
+                      dtype=[float,float,float,int]) ##here, next adapt bahamasplot hmf
+
+    # Output file
+    if outdir:
+        path = outdir+sim
+    else:
+        path = get_dirb(env)+sim
+    if (not os.path.exists(path)):
+        os.makedirs(path)
+    outfil = path+'/nh_sn'+str(snap)+'_dm'+str(dm)+'.txt'
+
+    with open(outfil, 'w') as outf:
+        # Header
+        outf.write('# '+sim+', snapshot='+str(snap)+' \n')
+        outf.write('# Volume='+str(volume)+', dm='+str(dm)+' \n' )
+        outf.write('# log(Mh/Msun/h)_midpoint, log(Mh)_low, log(Mh)_high, Number of haloes \n')
+
+        # Data
+        np.savetxt(outf,tofile.T,fmt=('{:.5f} {:.5f} {:.5f} {:d}'))
+    outf.closed
+
+    print(outfil)
+    return outfil
 
 
 if __name__== "__main__":

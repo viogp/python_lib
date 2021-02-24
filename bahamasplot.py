@@ -439,7 +439,7 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     sims : list of strings
         Array with the names of the simulation
     env : string
-        ari or cosma, to use the adecuate paths
+        ari, arilega or cosma, to use the adecuate paths
     labels : list of strings
         Array with the labels to be used
     dirplot : string
