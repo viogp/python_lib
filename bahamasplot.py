@@ -426,7 +426,7 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 
     return plotf
 
-def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
+def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None,Testing=False):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -440,6 +440,12 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
         Array with the names of the simulation
     env : string
         ari, arilega or cosma, to use the adecuate paths
+    mmin : float                                                                                       
+        Mimimum mass to be considered                                                                  
+    mmax : float                                                                                       
+        Maximum mass to be considered                                                                  
+    dm : float                                                                                         
+        Intervale step for the HMF   
     labels : list of strings
         Array with the labels to be used
     dirplot : string
@@ -463,10 +469,6 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
 
     # Check that the size of the arrays for the simulations and labels is the same
     labels = get_simlabels(sims,labels=labels)
-
-    # The subfiles to loop over
-    nvols = 'All'
-    if Testing: nvols = 2
 
     # Bins in halo mass
     mmin = 9. ; mmax = 16. ; dm = 0.1

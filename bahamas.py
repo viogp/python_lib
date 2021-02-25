@@ -818,9 +818,25 @@ def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=Tru
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_hmf(31,'Group_M_Mean200','HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.get_hmf(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata0/arivgonz/BAHAMAS/')
     '''
-    
+
+    # Output file
+    if outdir:
+        path = outdir+sim
+    else:
+        path = get_dirb(env)+sim
+    if (not os.path.exists(path)):
+        os.makedirs(path)
+
+    if Testing:
+        outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'_test.txt'
+    else:
+        outfil = path+'/nh_'+massdef+'sn'+str(snap)+'_dm'+str(dm)+'.txt'
+        if (os.path.isfile(outfil)):
+            return outfil
+
     # The subfiles to loop over
     nvols = 'All'
     if Testing: nvols = 2
@@ -862,18 +878,9 @@ def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=Tru
 
     # Output only bins with haloes
     indh = np.where(nh > 0) 
-    tofile = np.array([mhist[indh], elow[indh], ehigh[indh], nh[indh]],
-                      dtype=[float,float,float,int]) ##here, next adapt bahamasplot hmf
+    tofile = np.array([mhist[indh], elow[indh], ehigh[indh], nh[indh]])
 
-    # Output file
-    if outdir:
-        path = outdir+sim
-    else:
-        path = get_dirb(env)+sim
-    if (not os.path.exists(path)):
-        os.makedirs(path)
-    outfil = path+'/nh_sn'+str(snap)+'_dm'+str(dm)+'.txt'
-
+    # Write to output file
     with open(outfil, 'w') as outf:
         # Header
         outf.write('# '+sim+', snapshot='+str(snap)+' \n')
@@ -881,10 +888,9 @@ def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=Tru
         outf.write('# log(Mh/Msun/h)_midpoint, log(Mh)_low, log(Mh)_high, Number of haloes \n')
 
         # Data
-        np.savetxt(outf,tofile.T,fmt=('{:.5f} {:.5f} {:.5f} {:d}'))
+        np.savetxt(outf,tofile.T,fmt='%.5f %.5f %.5f %.0f')
     outf.closed
 
-    print(outfil)
     return outfil
 
 
