@@ -785,14 +785,14 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
     return minsfr
 
 
-def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
+def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
     '''
     Calculate the halo mass function and write it into a file
 
     Parameters
     -----------
-    snap : integer
-        Snapshot number to calculate the HMF
+    zz : float
+        Redshift to calculate the HMF
     massdef : string
         Name of the mass definition to be used
     sim : string
@@ -821,6 +821,10 @@ def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=Tru
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
     >>> b.get_hmf(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata0/arivgonz/BAHAMAS/')
     '''
+
+    # Get snapshot
+    zmin,zmax = get_zminmaxs([zz])
+    snap, z_snap = get_snap(zz,zmin,zmax,sim,env)
 
     # Output file
     if outdir:
@@ -852,7 +856,7 @@ def get_hmf(snap,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=Tru
     # Get subfind files
     files = get_subfind_files(snap,sim,env)
     if (len(files)<1):
-        print('WARNING (get_hmf): no subfind files at snap={}, {} '.format(snap,sim))
+        print('WARNING (b.get_hmf): no subfind files at snap={}, {} '.format(snap,sim))
         return None
     
     # Loop over the files

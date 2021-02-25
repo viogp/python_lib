@@ -434,11 +434,11 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
     -----------
     zz : float
         Redshift to make the plot
-    massdef : string
-        Name of the mass definition to be used
+    massdef : list of string
+        Names of the mass definitions to be used
     sims : list of strings
         Array with the names of the simulation
-    env : string
+    env : list of string
         ari, arilega or cosma, to use the adecuate paths
     mmin : float                                                                                       
         Mimimum mass to be considered                                                                  
@@ -467,14 +467,15 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
     >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
     """ 
 
-    # Check that the size of the arrays for the simulations and labels is the same
+    # Check that the size of the arrays is the same for sims, massdef and env
+    if (len(sims) != len(env) or len(sims) != len(massdef)):
+        print('WARNING (bp.mf_sims): Input arrays have different lengths {}, {}, {}'.format(
+            sims,env,massdef))
+        return None
+
+    # Get labels or check the arrays
     labels = get_simlabels(sims,labels=labels)
-
-    # Bins in halo mass
-    mmin = 9. ; mmax = 16. ; dm = 0.1
-    edges = np.array(np.arange(mmin,mmax,dm))
-    mhist = edges[1:]-0.5*dm  #; print("mhist={}".format(mhist)) 
-
+    
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
@@ -490,6 +491,11 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
+        outfil = b.get_hmf(zz,massdef[ii],sim,env[ii],                                               
+                           mmin=mmin,mmax=mmax,dm=dm,                                                  
+                           outdir=outdir,Testing=Testing)
+        if not outfil: continue
+        exit()
         hmf  = np.zeros(shape=(len(mhist)))
         volume = 0.
 
@@ -532,7 +538,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
 
     if (files2plot<1):
         print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
-        return ' '
+        return None
 
     # Legend
     ax.annotate('z='+str(zz),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
