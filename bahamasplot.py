@@ -426,7 +426,7 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 
     return plotf
 
-def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None,Testing=False):
+def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,Testing=True):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -445,11 +445,11 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
     mmax : float                                                                                       
         Maximum mass to be considered                                                                  
     dm : float                                                                                         
-        Intervale step for the HMF   
+        Intervale step in halo mass   
     labels : list of strings
         Array with the labels to be used
-    dirplot : string
-        Path to plots
+    outplot : string
+        Path to output
     Testing : boolean
         True or False for testing with few subfiles
 
@@ -461,10 +461,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
     Examples
     ---------
     >>> import bahamasplot as bp
-    >>> sims = ['L050N256/WMAP9_PMGRID512/Sims/ex','L050N256/WMAP9_PMGRID1024/Sims/ex'] 
-    >>> labels = ['PMGRID=512','PMGRID=1024']
-    >>> bp.mf_sims(7.,'Group_M_Mean200',sims,'cosma',labels=labels)
-    >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
     """ 
 
     # Check that the size of the arrays is the same for sims, massdef and env
@@ -491,53 +488,33 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
-        outfil = b.get_hmf(zz,massdef[ii],sim,env[ii],                                               
-                           mmin=mmin,mmax=mmax,dm=dm,                                                  
-                           outdir=outdir,Testing=Testing)
-        if not outfil: continue
-        exit()
-        hmf  = np.zeros(shape=(len(mhist)))
-        volume = 0.
+        outfil = b.get_nh(zz,massdef[ii],sim,env[ii],                                               
+                          mmin=mmin,mmax=mmax,dm=dm,                                                  
+                          outdir=outdir,Testing=Testing)
+        if outfil is None: continue
+        files2plot += 1 ; print(outfil)
 
-        # Get the closest snapshot to the input redshift
-        zmins, zmaxs = b.get_zminmaxs([zz])
-        snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
+        # Read data
+        mhist, nh = np.loadtxt(outfil,usecols=(0,3),unpack=True)
 
-        # Get subfind files
-        files = b.get_subfind_files(snap,sim,env)
-        if (len(files)<1):
-            print('WARNING (bahamasplot): no subfind files at snap={}, {} '.format(snap,sim))
-            continue
-        files2plot += len(files)
+        # Read volume and dm
+        ff = open(outfil, 'r')
+        line1 = ff.readline()
+        line2 = ff.readline()
+        ff.close()
+        volume = float(line2.split(',')[0].split('=')[-1])
+        dm = float(line2.split(',')[1].split('=')[-1])
 
-        for iff, ff in enumerate(files):
-            f = h5py.File(ff, 'r')
-            # Read volume in first iteration
-            if (iff == 0):
-                header = f['Header']
-                volume = np.power(header.attrs['BoxSize'],3.)
-
-            haloes = f['FOF']
-            mh = haloes[massdef][:]  #10^10Msun/h
-            ind = np.where(mh > 0.)
-            lmh = np.log10(mh[ind]) + 10.
-
-            # HMF
-            H, bins_edges = np.histogram(lmh,bins=edges)
-            hmf[:] = hmf[:] + H
-
-            if (nvols != 'All'):
-                if (iff>nvols): break
-
+        # Calculate HMF
         print('Side of sim box = {:.2f} Mpc^3/h^3'.format(np.power(volume,1./3.)))
         if (volume>0.):
-            hmf = hmf/volume/dm  # In Mpc^3/h^3
+            hmf = nh/volume/dm  # In Mpc^3/h^3
 
             ind = np.where(hmf>0.)
             ax.plot(mhist[ind],np.log10(hmf[ind]),c=cols[ii],label=labels[ii])
 
     if (files2plot<1):
-        print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
+        print('WARNING (bp.mf_sims): No mf_sims plot made at z={}'.format(zz))
         return None
 
     # Legend
@@ -550,14 +527,15 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,dirplot=None
         item.set_visible(False)
 
     # Path to plot
-    if (dirplot == None):
-        dirp = b.get_dirb(env)+'plots/'+sim+'/'
+    if (outdir == None):
+        dirp = b.get_dirb(env[0])+'plots/'
     else:
-        dirp = dirplot+sim+'/'
+        dirp = outdir+'plots/'
 
     if (not os.path.exists(dirp)):
         os.makedirs(dirp)
-    plotf = dirp+'mf_sims_z'+str(zz)+'_'+massdef+'.pdf'
+    plotf = dirp+'mf_z'+str(zz)+'_sims'+str(len(sims))+'_mdef'+\
+            str(len(np.unique(massdef)))+'.pdf'
     fig.savefig(plotf)
 
     return plotf

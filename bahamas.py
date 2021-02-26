@@ -2,6 +2,7 @@ import os.path
 import numpy as np
 import h5py
 import glob
+import subprocess
 from astropy import constants as const
 from iotools import stop_if_no_file, is_sorted
 #print('\n \n')
@@ -785,14 +786,14 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
     return minsfr
 
 
-def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
+def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
     '''
-    Calculate the halo mass function and write it into a file
+    Calculate the number of haloes per mass bin and write this into a file
 
     Parameters
     -----------
     zz : float
-        Redshift to calculate the HMF
+        Redshift to get the number of haloes
     massdef : string
         Name of the mass definition to be used
     sim : string
@@ -804,7 +805,7 @@ def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True)
     mmax : float
         Maximum mass to be considered
     dm : float
-        Intervale step for the HMF
+        Intervale step for the halo mass
     outdir : string
         Path to output file
     Testing : boolean
@@ -819,7 +820,7 @@ def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True)
     ---------
     >>> import bahamas as b
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
-    >>> b.get_hmf(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata0/arivgonz/BAHAMAS/')
+    >>> b.get_nh(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata0/arivgonz/BAHAMAS/')
     '''
 
     # Get snapshot
@@ -837,8 +838,10 @@ def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True)
     if Testing:
         outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'_test.txt'
     else:
-        outfil = path+'/nh_'+massdef+'sn'+str(snap)+'_dm'+str(dm)+'.txt'
-        if (os.path.isfile(outfil)):
+        outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'.txt'
+    if (os.path.isfile(outfil)):
+        nlines = subprocess.call(['wc', '-l', outfil])
+        if (nlines > 0):
             return outfil
 
     # The subfiles to loop over
@@ -856,7 +859,7 @@ def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True)
     # Get subfind files
     files = get_subfind_files(snap,sim,env)
     if (len(files)<1):
-        print('WARNING (b.get_hmf): no subfind files at snap={}, {} '.format(snap,sim))
+        print('WARNING (b.get_nh): no subfind files at snap={}, {} '.format(snap,sim))
         return None
     
     # Loop over the files
@@ -873,7 +876,7 @@ def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True)
         ind = np.where(mh > 0.)
         lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
 
-        # HMF
+        # Number of haloes
         H, bins_edges = np.histogram(lmh,bins=edges)
         nh[:] = nh[:] + H
 
@@ -893,7 +896,6 @@ def get_hmf(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True)
 
         # Data
         np.savetxt(outf,tofile.T,fmt='%.5f %.5f %.5f %.0f')
-    outf.closed
 
     return outfil
 
