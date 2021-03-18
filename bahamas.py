@@ -13,6 +13,7 @@ dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
 dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 dirobsari = '/hpcdata0/Obs_Data/'
 
+dirbahamascosmalega = '/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 
@@ -144,7 +145,7 @@ def get_dirb(env):
     Parameters
     -----------
     env : string
-        cosma, ari or arilega, to use the adecuate paths
+        cosma, cosmalega, ari or arilega, to use the adecuate paths
  
     Returns
     -----
@@ -164,6 +165,10 @@ def get_dirb(env):
         dirb = dirbahamasarilega
     elif (env == 'cosma'):
         dirb = dirbahamascosma
+    elif (env == 'cosmalega'):
+        dirb = dirbahamascosmalega
+    else:
+        print('WARNING (b.get_dirb): environment name not cosma, cosmalega, ari or arilega')
 
     return dirb
 
@@ -174,7 +179,7 @@ def get_dirobs(env):
     Parameters
     -----------
     env : string
-        cosma, ari or arilega, to use the adecuate paths
+        cosma, cosmalega, ari or arilega, to use the adecuate paths
  
     Returns
     -----
@@ -190,7 +195,7 @@ def get_dirobs(env):
     dirobs = None
     if (env == 'ari' or env == 'arilega'):
         dirobs = dirobsari
-    elif (env == 'cosma'):
+    elif (env == 'cosma' or env == 'cosmalega'):
         dirobs = dirobscosma
 
     return dirobs
@@ -205,7 +210,7 @@ def get_path2data(sim,env):
     sims : list of strings
         Array with the names of the simulation
     env : string
-        cosma, ari or arilega, to use the adecuate paths
+        cosma, cosmalega, ari or arilega, to use the adecuate paths
  
     Returns
     -----
@@ -226,8 +231,10 @@ def get_path2data(sim,env):
         path2data = dirbahamasarilega+sim+'/Data/EagleSubGroups_5r200/'
     elif (env == 'cosma'):
         path2data = dirbahamascosma+sim+'/data/'
+    elif (env == 'cosmalega'):
+        path2data = dirbahamascosmalega+sim+'/data/'
     else:
-        exit('get_path2data set to handle env=cosma, ari or arilega')
+        exit('get_path2data set to handle env=cosma, cosmalega, ari or arilega')
 
     return path2data    
 
@@ -243,7 +250,7 @@ def get_particle_files(snap,sim,env):
     sims : list of strings
         Array with the names of the simulation
     env : string
-        ari or cosma, to use the adecuate paths
+        ari(lega) or cosma(lega), to use the adecuate paths
  
     Returns
     -----
@@ -564,7 +571,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     dirz : string
         Alternative directory where the table with z and snapshots is.
     env : string
-        ari, arilega or cosma, to use the adecuate paths
+        ari, arilega or cosma, cosmalega to use the adecuate paths
 
     Returns
     -----
@@ -902,6 +909,13 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
 
 if __name__== "__main__":
     env = 'ari'
+    env = 'cosmalega'
+
+    if (env == 'cosmalega'):
+        sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
+        dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/')
+        print(table_z_sn(sim,'cosmalega',dirz=dirz)
+        print(resolution(sim,'cosmalega'))
 
     if (env == 'ari'):
         print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9','arilega'))
