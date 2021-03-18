@@ -24,7 +24,10 @@ def check_file(infile):
 	return file_fine
 
 def is_sorted(a):
-    for i in range(a.size-1):
-         if a[i+1] < a[i] :
-               return False
-    return True
+        '''
+        Retrun True if the array is sorted
+        '''
+        for i in range(len(a)-1):
+                if a[i+1] < a[i] :
+                        return False
+        return True

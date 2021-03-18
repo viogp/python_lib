@@ -25,7 +25,7 @@ List of functions:
   angular_scale(): calculates the angular scale at redshift, z.
   luminosity_distance(): calculates the luminosity distance at 
                          redshift, z (Mpc/h).
-  comving_volume(): calculates the comoving volume contained
+  comoving_volume(): calculates the comoving volume contained
                     within a sphere extending out to redshift,
                     z ((Mpc/h)^3).
   dVdz() :  calculates dV/dz at redshift, z  (Mpc/h)^3.
@@ -43,6 +43,8 @@ List of functions:
   omegab(z): return baryon density at z.
   omegav(z): return vacuum density at z.
   omegar(z): return radiation density at z.
+
+  ndeg2nV(ndeg,z1,z2,area,verbose=False): Transforms number of objects per deg2 to number density (N/V). 
 
   emission_line_flux(luminosity_data,z): returns flux from luminosity
   emission_line_luminosity(flux_data,z): returns luminosity from flux
@@ -159,13 +161,26 @@ def set_Millennium():
     set_cosmology(0.25,0.045,0.75,0.73)
     return
 
+
 def set_MR7():
     set_cosmology(0.272,0.0455,0.728,0.704)
     return
 
+
+def set_bahamasW9():
+    set_cosmology(0.2793, 0.0463, 0.7207, 0.700)
+    return
+
+
+def set_bahamasP():
+    set_cosmology(0.3175, 0.0490, 0.6825, 0.6711)
+    return
+
+
 def set_Planck13():
     set_cosmology(0.307,0.0483,0.693,0.678)
     return
+
 
 def set_Planck15():
     set_cosmology(0.307,0.0486,0.693,0.677)
@@ -641,6 +656,40 @@ def kaiser_factor(z,bias,gamma=None):
     return kaiser_factor
 
 
+def ndeg2nV(ndeg,z1,z2,area,verbose=False):
+    '''
+    Transforms number of objects per deg2 to 
+    number density (N/V). 
+    A cosmology needs to have been set.
+
+    Parameters:
+    ndeg : float, number of objects per deg2
+    z1 : float, lower redshift limit of the survey
+    z2 : float, higher redshift limit of the survey
+    area : float, total area of the survey (deg2)
+
+    Returns:
+    nV : Number density (NV) [(Mpc/h)^-3]
+
+    Example:
+    import Cosmology as cosmo
+    cosmo.set_bahamasW9()
+    cosmo.ndeg2nV(2400,0.6,1.6,14000)
+    > 0.0002671477226063551
+    '''
+
+    if (z1<0.001):
+        vol = comoving_volume(z2)
+    else:
+        vol = comoving_volume(z2) - comoving_volume(z1)
+    nV = ndeg*area/vol
+
+    if verbose:
+        print('nV [(Mpc/3)^-3] = {:.1e}'.format(nV))
+    
+    return nV
+
+    
 def logL2flux(log10luminosity,z):
     """
     Returns flux in units of erg/s/cm^2 from input of

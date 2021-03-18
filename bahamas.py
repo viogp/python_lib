@@ -1,15 +1,16 @@
-import sys,os.path
+import os.path
 import numpy as np
 import h5py
 import glob
-from astropy import units as u
+import subprocess
+from astropy import constants as const
 from iotools import stop_if_no_file, is_sorted
 #print('\n \n')
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
 dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
-dirbahamasari = '/hpcdata3/arivgonz/BAHAMAS/'
+dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 dirobsari = '/hpcdata0/Obs_Data/'
 
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
@@ -20,6 +21,7 @@ tblz = 'snap_z.txt'
 defaultdz = 0.25
 
 n0 = 3
+
 
 def get_zminmaxs(zz,dz=None):
     """
@@ -51,7 +53,7 @@ def get_zminmaxs(zz,dz=None):
     # Check that the input list is sorted
     if(zz != sorted(zz)):
         print('STOP (get_zminmaxs): Sort the redshift list')
-        sys.exit()
+        exit()
         return -999.,-999.
     
     if (dz is not None):
@@ -134,6 +136,7 @@ def mb2lmsun(massb,h0):
         lmass = np.log10(massb) + 10. - np.log10(h0)
         return lmass
 
+    
 def get_dirb(env):
     """
     Get the Bahamas directory given the environment
@@ -224,7 +227,7 @@ def get_path2data(sim,env):
     elif (env == 'cosma'):
         path2data = dirbahamascosma+sim+'/data/'
     else:
-        sys.exit('get_path2data set to handle env=cosma, ari or arilega')
+        exit('get_path2data set to handle env=cosma, ari or arilega')
 
     return path2data    
 
@@ -262,7 +265,7 @@ def get_particle_files(snap,sim,env):
         path = paths[0]
     else:
         print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        sys.exit()
+        exit()
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0) 
     files = glob.glob(root+'*.hdf5')
@@ -303,7 +306,7 @@ def get_subfind_files(snap,sim,env):
         path = paths[0]
     else:
         print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        sys.exit()
+        exit()
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
@@ -344,7 +347,7 @@ def get_particle_files(snap,sim,env):
         path = paths[0]
     else:
         print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        sys.exit()
+        exit()
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
@@ -434,6 +437,10 @@ def table_z_sn(sim,env,dirz=None):
 
     # Initialize arrays for z and sn
     dirs = glob.glob(path+'groups_0*')
+    if (len(dirs) < 1) :
+        print('STOP (bahamas.table_z_sn): {} not containing expected files'.format(path))
+        exit()
+        
     zzs = np.zeros(shape=len(dirs)) ; zzs.fill(-999.)
     sns = np.zeros(shape=len(dirs), dtype=int)
 
@@ -648,7 +655,7 @@ def cenids(snap,sim,env):
     lenf = len(files)
     if (lenf<1):
         print('STOP(~/python_lib/bahamas): Make sure you can see the path {}'.format(path))
-        sys.exit()
+        exit()
 
     for ii,ff in enumerate(files):
         stop_if_no_file(ff)
@@ -663,12 +670,12 @@ def cenids(snap,sim,env):
     sorted = is_sorted(cenids)
     if (not sorted):
         print('STOP(bahamas/cenids): central indexes not sorted')
-        sys.exit()
+        exit()
     
     return cenids
 
 
-def resolution(sim,env):
+def resolution(sim,env,zz=0.,verbose=True):
     """
     Get the mass resolution of a simulation
 
@@ -678,6 +685,10 @@ def resolution(sim,env):
         Simulation name
     env : string
         ari or cosma, to use the adecuate paths
+    zz : float
+        Redshift to look (should be the same for all)
+    verbose : boolean
+        True to print the resolution
 
     Returns
     -----
@@ -687,12 +698,14 @@ def resolution(sim,env):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.resolution('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.resolution('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
     >>> b.resolution('L050N256/WMAP9/Sims/ex','cosma')
     """
 
+    snap, z_snap = get_snap(zz,-999.,999.,sim,env)
+    
     # Simulation input
-    files = get_particle_files(0,sim,env)
+    files = get_particle_files(snap,sim,env)
 
     f= h5py.File(files[0],'r')
     header=f['Header']
@@ -710,25 +723,204 @@ def resolution(sim,env):
 
         mgas = mdm*omegab/(omega0-omegab)
 
+        if (verbose):
+            print('Particle resolution of sim.: {}'.format(sim))
+            print('mdm (Msun) = {:.2e}, mgas (Msun)=mb= {:.2e}'.format(mdm,mgas))
+        
         return mdm,mgas
+
+
+def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
+    '''
+    Get the minimum star formation rate, following eq 1 in Schaye et al. 2015
+
+    Parameters
+    -----------
+    sim : string
+        Simulation name
+    env : string
+        ari or cosma, to use the adecuate paths
+    zz : float
+        Redshift to read files
+    A : float
+        Kennicutt-Schmidt's law constant in Msun yr^-1 kpc^-2 units
+    gamma : float
+        Ratio of specific heats
+    fg : float
+        Mass fraction in gas
+    n : float
+        Index of the Kennicutt-Schmidt's law
+    verbose : boolean
+        True to print the resolution
+
+    Returns
+    -----
+    minsfr : float
+        Minimum theoretical star formation rate in Msun/yr units
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_min_sfr('HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
+    '''
+
+    # Typical values at the outskirts of haloes, where SF happens
+    nHsf   = 0.001  # cm^-3  
+    Tsf = 100000 # K      
+
+    # Get the particle resolution
+    mdm, mgas = resolution(sim,env,verbose=False)
+
+    apc = A/1e6 # Msun yr^-1 pc^-2
+
+    nHm = nHsf * 100.**3 # m^-3
+    P = nHm*const.k_B.value*Tsf
+    
+    gp_si = np.sqrt(gamma*fg*P/const.G.value)
+    gp = gp_si*const.pc.value**2/const.M_sun.value
+
+    minsfr = mgas*apc*np.power(gp,n-1)*10**9
+    if verbose:
+        print('  Min. theoretical log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(minsfr)))
+    
+    return minsfr
+
+
+def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
+    '''
+    Calculate the number of haloes per mass bin and write this into a file
+
+    Parameters
+    -----------
+    zz : float
+        Redshift to get the number of haloes
+    massdef : string
+        Name of the mass definition to be used
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma, to use the adecuate paths
+    mmin : float
+        Mimimum mass to be considered
+    mmax : float
+        Maximum mass to be considered
+    dm : float
+        Intervale step for the halo mass
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+
+    Returns
+    -----
+    outfile : string
+        Path to file with: 
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.get_nh(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata0/arivgonz/BAHAMAS/')
+    '''
+
+    # Get snapshot
+    zmin,zmax = get_zminmaxs([zz])
+    snap, z_snap = get_snap(zz,zmin,zmax,sim,env)
+
+    # Output file
+    if outdir:
+        path = outdir+sim
+    else:
+        path = get_dirb(env)+sim
+    if (not os.path.exists(path)):
+        os.makedirs(path)
+
+    if Testing:
+        outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'_test.txt'
+    else:
+        outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'.txt'
+    if (os.path.isfile(outfil)):
+        nlines = subprocess.call(['wc', '-l', outfil])
+        if (nlines > 0):
+            return outfil
+
+    # The subfiles to loop over
+    nvols = 'All'
+    if Testing: nvols = 2
+
+    # Bins in halo mass
+    edges = np.array(np.arange(mmin,mmax,dm))
+    mhist = edges[1:]-0.5*dm
+    nh  = np.zeros(shape=(len(mhist)))
+
+    elow  = edges[:-1]
+    ehigh = edges[1:]
+    
+    # Get subfind files
+    files = get_subfind_files(snap,sim,env)
+    if (len(files)<1):
+        print('WARNING (b.get_nh): no subfind files at snap={}, {} '.format(snap,sim))
+        return None
+    
+    # Loop over the files
+    volume = 0.
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r')
+        # Read volume in first iteration
+        if (iff == 0):
+            header = f['Header']
+            volume = np.power(header.attrs['BoxSize'],3.)
+
+        haloes = f['FOF']
+        mh = haloes[massdef][:]  #10^10Msun/h
+        ind = np.where(mh > 0.)
+        lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
+
+        # Number of haloes
+        H, bins_edges = np.histogram(lmh,bins=edges)
+        nh[:] = nh[:] + H
+
+        if (nvols != 'All'):
+            if (iff>nvols): break
+
+    # Output only bins with haloes
+    indh = np.where(nh > 0) 
+    tofile = np.array([mhist[indh], elow[indh], ehigh[indh], nh[indh]])
+
+    # Write to output file
+    with open(outfil, 'w') as outf:
+        # Header
+        outf.write('# '+sim+', snapshot='+str(snap)+' \n')
+        outf.write('# Volume='+str(volume)+', dm='+str(dm)+' \n' )
+        outf.write('# log(Mh/Msun/h)_midpoint, log(Mh)_low, log(Mh)_high, Number of haloes \n')
+
+        # Data
+        np.savetxt(outf,tofile.T,fmt='%.5f %.5f %.5f %.0f')
+
+    return outfil
+
 
 if __name__== "__main__":
     env = 'ari'
 
     if (env == 'ari'):
-        sim = 'AGN_TUNED_nu0_L100N256_WMAP9'
-        dirz = '/hpcdata3/arivgonz/bahamas/'
+        print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9','arilega'))
+        print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9','arilega'))
 
-        print(get_z(-1,sim,dirz,env))
-        print(get_z(26,sim,dirz,env))
+        sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-        snap,zsnap = get_snap(3.2,2.8,3.8,sim,dirz,env)
-        print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
-        print(get_snap(-100.,-200.,-5.,sim,dirz,env))
-        print(get_snap(0.28,0.26,0.3,sim,dirz,env))
+        #print(get_z(-1,sim,dirz,env))
+        #print(get_z(26,sim,dirz,env))
+        #
+        #snap,zsnap = get_snap(3.2,2.8,3.8,sim,dirz,env)
+        #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+        #print(get_snap(-100.,-200.,-5.,sim,dirz,env))
+        #print(get_snap(0.28,0.26,0.3,sim,dirz,env))
+        #print(resolution(sim,env))
+        #print(np.log10(get_min_sfr(sim,env))+9.)
 
-    print(get_zminmaxs([0.]))
-    print(get_zminmaxs([0.,1.],dz=0.5))
-    print(get_zminmaxs([0.,1.]))
-    print(get_zminmaxs([0.,1.,0.5]))
+    #print(get_zminmaxs([0.]))
+    #print(get_zminmaxs([0.,1.],dz=0.5))
+    #print(get_zminmaxs([0.,1.]))
+    #print(get_zminmaxs([0.,1.,0.5]))
 

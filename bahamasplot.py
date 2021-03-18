@@ -16,6 +16,19 @@ plt.style.use(mpl_style.style1)
 zs0 = [100.,5.,4.,3.,2.,1.,0.5,0.1,0.]
 epsz = 0.0001
 
+def logformat(y,pos):
+    '''
+    To be used as follows:
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(myLogFormat))
+    (https://stackoverflow.com/questions/21920233/matplotlib-log-scale-tick-label-number-formatting/33213196)
+    '''
+    # Find the number of decimal places required
+    decimalplaces = int(np.maximum(-np.log10(y),0))     # =0 for numbers >=1
+    # Insert that number into a format string
+    formatstring = '{{:.{:1d}f}}'.format(decimalplaces)
+    # Return the formatted tick label
+    return formatstring.format(y)
+
 def get_simlabels(sims,labels=None):
     """
     Check that the arrays sims and inlabels have the same lenght,
@@ -43,8 +56,51 @@ def get_simlabels(sims,labels=None):
     # Check that the size of the arrays for the simulations and labels is the same
     if (labels == None or len(labels) != len(sims)):
         # Generate labels
-        outlabels = [x.split('/')[-1] for x in sims]        
+        labels1 = [x.split('/')[-1] for x in sims]        
 
+        outlabels = labels1 ; newlabel = ''
+        for ii,label in enumerate(labels1):
+            val = '_msfof'
+            if val in label:
+                label = label.split(val)[0]
+
+            val = '_beta_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\beta=$'+l1
+                label = label.split(val)[0]
+
+            val = '_BH'
+            if val in label:
+                label = label.split(val)[0]
+            
+            val = '_n_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$n=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = '_dT_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\Delta T=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = '_mu_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\mu=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = 'ws_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel='$v_{\\rm wind}=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            if (newlabel != ''):    
+                outlabels[ii] = newlabel
+        
     return outlabels
 
 def get_zticks(lowestz,xmin,xmax):
@@ -373,7 +429,7 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 
     return plotf
 
-def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
+def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,Testing=True):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -381,16 +437,22 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     -----------
     zz : float
         Redshift to make the plot
-    massdef : string
-        Name of the mass definition to be used
+    massdef : list of string
+        Names of the mass definitions to be used
     sims : list of strings
         Array with the names of the simulation
-    env : string
-        ari or cosma, to use the adecuate paths
+    env : list of string
+        ari, arilega or cosma, to use the adecuate paths
+    mmin : float                                                                                       
+        Mimimum mass to be considered                                                                  
+    mmax : float                                                                                       
+        Maximum mass to be considered                                                                  
+    dm : float                                                                                         
+        Intervale step in halo mass   
     labels : list of strings
         Array with the labels to be used
-    dirplot : string
-        Path to plots
+    outplot : string
+        Path to output
     Testing : boolean
         True or False for testing with few subfiles
 
@@ -402,24 +464,18 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     Examples
     ---------
     >>> import bahamasplot as bp
-    >>> sims = ['L050N256/WMAP9_PMGRID512/Sims/ex','L050N256/WMAP9_PMGRID1024/Sims/ex'] 
-    >>> labels = ['PMGRID=512','PMGRID=1024']
-    >>> bp.mf_sims(7.,'Group_M_Mean200',sims,'cosma',labels=labels)
-    >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],'ari')
+    >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
     """ 
 
-    # Check that the size of the arrays for the simulations and labels is the same
+    # Check that the size of the arrays is the same for sims, massdef and env
+    if (len(sims) != len(env) or len(sims) != len(massdef)):
+        print('WARNING (bp.mf_sims): Input arrays have different lengths {}, {}, {}'.format(
+            sims,env,massdef))
+        return None
+
+    # Get labels or check the arrays
     labels = get_simlabels(sims,labels=labels)
-
-    # The subfiles to loop over
-    nvols = 'All'
-    if Testing: nvols = 2
-
-    # Bins in halo mass
-    mmin = 9. ; mmax = 16. ; dm = 0.1
-    edges = np.array(np.arange(mmin,mmax,dm))
-    mhist = edges[1:]-0.5*dm  #; print("mhist={}".format(mhist)) 
-
+    
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
@@ -435,49 +491,34 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
-        hmf  = np.zeros(shape=(len(mhist)))
-        volume = 0.
+        outfil = b.get_nh(zz,massdef[ii],sim,env[ii],                                               
+                          mmin=mmin,mmax=mmax,dm=dm,                                                  
+                          outdir=outdir,Testing=Testing)
+        if outfil is None: continue
+        files2plot += 1 ; print(outfil)
 
-        # Get the closest snapshot to the input redshift
-        zmins, zmaxs = b.get_zminmaxs([zz])
-        snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
+        # Read data
+        mhist, nh = np.loadtxt(outfil,usecols=(0,3),unpack=True)
 
-        # Get subfind files
-        files = b.get_subfind_files(snap,sim,env)
-        if (len(files)<1):
-            print('WARNING (bahamasplot): no subfind files at snap={}, {} '.format(snap,sim))
-            continue
-        files2plot += len(files)
+        # Read volume and dm
+        ff = open(outfil, 'r')
+        line1 = ff.readline()
+        line2 = ff.readline()
+        ff.close()
+        volume = float(line2.split(',')[0].split('=')[-1])
+        dm = float(line2.split(',')[1].split('=')[-1])
 
-        for iff, ff in enumerate(files):
-            f = h5py.File(ff, 'r')
-            # Read volume in first iteration
-            if (iff == 0):
-                header = f['Header']
-                volume = np.power(header.attrs['BoxSize'],3.)
-
-            haloes = f['FOF']
-            mh = haloes[massdef][:]  #10^10Msun/h
-            ind = np.where(mh > 0.)
-            lmh = np.log10(mh[ind]) + 10.
-
-            # HMF
-            H, bins_edges = np.histogram(lmh,bins=edges)
-            hmf[:] = hmf[:] + H
-
-            if (nvols != 'All'):
-                if (iff>nvols): break
-
+        # Calculate HMF
         print('Side of sim box = {:.2f} Mpc^3/h^3'.format(np.power(volume,1./3.)))
         if (volume>0.):
-            hmf = hmf/volume/dm  # In Mpc^3/h^3
+            hmf = nh/volume/dm  # In Mpc^3/h^3
 
             ind = np.where(hmf>0.)
             ax.plot(mhist[ind],np.log10(hmf[ind]),c=cols[ii],label=labels[ii])
 
     if (files2plot<1):
-        print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
-        return ' '
+        print('WARNING (bp.mf_sims): No mf_sims plot made at z={}'.format(zz))
+        return None
 
     # Legend
     ax.annotate('z='+str(zz),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
@@ -489,14 +530,15 @@ def mf_sims(zz,massdef,sims,env,labels=None,dirplot=None,Testing=False):
         item.set_visible(False)
 
     # Path to plot
-    if (dirplot == None):
-        dirp = b.get_dirb(env)+'plots/'+sim+'/'
+    if (outdir == None):
+        dirp = b.get_dirb(env[0])+'plots/'
     else:
-        dirp = dirplot+sim+'/'
+        dirp = outdir+'plots/'
 
     if (not os.path.exists(dirp)):
         os.makedirs(dirp)
-    plotf = dirp+'mf_sims_z'+str(zz)+'_'+massdef+'.pdf'
+    plotf = dirp+'mf_z'+str(zz)+'_sims'+str(len(sims))+'_mdef'+\
+            str(len(np.unique(massdef)))+'.pdf'
     fig.savefig(plotf)
 
     return plotf
@@ -506,13 +548,16 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sim1 = 'L050N256/WMAP9/Sims/ex'
-        sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ex'
+        #sim1 = 'L050N256/WMAP9/Sims/ex'
+        #sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ex'
 
-        sims = [sim1, sim2]
-        labels = ['PMGRID = 512','PMGRID = 1024']
+        #sims = [sim1, sim2]
+        #labels = ['PMGRID = 512','PMGRID = 1024']
         #print(wctime(sims,labels,env))
         #print(cputime(sims,labels,env))
-        print(mf_sims(7.,'Group_M_Mean200',sims,env,
-                      labels=labels,Testing=True))
+        #print(mf_sims(7.,'Group_M_Mean200',sims,env,
+        #              labels=labels,Testing=True))
 
+        print(get_simlabels(['L050N256/WMAP9/Sims/ws_106_66_mu_5_70_dT_7_49_n_24_BH_beta_3_20_msfof_1_93e11',
+                             'AGN_TUNED_nu0_L100N256_WMAP9',
+                             'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',]))

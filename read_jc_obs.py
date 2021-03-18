@@ -20,7 +20,8 @@ def set_dz(dz=None):
     return
 
 
-def read_jc_lf(obs_dir,zz,dz=None,h0=None,infile=None,survey=None,limit=None,inlog=True):
+def read_jc_lf(obs_dir,zz,dz=None,h0=None,infile=None,survey=None,limit=None,inlog=True,
+               h2unitL=True):
     set_h0(h0) ; set_dz(dz) ; firstpass=True
 
     files = [ ]
@@ -36,17 +37,25 @@ def read_jc_lf(obs_dir,zz,dz=None,h0=None,infile=None,survey=None,limit=None,inl
         ind = np.where((abs(oz-zz)<obsdz) & (ozlow<zz) & (ozhigh>zz) & (oPhi>0.))
     
         # Johan's units: L(erg/s), Phi(Mpc^-3/dLogL)
-        # Output: L(h-2 erg/s), Phi(Mpc^-3h^3/dLogL)
+        # Output: L(h-2 erg/s) or L(erg/s), Phi(Mpc^-3h^3/dLogL)
         if (np.shape(ind)[1]>0):
             if inlog:
                 if firstpass:
                     firstpass = False
-                    L = np.log10(oL[ind]) + 2*np.log10(obsh0) 
+                    if h2unitL:
+                        L = np.log10(oL[ind]) + 2*np.log10(obsh0)
+                    else:
+                        L = np.log10(oL[ind])
+                        
                     Phi = np.log10(oPhi[ind]) - 3*np.log10(obsh0)
                     el = np.log10(oPhi[ind])  - np.log10(oPlow[ind])
                     eh = np.log10(oPhigh[ind])- np.log10(oPhi[ind])
                 else:
-                    L = np.append(L,np.log10(oL[ind]) + 2*np.log10(obsh0))
+                    if h2unitL:
+                        L = np.append(L,np.log10(oL[ind]) + 2*np.log10(obsh0))
+                    else:
+                        L = np.append(L,np.log10(oL[ind]))
+                        
                     Phi = np.append(Phi,\
                               np.log10(oPhi[ind])- 3*np.log10(obsh0))
                     el = np.append(el,np.log10(oPhi[ind])\
@@ -56,12 +65,20 @@ def read_jc_lf(obs_dir,zz,dz=None,h0=None,infile=None,survey=None,limit=None,inl
             else:
                 if firstpass:
                     firstpass = False
-                    L = oL[ind]*obsh0**2.
+                    if h2unitL:
+                        L = oL[ind]*obsh0**2.
+                    else:
+                        L = oL[ind]
+                        
                     Phi = oPhi[ind]/(obsh0**3)
                     el = (oPhi[ind]-oPlow[ind])/(obsh0**3)
                     eh = (oPhigh[ind]-oPhi[ind])/(obsh0**3)
                 else:
-                    L = np.append(L,oL[ind]*obsh0**2.)
+                    if h2unitL:
+                        L = np.append(L,oL[ind]*obsh0**2.)
+                    else:
+                        L = np.append(L,oL[ind])
+                        
                     Phi = np.append(Phi,oPhi[ind]/(obsh0**3))
                     el = np.append(el,(oPhi[ind]-oPlow[ind])/(obsh0**3))
                     eh = np.append(eh,(oPhigh[ind]-oPhi[ind])/(obsh0**3))

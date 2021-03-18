@@ -8,6 +8,8 @@ Some useful functions
 
   n_gt_x(x,array): returns the number of elements in the array larger than each of the values in x.
 
+  chi2(obs,model,err): returns the chi^2 for a model
+
 NOTE: this module requires the numpy and scipy libraries to be
       available for import!
 
@@ -152,3 +154,63 @@ def n_gt_x(xedges,array):
         y[i] = np.shape(ind)[1]
 
     return y
+
+    
+def get_interval(val,low,high):
+    '''
+    Get the index, i, of the interval where low[i]<val<high[i]
+    
+    Parameters:
+    val : int or float
+        Value
+    low : array of int or floats
+        Array of the low edges of the intervals
+    high : array of int or floats
+        Array of the high edges of the intervals
+
+    Returns:
+    ind : integer
+       Index of the interval the value belongs to or -999 if outside
+    '''
+
+    ind = -999
+    
+    if (len(low) != len(high)):
+        return ind
+
+    if (val == high[-1] and val >= low[-1]):
+        ind = len(high) -1
+    else:
+        linds = np.where(val >= low)
+        hinds = np.where(val < high)
+
+        if (np.shape(linds)[1]>0 and np.shape(hinds)[1]>0):
+            lind = linds[0]
+            hind = hinds[0]
+            common = list(set(lind).intersection(hind))
+            if (len(common)==1):
+                ind = common[0]
+
+    return ind
+
+
+def chi2(obs,model,err):
+    '''
+    Get the chi^2 for a given model
+    
+    Parameters:
+    obs : array of floats
+        The observatioins or target values
+    model : array of floats
+        The model values (should be the same length as obs)
+    err : array of floats
+        The error of the observations
+
+    Returns:
+    val : float
+       chi^2 values
+    '''
+    val = 0.
+    for i,iobs in enumerate(obs):
+        val = val + (iobs-model[i])**2/(err[i]*err[i])
+    return val
