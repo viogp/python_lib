@@ -78,12 +78,15 @@ def get_zticks(lowestz,xmin,xmax):
     [100.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.5, 5.0]
     """ 
 
+    if (lowestz > xmax):
+        print('STOP (bahamasplot/get_zticks): lowest z is above {}'.format(xmax))
+        sys.exit()
+
     zticks0 = [cosmo.age_of_universe(x) for x in zs0]
     agelz = cosmo.age_of_universe(lowestz)
 
     if (lowestz < epsz):
-        zs = zs0
-        zticks = zticks0
+        return zs0,zticks0
     else:
         ind = next(x[0] for x in enumerate(zticks0) if x[1] > xmax) - 1
         if (ind == 0):

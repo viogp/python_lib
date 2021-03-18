@@ -148,7 +148,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         for iff, ff in enumerate(files):
             f = h5py.File(ff, 'r')
-            p0 = f['PartType0']
+            p0 = f['PartType0'] # Gas particles
 
             if (iff == 0):
                 # Read simulation constants in first iteration
@@ -164,7 +164,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
                 #slim = 1./cosmo.tHubble(redshift) #1/Gyr ##here
 
                 # Read gas properties of the particles
-                groupnum = p0['GroupNumber'][:]
+                groupnum = p0['GroupNumber'][:] # FoF group number particle is in
                 subgroupnum = p0['SubGroupNumber'][:]
                 partmass = p0['Mass'][:]*1e10/h0       #Msun
                 partx = p0['Coordinates'][:,0]/h0 
@@ -239,28 +239,33 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
         df_fof = pd.DataFrame(data=np.vstack([m500,r500,cop_x,cop_y,cop_z]).T,
                               columns=["m500","r500","cop_x","cop_y","cop_z"])
-        #m500,r500,cop_x,cop_y,cop_z=[[] for i in range(5)]
-        #df_fof.index += 1
-        #df_fof.index.names = ['groupnum']
-        #df_fof.reset_index(inplace=True)
-        #df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
-        #df_part.reset_index(inplace=True, drop=True)
-        #merge = pd.merge(df_part, df_fof, on=['groupnum'])
-        #merge['partx'] = merge.partx - merge.cop_x + boxsize / 2
-        #merge['party'] = merge.party - merge.cop_y + boxsize / 2
-        #merge['partz'] = merge.partz - merge.cop_z + boxsize / 2
-        #merge.x.loc[merge.partx < 0] = merge.partx.loc[merge.x < 0] + boxsize
-        #merge.y.loc[merge.party < 0] = merge.party.loc[merge.y < 0] + boxsize
-        #merge.z.loc[merge.partz < 0] = merge.partz.loc[merge.z < 0] + boxsize
-        #
-        #merge = merge.loc[merge.m500 > 1e13]
-        #merge['distance'] = (((boxsize / 2) - merge.partx) ** 2 + 
-        #                     ((boxsize / 2) - merge.party) ** 2 + 
-        #                     ((boxsize / 2) - merge.partz) ** 2) ** 0.5
-        #merge['inside_r500'] = merge.distance <= merge.r500
-        #merge = merge.loc[merge.inside_r500 == True]
-        #groups = merge.groupby(['groupnum'], as_index=False)
-        #gas_mass = groups.Mass.sum() ####here
+        m500,r500,cop_x,cop_y,cop_z=[[] for i in range(5)]
+
+        df_fof.index += 1
+        df_fof.index.names = ['groupnum']
+        df_fof.reset_index(inplace=True)
+        # here: is there a new groupnum column created? why the reset_index?
+        df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+        df_part.reset_index(inplace=True, drop=True)
+
+        merge = pd.merge(df_part, df_fof, on=['groupnum'])
+        print(merge.columns) ; sys.exit()
+#        merge['partx'] = merge.partx - merge.cop_x + boxsize / 2
+#        merge['party'] = merge.party - merge.cop_y + boxsize / 2
+#        merge['partz'] = merge.partz - merge.cop_z + boxsize / 2
+#
+#        merge.x.loc[merge.partx < 0] = merge.partx.loc[merge.x < 0] + boxsize
+#        merge.y.loc[merge.party < 0] = merge.party.loc[merge.y < 0] + boxsize
+#        merge.z.loc[merge.partz < 0] = merge.partz.loc[merge.z < 0] + boxsize
+#        
+#        merge = merge.loc[merge.m500 > 1e13]
+#        merge['distance'] = (((boxsize / 2) - merge.partx) ** 2 + 
+#                             ((boxsize / 2) - merge.party) ** 2 + 
+#                             ((boxsize / 2) - merge.partz) ** 2) ** 0.5
+#        merge['inside_r500'] = merge.distance <= merge.r500
+#        merge = merge.loc[merge.inside_r500 == True]
+#        groups = merge.groupby(['groupnum'], as_index=False)
+#        gas_mass = groups.partmass.sum() ####here
 
         # fgas observations
 
@@ -295,24 +300,29 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         ax5.plot(zhist,medians)
         print(medians) ###HERE
 
-    #if (files2plot<1):
-    #    print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
-    #    return ' '
-    #
-    ## Legend
-    #ax.annotate('z='+str(zz),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
-    #leg = ax.legend(loc=3, handlelength=0, handletextpad=0)
-    #leg.draw_frame(False)
-    #for ii,text in enumerate(leg.get_texts()):
-    #    text.set_color(cols[ii])
-    #for item in leg.legendHandles:
-    #    item.set_visible(False)
-    #
+    if (files2plot<1):
+        print('WARNING (bahamasplot): No mf_sims plot made at z={}'.format(zz))
+        return ' '
+    
+    # Legend
+    ax.annotate('z='+str(zz),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
+    leg = ax.legend(loc=3, handlelength=0, handletextpad=0)
+    leg.draw_frame(False)
+    for ii,text in enumerate(leg.get_texts()):
+        text.set_color(cols[ii])
+    for item in leg.legendHandles:
+        item.set_visible(False)
+    
+    # Title for plots sith single simulation
+    if (len(sims)==1):
+        plt.title(sims[0])
+
     # Path to plot
+    subpath = sims[0]
     if (dirplot == None):
-        dirp = b.get_dirb(env)+'plots/'+sim+'/'
+        dirp = b.get_dirb(env)+'plots/'+subpath+'/'
     else:
-        dirp = dirplot+sim+'/'
+        dirp = dirplot+subpath+'/'
 
     if (not os.path.exists(dirp)):
         os.makedirs(dirp)
@@ -328,7 +338,7 @@ if __name__== "__main__":
     env = 'cosma'
 
     if (env == 'cosma'):
-        sims = ['L050N256/WMAP9/Sims/ws_108_35_mu_6_20_dT_8_13_n_74_BH_beta_1_20_msfof_1_93e11']
+        sims = ['L050N256/WMAP9/Sims/ex']
         labels = None
 
     elif (env == 'ari'):
