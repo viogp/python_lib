@@ -797,7 +797,7 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,dirz=None,verbo
     return minsfr
 
 
-def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
+def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,dirz=None,outdir=None,Testing=True):
     '''
     Calculate the number of haloes per mass bin and write this into a file
 
@@ -817,6 +817,8 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
         Maximum mass to be considered
     dm : float
         Intervale step for the halo mass
+    dirz : string
+        Alternative path to table with z and snapshot.
     outdir : string
         Path to output file
     Testing : boolean
@@ -836,7 +838,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
 
     # Get snapshot
     zmin,zmax = get_zminmaxs([zz])
-    snap, z_snap = get_snap(zz,zmin,zmax,sim,env)
+    snap, z_snap = get_snap(zz,zmin,zmax,sim,env,dirz=dirz)
 
     # Output file
     if outdir:
@@ -866,13 +868,13 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
 
     elow  = edges[:-1]
     ehigh = edges[1:]
-    
+
     # Get subfind files
     files = get_subfind_files(snap,sim,env)
     if (len(files)<1):
         print('WARNING (b.get_nh): no subfind files at snap={}, {} '.format(snap,sim))
         return None
-    
+
     # Loop over the files
     volume = 0.
     for iff, ff in enumerate(files):
@@ -912,8 +914,9 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
 
 
 if __name__== "__main__":
-    dirz = None
+    dirz = None ; outdir = None
     snap = 18
+    zz = 3.
 
     #env = 'ari'
     env = 'cosmalega'
@@ -921,6 +924,7 @@ if __name__== "__main__":
     if (env == 'cosmalega'):
         sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
+        outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
     if (env == 'ari'):
         print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9','arilega'))
         print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9','arilega'))
@@ -936,4 +940,5 @@ if __name__== "__main__":
     #print(cenids(snap,sim,env))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
-    print(get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True))
+    print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
+
