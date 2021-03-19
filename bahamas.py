@@ -682,7 +682,7 @@ def cenids(snap,sim,env):
     return cenids
 
 
-def resolution(sim,env,zz=0.,verbose=True):
+def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     """
     Get the mass resolution of a simulation
 
@@ -694,6 +694,8 @@ def resolution(sim,env,zz=0.,verbose=True):
         ari or cosma, to use the adecuate paths
     zz : float
         Redshift to look (should be the same for all)
+    dirz : string
+        Alternative path to table with z and snapshot.
     verbose : boolean
         True to print the resolution
 
@@ -709,7 +711,7 @@ def resolution(sim,env,zz=0.,verbose=True):
     >>> b.resolution('L050N256/WMAP9/Sims/ex','cosma')
     """
 
-    snap, z_snap = get_snap(zz,-999.,999.,sim,env)
+    snap, z_snap = get_snap(zz,-999.,999.,sim,env,dirz=dirz)
     
     # Simulation input
     files = get_particle_files(snap,sim,env)
@@ -737,7 +739,7 @@ def resolution(sim,env,zz=0.,verbose=True):
         return mdm,mgas
 
 
-def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
+def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,dirz=None,verbose=True):
     '''
     Get the minimum star formation rate, following eq 1 in Schaye et al. 2015
 
@@ -757,6 +759,8 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
         Mass fraction in gas
     n : float
         Index of the Kennicutt-Schmidt's law
+    dirz : string
+        Alternative path to table with z and snapshot.
     verbose : boolean
         True to print the resolution
 
@@ -776,7 +780,7 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
     Tsf = 100000 # K      
 
     # Get the particle resolution
-    mdm, mgas = resolution(sim,env,verbose=False)
+    mdm, mgas = resolution(sim,env,dirz=dirz,verbose=False)
 
     apc = A/1e6 # Msun yr^-1 pc^-2
 
@@ -786,9 +790,9 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,verbose=True):
     gp_si = np.sqrt(gamma*fg*P/const.G.value)
     gp = gp_si*const.pc.value**2/const.M_sun.value
 
-    minsfr = mgas*apc*np.power(gp,n-1)*10**9
+    minsfr = mgas*apc*np.power(gp,n-1)
     if verbose:
-        print('  Min. theoretical log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(minsfr)))
+        print('  Min. theoretical log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(minsfr)+9))
     
     return minsfr
 
@@ -908,33 +912,28 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True):
 
 
 if __name__== "__main__":
-    env = 'ari'
+    dirz = None
+    snap = 18
+
+    #env = 'ari'
     env = 'cosmalega'
 
     if (env == 'cosmalega'):
         sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
-        dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/')
-        print(table_z_sn(sim,'cosmalega',dirz=dirz)
-        print(resolution(sim,'cosmalega'))
-
+        dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
     if (env == 'ari'):
         print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9','arilega'))
         print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9','arilega'))
 
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-        #print(get_z(-1,sim,dirz,env))
-        #print(get_z(26,sim,dirz,env))
-        #
-        #snap,zsnap = get_snap(3.2,2.8,3.8,sim,dirz,env)
-        #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
-        #print(get_snap(-100.,-200.,-5.,sim,dirz,env))
-        #print(get_snap(0.28,0.26,0.3,sim,dirz,env))
-        #print(resolution(sim,env))
-        #print(np.log10(get_min_sfr(sim,env))+9.)
-
-    #print(get_zminmaxs([0.]))
     #print(get_zminmaxs([0.,1.],dz=0.5))
-    #print(get_zminmaxs([0.,1.]))
-    #print(get_zminmaxs([0.,1.,0.5]))
-
+    #print(table_z_sn(sim,env,dirz=dirz)
+    #print(get_z(27,sim,env,dirz=dirz))
+    #print(get_z(-1,sim,env,dirz=dirz))
+    #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
+    #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+    #print(cenids(snap,sim,env))
+    #print(resolution(sim,env,dirz=dirz))
+    #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
+    print(get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,outdir=None,Testing=True))
