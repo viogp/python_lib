@@ -853,7 +853,10 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,dirz=None,outdir=None,Test
     else:
         outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'.txt'
     if (os.path.isfile(outfil)):
-        nlines = subprocess.call(['wc', '-l', outfil])
+        #data = subprocess.run(['wc', '-l', outfil], capture_output=True) #python3.7
+        process = subprocess.run(['wc', '-l', outfil], universal_newlines=True, 
+                                 stdout=subprocess.PIPE).stdout
+        nlines = int(process.split(' ')[0])
         if (nlines > 0):
             return outfil
 
@@ -926,9 +929,6 @@ if __name__== "__main__":
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
     if (env == 'ari'):
-        print(resolution('AGN_TUNED_nu0_L400N1024_WMAP9','arilega'))
-        print(resolution('HIRES/AGN_RECAL_nu0_L100N512_WMAP9','arilega'))
-
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
     #print(get_zminmaxs([0.,1.],dz=0.5))
