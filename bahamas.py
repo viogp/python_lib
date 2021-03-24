@@ -797,7 +797,8 @@ def get_min_sfr(sim,env,zz=0.,A=1.515*1e-4,gamma=5/3,fg=1.,n=1.4,dirz=None,verbo
     return minsfr
 
 
-def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,dirz=None,outdir=None,Testing=True):
+def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
+           dirz=None,outdir=None,Testing=True,verbose=False):
     '''
     Calculate the number of haloes per mass bin and write this into a file
 
@@ -823,6 +824,8 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,dirz=None,outdir=None,Test
         Path to output file
     Testing : boolean
         Calculations on part or all the simulation
+    verbose : boolean
+        True to print the resolution
 
     Returns
     -----
@@ -858,6 +861,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,dirz=None,outdir=None,Test
                                  stdout=subprocess.PIPE).stdout
         nlines = int(process.split(' ')[0])
         if (nlines > 0):
+            if verbose: print('b.get_nh, file already exists: ',outfil)
             return outfil
 
     # The subfiles to loop over
