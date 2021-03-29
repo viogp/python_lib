@@ -172,6 +172,53 @@ def get_dirb(env):
 
     return dirb
 
+
+def get_outdirs(env,sim=None):
+    """
+    Get the output directories given the environment
+
+    Parameters
+    -----------
+    env : string
+        cosma, cosmalega, ari or arilega, to use the adecuate paths
+    sim : string
+        Simulation to be used in path, otherwise *'_models'
+
+    Returns
+    -----
+    outdir : string
+       Path to output files
+    dirz :string
+       Path to list with z, snapshot
+    dirplots : string
+       Path to output plots
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_outdirs('arilega')
+    """
+
+    outdir = None ; dirz = None ; dirplots = None
+
+    if (env == 'ari' or env == 'arilega'):
+        outdir = dirbahamasari
+    elif (env == 'cosma' or env == 'cosmalega'): 
+        outdir = dirbahamascosma
+    else:
+        print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
+
+    dirz = outdir 
+
+    if ('lega' in env):
+        dirplots = outdir+'plots/published_models/'
+    else:
+        dirplots = outdir+'plots/compared_models/'
+    print(dirplots) ; exit() #here
+    # need to think about plots for indicvidual sims+ if to create here the directories
+    return outdir,dirz,dirplots
+
+
 def get_dirobs(env):
     """
     Get the directory with observations given the environment
@@ -900,6 +947,7 @@ if __name__== "__main__":
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
     #print(get_zminmaxs([0.,1.],dz=0.5))
+    print(get_outdirs(env))
     #print(table_z_sn(sim,env,dirz=dirz)
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
@@ -908,5 +956,5 @@ if __name__== "__main__":
     #print(cenids(snap,sim,env))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
-    print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
+    #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
 
