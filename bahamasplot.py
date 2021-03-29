@@ -49,17 +49,21 @@ def get_simlabels(sims,labels=None):
     Examples
     ---------
     >>> import bahamasplot as bp
-    >>> bp.get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9','HIRES/AGN_RECAL_nu0_L100N512_WMAP9'])
+    >>> bp.get_simlabels(['HIRES/AGN_RECAL_nu0_L100N512_WMAP9','L400N1024/WMAP9/Sims/BAHAMAS'])
     """ 
 
     outlabels = labels
     # Check that the size of the arrays for the simulations and labels is the same
     if (labels == None or len(labels) != len(sims)):
         # Generate labels
+        labels0 = [x.split('/')[0] for x in sims]        
         labels1 = [x.split('/')[-1] for x in sims]        
 
         outlabels = labels1 ; newlabel = ''
         for ii,label in enumerate(labels1):
+            if (label == 'BAHAMAS'):
+                newlabel = labels0[ii]
+
             val = '_msfof'
             if val in label:
                 label = label.split(val)[0]
@@ -429,7 +433,9 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 
     return plotf
 
-def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,Testing=True):
+
+def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
+            dirz=None,outdir=None,Testing=False):
     """
     Compare the halo mass function of different simulations at a given z
 
@@ -443,14 +449,16 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,
         Array with the names of the simulation
     env : list of string
         ari, arilega or cosma, to use the adecuate paths
-    mmin : float                                                                                       
-        Mimimum mass to be considered                                                                  
-    mmax : float                                                                                       
-        Maximum mass to be considered                                                                  
-    dm : float                                                                                         
+    mmin : float
+        Mimimum mass to be considered
+    mmax : float
+        Maximum mass to be considered
+    dm : float
         Intervale step in halo mass   
     labels : list of strings
         Array with the labels to be used
+    dirz : string
+        Alternative path to table with z and snapshot
     outplot : string
         Path to output
     Testing : boolean
@@ -464,7 +472,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,
     Examples
     ---------
     >>> import bahamasplot as bp
-    >>> bp.mf_sims(0.,'Group_M_Mean200',['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
+    >>> bp.mf_sims(0.,['Group_M_Mean200'],['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
     """ 
 
     # Check that the size of the arrays is the same for sims, massdef and env
@@ -475,7 +483,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,
 
     # Get labels or check the arrays
     labels = get_simlabels(sims,labels=labels)
-    
+
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
@@ -491,9 +499,9 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
-        outfil = b.get_nh(zz,massdef[ii],sim,env[ii],                                               
-                          mmin=mmin,mmax=mmax,dm=dm,                                                  
-                          outdir=outdir,Testing=Testing)
+        outfil = b.get_nh(zz,massdef[ii],sim,env[ii],
+                          mmin=mmin,mmax=mmax,dm=dm,
+                          dirz=dirz,outdir=outdir,Testing=Testing)
         if outfil is None: continue
         files2plot += 1 ; print(outfil)
 
@@ -545,19 +553,22 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,outdir=None,
     
 
 if __name__== "__main__":
-    env = 'cosma'
+    dirz = None ; outdir = None
+    snap = 18
+    zz = 3.
 
-    if (env == 'cosma'):
-        #sim1 = 'L050N256/WMAP9/Sims/ex'
-        #sim2 = 'L050N256/WMAP9_PMGRID1024/Sims/ex'
+    env = 'ari'
+    env = 'cosmalega'
 
-        #sims = [sim1, sim2]
-        #labels = ['PMGRID = 512','PMGRID = 1024']
-        #print(wctime(sims,labels,env))
-        #print(cputime(sims,labels,env))
-        #print(mf_sims(7.,'Group_M_Mean200',sims,env,
-        #              labels=labels,Testing=True))
+    if (env == 'cosmalega'):
+        sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
+        dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
+        outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
+    if (env == 'ari'):
+        sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-        print(get_simlabels(['L050N256/WMAP9/Sims/ws_106_66_mu_5_70_dT_7_49_n_24_BH_beta_3_20_msfof_1_93e11',
-                             'AGN_TUNED_nu0_L100N256_WMAP9',
-                             'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',]))
+    #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
+    #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
+    #               'L400N1024/WMAP9/Sims/BAHAMAS']))
+    print(mf_sims(zz,['Group_M_Mean200'],[sim],[env],
+                  dirz=dirz,outdir=outdir, Testing=True))

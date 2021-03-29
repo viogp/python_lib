@@ -266,13 +266,13 @@ def get_particle_files(snap,sim,env):
     # Simulation input
     path1 = get_path2data(sim,env)+'particledata_'+str(snap).zfill(n0)
 
-    # Get path to subfind files
+    # Get path to particle files
     paths = glob.glob(path1+'*/') 
     if (len(paths) == 1):
         path = paths[0]
     else:
-        print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        exit()
+        print('WARNING(b.get_particle_files): more than one or none directories with root {}'.format(path1+'*/'))
+        return None
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0) 
     files = glob.glob(root+'*.hdf5')
@@ -312,52 +312,14 @@ def get_subfind_files(snap,sim,env):
     if (len(paths) == 1):
         path = paths[0]
     else:
-        print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        exit()
+        print('WARNING (b.get_subfind_files): more than one or none directories with root {}'.format(path1+'*/'))
+        return None
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
-
-    return files     
-
-
-def get_particle_files(snap,sim,env): 
-    """
-    Get the particle files
-
-    Parameters
-    -----------
-    snap : integer
-        Snapshot number
-    sims : list of strings
-        Array with the names of the simulation
-    env : string
-        ari or cosma, to use the adecuate paths
- 
-    Returns
-    -----
-    files : array of string
-       Subfind files with full paths
-
-    Examples
-    ---------
-    >>> import bahamas as b
-    >>> b.get_particle_files(8,'L050N256/WMAP9/Sims/ex','cosma')
-    """
-
-    # Simulation input
-    path1 = get_path2data(sim,env)+'particledata_'+str(snap).zfill(n0)
-
-    # Get path to the particle files
-    paths = glob.glob(path1+'*/')
-    if (len(paths) == 1):
-        path = paths[0]
-    else:
-        print('STOP(~/python_lib/bahamas): more than one or none directories with root {}'.format(path1+'*/'))
-        exit()
-
-    root = path+'eagle_subfind_particles_'+str(snap).zfill(n0)
-    files = glob.glob(root+'*.hdf5')
+    if (len(files)<1):
+        print('WARNING (b.get_subfind_files): no files in path {}'.format(path1+'*/'))
+        return None
 
     return files     
 
@@ -445,8 +407,8 @@ def table_z_sn(sim,env,dirz=None):
     # Initialize arrays for z and sn
     dirs = glob.glob(path+'groups_0*')
     if (len(dirs) < 1) :
-        print('STOP (bahamas.table_z_sn): {} not containing expected files'.format(path))
-        exit()
+        print('WARNING (b.table_z_sn): {} not containing expected files'.format(path))
+        return None
         
     zzs = np.zeros(shape=len(dirs)) ; zzs.fill(-999.)
     sns = np.zeros(shape=len(dirs), dtype=int)
@@ -526,6 +488,7 @@ def get_z(snap,sim,env,dirz=None):
     if (not os.path.isfile(tablez)):
         # Generate the table if it doesn't exist
         tablez = table_z_sn(sim,env,dirz=dirz)
+        if tablez is None: return -999.
 
     # Read the table:
     zzs, snsf = np.loadtxt(tablez, unpack=True)
@@ -601,6 +564,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     if (not os.path.isfile(tablez)):
         # Generate the table if it doesn't exist
         tablez = table_z_sn(sim,env,dirz=dirz)
+        if tablez is None: return -999.,-999.
 
     # Read the table:
     zzs, lsns = np.loadtxt(tablez, unpack=True)        
@@ -630,7 +594,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
             return -999,-999.
 
 
-def cenids(snap,sim,env):
+def get_cenids(snap,sim,env):
     """
     Get the list of indexes for central galaxies
 
@@ -651,18 +615,19 @@ def cenids(snap,sim,env):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
-    >>> b.cenids(8,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.get_cenids(8,'L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
     files = get_subfind_files(snap,sim,env)
+    if files is None: return -999.
 
     # Cycle through the files
     lenf = len(files)
     if (lenf<1):
-        print('STOP(~/python_lib/bahamas): Make sure you can see the path {}'.format(path))
-        exit()
+        print('WARNING (b.get_cenids): Make sure you can see the path {}'.format(path))
+        return -999.
 
     for ii,ff in enumerate(files):
         stop_if_no_file(ff)
@@ -676,8 +641,8 @@ def cenids(snap,sim,env):
     # Check that the array is sorted
     sorted = is_sorted(cenids)
     if (not sorted):
-        print('STOP(bahamas/cenids): central indexes not sorted')
-        exit()
+        print('WARNING (b.get_cends): central indexes not sorted')
+        return -999.
     
     return cenids
 
@@ -715,6 +680,7 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     
     # Simulation input
     files = get_particle_files(snap,sim,env)
+    if files is None: return -999., -999.
 
     f= h5py.File(files[0],'r')
     header=f['Header']
@@ -878,9 +844,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
 
     # Get subfind files
     files = get_subfind_files(snap,sim,env)
-    if (len(files)<1):
-        print('WARNING (b.get_nh): no subfind files at snap={}, {} '.format(snap,sim))
-        return None
+    if (files is None): return None
 
     # Loop over the files
     volume = 0.
