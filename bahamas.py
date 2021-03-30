@@ -4,7 +4,7 @@ import h5py
 import glob
 import subprocess
 from astropy import constants as const
-from iotools import stop_if_no_file, is_sorted
+from iotools import stop_if_no_file, is_sorted, create_dir
 #print('\n \n')
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
@@ -200,22 +200,34 @@ def get_outdirs(env,sim=None):
     """
 
     outdir = None ; dirz = None ; dirplots = None
-
+    
+    # Outdir
     if (env == 'ari' or env == 'arilega'):
         outdir = dirbahamasari
     elif (env == 'cosma' or env == 'cosmalega'): 
         outdir = dirbahamascosma
     else:
         print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
+        return None,None,None
 
+    new_dir = create_dir(outdir) 
+    if not new_dir: return None,None,None
+
+    # Dirz
     dirz = outdir 
 
-    if ('lega' in env):
-        dirplots = outdir+'plots/published_models/'
+    # Dirplots
+    if not sim:
+        if ('lega' in env):
+            dirplots = outdir+'plots/published_models/'
+        else:
+            dirplots = outdir+'plots/compared_models/'
     else:
-        dirplots = outdir+'plots/compared_models/'
-    print(dirplots) ; exit() #here
-    # need to think about plots for indicvidual sims+ if to create here the directories
+        dirplots = outdir+'plots/'+sim
+
+    new_dir = create_dir(outdir) 
+    if not new_dir: return None,None,None
+
     return outdir,dirz,dirplots
 
 
