@@ -173,7 +173,7 @@ def get_dirb(env):
     return dirb
 
 
-def get_outdirs(env,sim=None):
+def get_outdirs(env,sim_label=None):
     """
     Get the output directories given the environment
 
@@ -181,8 +181,8 @@ def get_outdirs(env,sim=None):
     -----------
     env : string
         cosma, cosmalega, ari or arilega, to use the adecuate paths
-    sim : string
-        Simulation to be used in path, otherwise *'_models'
+    sim_label : string
+        Simulation label to be used in path, otherwise *'_models'
 
     Returns
     -----
@@ -217,13 +217,13 @@ def get_outdirs(env,sim=None):
     dirz = outdir 
 
     # Dirplots
-    if not sim:
+    if not sim_label:
         if ('lega' in env):
             dirplots = outdir+'plots/published_models/'
         else:
             dirplots = outdir+'plots/compared_models/'
     else:
-        dirplots = outdir+'plots/'+sim
+        dirplots = outdir+'plots/'+sim_label
 
     new_dir = create_dir(outdir) 
     if not new_dir: return None,None,None
