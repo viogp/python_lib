@@ -178,12 +178,12 @@ def set_bahamasP():
 
 
 def set_Planck13():
-    set_cosmology(0.307,0.0483,0.693,0.678)
+    set_cosmology(0.3086,0.0483,0.6914,0.6777)
     return
 
 
-def set_Planck15():
-    set_cosmology(0.307,0.0486,0.693,0.677)
+def set_Planck15(): #UNIT
+    set_cosmology(0.3089,0.0486,0.6911,0.6774)
     return
 
 
