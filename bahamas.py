@@ -223,7 +223,7 @@ def get_outdirs(env,sim_label=None):
         else:
             dirplots = outdir+'plots/compared_models/'
     else:
-        dirplots = outdir+'plots/'+sim_label
+        dirplots = outdir+'plots/'+sim_label+'/'
 
     new_dir = create_dir(dirplots) 
     if not new_dir: return None,None,None
