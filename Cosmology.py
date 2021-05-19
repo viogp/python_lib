@@ -28,6 +28,7 @@ List of functions:
   comoving_volume(): calculates the comoving volume contained
                     within a sphere extending out to redshift,
                     z ((Mpc/h)^3).
+  cv_survey(z1,z2,area): calculates the comoving volume of a survey ((Mpc/h)^3).
   dVdz() :  calculates dV/dz at redshift, z  (Mpc/h)^3.
   H(): return Hubble constant as measured at redshift, z.
   tHubble(): returns Hubble time at redshift z (Gyr).
@@ -60,7 +61,7 @@ Based upon the 'Cosmology Calculator' (Wright, 2006, PASP,
 
 """
 
-import sys, math
+import sys
 import numpy as np
 import scipy as sp
 from scipy.constants import c,constants
@@ -91,6 +92,7 @@ Mpc2cm = constants.mega*constants.parsec*100.
 zlow = 0.00001 ; dlz = np.log(zmax)/float(nzmax) 
 lredshift = np.arange(np.log(zlow),np.log(zmax),dz)
 
+asky =  4.0*np.pi*(180/np.pi)**2
 
 def set_cosmology(omega0=None,omegab=None,lambda0=None,h0=None, \
                       universe="Flat",include_radiation=False):
@@ -178,12 +180,12 @@ def set_bahamasP():
 
 
 def set_Planck13():
-    set_cosmology(0.307,0.0483,0.693,0.678)
+    set_cosmology(0.3086,0.0483,0.6914,0.6777)
     return
 
 
-def set_Planck15():
-    set_cosmology(0.307,0.0486,0.693,0.677)
+def set_Planck15(): #UNIT
+    set_cosmology(0.3089,0.0486,0.6911,0.6774)
     return
 
 
@@ -428,18 +430,23 @@ def luminosity_distance(z):
     return dL
     
 
-def comoving_volume(z):
+def comoving_volume(z, verbose=False):
     """
     comoving_volume(): returns the comoving volume (in (Mpc/h)^3)
                        contained within a sphere extending out
                        to redshift, z.
 
-    USAGE: vol = comoving_volume(z)
-
-    NOTE: requires that a cosmology must first have been
-          set using set_cosmology()
+    Example:
+    import Cosmology as cosmo
+    cosmo.set_Planck15()
+    cosmo.comoving_volume(0.9,verbose=True)
+    > cV (z=0.9) = 4.03e+10 (Mpc/h)^-3
     """
     cosmology_set()
+
+    if (z<0.001):
+        return 0.0
+    
     dr = comoving_distance(z)*Mpc/(c/H100) #Unitless: DC/DH
     x = np.sqrt(np.abs(WK))*dr
     if np.ndim(z) > 0:
@@ -469,8 +476,44 @@ def comoving_volume(z):
             if(WK < 0.0): 
                 y = -y
             ratio = 1.0 + y/5.0 + np.power(y,2)*(2.0/105.0)
-    vol = 4.0*math.pi*ratio*np.power((c/H100)*dr/Mpc,3)/3.0
+
+    vol = 4.0*np.pi*ratio*np.power((c/H100)*dr/Mpc,3)/3.0
+
+    if verbose:
+        print('cV (z={:.1f}) = {:.4e} (Mpc/h)^-3'.format(z,vol))
     return vol
+
+
+def cv_survey(z1,z2,area,verbose=False):
+    '''
+    Get the volume of a survey.
+    A cosmology needs to have been set.
+
+    Parameters:
+    z1 : float, lower redshift limit of the survey
+    z2 : float, higher redshift limit of the survey
+    area : float, total area of the survey (deg2)
+
+    Returns:
+    vsurvey : survey's comoving volume [(Mpc/h)^-3]
+
+    Example:
+    import Cosmology as cosmo
+    cosmo.set_bahamasW9()
+    cosmo.cv_survey(0.9,1.0,14000,verbose=True)
+    > V survey (dz=0.1) = 3.9e+09 (Mpc/h)^-3
+    '''
+
+    if (z1<0.001):
+        dV = comoving_volume(z2)
+    else:
+        dV = comoving_volume(z2) - comoving_volume(z1)
+        
+    vsurvey = dV*area/asky
+    
+    if verbose:
+        print('V survey (dz={:.1f}) = {:.4e} (Mpc/h)^-3'.format(z2-z1,vsurvey))    
+    return vsurvey
 
 
 def dVdz(z):
@@ -656,17 +699,16 @@ def kaiser_factor(z,bias,gamma=None):
     return kaiser_factor
 
 
-def ndeg2nV(ndeg,z1,z2,area,verbose=False):
+def ndeg2nV(ndeg,z1,z2,verbose=False):
     '''
-    Transforms number of objects per deg2 to 
+    Transforms number of objects per deg2 per dz to 
     number density (N/V). 
     A cosmology needs to have been set.
 
     Parameters:
-    ndeg : float, number of objects per deg2
+    ndeg : float, number of objects per deg2 per dz
     z1 : float, lower redshift limit of the survey
     z2 : float, higher redshift limit of the survey
-    area : float, total area of the survey (deg2)
 
     Returns:
     nV : Number density (NV) [(Mpc/h)^-3]
@@ -674,18 +716,16 @@ def ndeg2nV(ndeg,z1,z2,area,verbose=False):
     Example:
     import Cosmology as cosmo
     cosmo.set_bahamasW9()
-    cosmo.ndeg2nV(2400,0.6,1.6,14000)
+    cosmo.ndeg2nV(2400,0.6,1.6)
     > 0.0002671477226063551
     '''
 
-    if (z1<0.001):
-        vol = comoving_volume(z2)
-    else:
-        vol = comoving_volume(z2) - comoving_volume(z1)
-    nV = ndeg*area/vol
-
+    dV = comoving_volume(z2) - comoving_volume(z1)
+    dz = z2-z1
+    nV = ndeg*dz*asky/dV
+    
     if verbose:
-        print('nV [(Mpc/3)^-3] = {:.1e}'.format(nV))
+        print('n (dz={:.1f}) = {:.4e} (Mpc/h)^-3'.format(dz,nV))
     
     return nV
 
