@@ -675,7 +675,7 @@ def get_cenids(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
-    >>> b.get_cenids(8,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_cenids(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
     """
 
     # Simulation input
@@ -691,11 +691,11 @@ def get_cenids(snap,sim,env):
     for ii,ff in enumerate(files):
         stop_if_no_file(ff)
         f = h5py.File(ff, 'r')
-        haloes = f['FOF']
+        haloes = f['FOF/FirstSubhaloID'][:]
         if (ii == 0):
-            cenids = haloes['FirstSubhaloID'][:]
+            cenids = np.unique(haloes)
         else:
-            np.append(cenids, haloes['FirstSubhaloID'][:]) 
+            cenids = np.append(cenids, np.unique(haloes))  
 
     # Check that the array is sorted
     sorted = is_sorted(cenids)
