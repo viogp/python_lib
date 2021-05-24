@@ -23,7 +23,6 @@ defaultdz = 0.25
 
 n0 = 3
 
-
 def get_zminmaxs(zz,dz=None):
     """
     Get the previous (min) and next (max) values
@@ -653,7 +652,7 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
             return -999,-999.
 
 
-def get_cenids(snap,sim,env):
+def get_cenids(snap,sim,env,testing=False,nfiles=2):
     """
     Get the list of indexes for central galaxies
 
@@ -665,6 +664,10 @@ def get_cenids(snap,sim,env):
         Simulation name
     env : string
         ari or cosma, to use the adecuate paths
+    testing: boolean
+        True or False
+    nfiles : integer
+        Number of files to be considered for testing
 
     Returns
     -----
@@ -675,7 +678,7 @@ def get_cenids(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
-    >>> b.get_cenids(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
+    >>> b.get_cenids(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega',testing=True)
     """
 
     # Simulation input
@@ -690,19 +693,15 @@ def get_cenids(snap,sim,env):
 
     for ii,ff in enumerate(files):
         stop_if_no_file(ff)
+
         f = h5py.File(ff, 'r')
         haloes = f['FOF/FirstSubhaloID'][:]
         if (ii == 0):
             cenids = np.unique(haloes)
         else:
             cenids = np.append(cenids, np.unique(haloes))  
+        if (testing and ii>nfiles): break
 
-    # Check that the array is sorted
-    sorted = is_sorted(cenids)
-    if (not sorted):
-        print('WARNING (b.get_cends): central indexes not sorted')
-        return -999.
-    
     return cenids
 
 
