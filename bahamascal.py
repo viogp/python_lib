@@ -245,10 +245,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
         snap, z_snap = b.get_snap(zz,zmins[0],zmaxs[0],sim,env)
 
         # Get particle files
-        files = b.get_particle_files(snap,sim,env)
-        if (len(files)<1):
-            print('WARNING (bahamascal): no subfind files at snap={}, {} '.format(snap,sim))
-            continue
+        files, allfiles = b.get_particle_files(snap,sim,env)
+        if (files is None): continue
 
         # Get mass resolution
         mdm,mgas = b.resolution(sim,env)
@@ -299,10 +297,8 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             f.close()
 
         # Get subfind files
-        files = b.get_subfind_files(snap,sim,env)
-        if (len(files)<1):
-            print('WARNING (bahamascal): no subfind files at snap={}, {} '.format(snap,sim))
-            continue
+        files, allfiles = b.get_subfind_files(snap,sim,env)
+        if files is None: continue
         files2plot += len(files)
 
         minsfr = 1e10

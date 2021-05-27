@@ -314,6 +314,8 @@ def get_particle_files(snap,sim,env):
     -----
     files : array of string
        Subfind files with full paths
+    allfiles : boolean
+       True if all files encountered given the numbers in the files names
 
     Examples
     ---------
@@ -321,6 +323,8 @@ def get_particle_files(snap,sim,env):
     >>> b.get_particle_files(8,'L050N256/WMAP9/Sims/ex','cosma')
     >>> b.get_particle_files(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
     """
+
+    allfiles = True
 
     # Simulation input
     path1 = get_path2data(sim,env)+'particledata_'+str(snap).zfill(n0)
@@ -331,13 +335,13 @@ def get_particle_files(snap,sim,env):
         path = paths[0]
     else:
         print('WARNING(b.get_particle_files): more than one or none directories with root {}'.format(path1+'*/'))
-        return None
+        return None, False
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0) 
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
         print('WARNING (b.get_particle_files): no files in path {}'.format(path1+'*/'))
-        return None
+        return None, False
 
     numff =[int(ff.split('.')[1]) for ff in files]
     ind = np.argsort(numff)
@@ -348,8 +352,9 @@ def get_particle_files(snap,sim,env):
         # Check if there are missing files
         if (ii != numff[iind]):
             print('WARNING (b.get_particle_files): missing file {}.{}.hdf5'.format(root,ii))
+            allfiles = False
 
-    return outff
+    return outff, allfiles
 
 
 def get_subfind_files(snap,sim,env):
@@ -369,13 +374,17 @@ def get_subfind_files(snap,sim,env):
     -----
     files : array of string
        Subfind files with full paths
+    allfiles : boolean
+       True if all files encountered given the numbers in the files names
 
     Examples
     ---------
     >>> import bahamas as b
     >>> b.get_subfind_files(8,'L050N256/WMAP9/Sims/ex','cosma')
-    >>> b.get_subfind_files(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
+    >>> files, allfiles = b.get_subfind_files(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
     """
+
+    allfiles = True
 
     # Simulation input
     path1 = get_path2data(sim,env)+'groups_'+str(snap).zfill(n0)
@@ -386,13 +395,13 @@ def get_subfind_files(snap,sim,env):
         path = paths[0]
     else:
         print('WARNING (b.get_subfind_files): more than one or none directories with root {}'.format(path1+'*/'))
-        return None
+        return None, False
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
         print('WARNING (b.get_subfind_files): no files in path {}'.format(path1+'*/'))
-        return None
+        return None, False
 
     numff =[int(ff.split('.')[1]) for ff in files]
     ind = np.argsort(numff)
@@ -403,8 +412,9 @@ def get_subfind_files(snap,sim,env):
         # Check if there are missing files
         if (ii != numff[iind]):
             print('WARNING (b.get_subfind_files): missing file {}.{}.hdf5'.format(root,ii))
+            allfiles = False
 
-    return outff
+    return outff, allfiles
 
 
 def get_cosmology(sim,env):
@@ -707,8 +717,8 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     """
 
     # Simulation input
-    files = get_subfind_files(snap,sim,env)
-    if files is None: return -999.
+    files, allfiles = get_subfind_files(snap,sim,env)
+    if allfiles is False: return -999.
 
     # Cycle through the files
     lenf = len(files)
@@ -726,6 +736,10 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
             cenids = np.unique(haloes)
         else:
             cenids = np.append(cenids, np.unique(haloes))  
+
+    if (not is_sorted(cenids)):
+        print('WARNING (b.get_cenids): Not ordered indeces {}'.format(path))
+        return -999.
 
     return cenids
 
@@ -762,8 +776,8 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     snap, z_snap = get_snap(zz,-999.,999.,sim,env,dirz=dirz)
     
     # Simulation input
-    files = get_particle_files(snap,sim,env)
-    if files is None: return -999., -999.
+    files, allfiles = get_particle_files(snap,sim,env)
+    if (files is None): return -999., -999.
 
     f= h5py.File(files[0],'r')
     header=f['Header']
@@ -926,7 +940,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
     ehigh = edges[1:]
 
     # Get subfind files
-    files = get_subfind_files(snap,sim,env)
+    files, allfiles = get_subfind_files(snap,sim,env)
     if (files is None): return None
 
     # Loop over the files
