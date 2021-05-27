@@ -310,7 +310,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
             f = h5py.File(ff, 'r') 
             fof = f['FOF'] ; subhaloes = f['Subhalo']
 
-            if (env != 'arilega'):
+            if ('lega' not in env):
                 snum1  = subhaloes['SubGroupNumber'][:]
             
             # Stellar mass

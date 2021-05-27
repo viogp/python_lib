@@ -319,6 +319,7 @@ def get_particle_files(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.get_particle_files(8,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_particle_files(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
     """
 
     # Simulation input
@@ -334,8 +335,21 @@ def get_particle_files(snap,sim,env):
 
     root = path+'eagle_subfind_particles_'+str(snap).zfill(n0) 
     files = glob.glob(root+'*.hdf5')
+    if (len(files)<1):
+        print('WARNING (b.get_particle_files): no files in path {}'.format(path1+'*/'))
+        return None
 
-    return files     
+    numff =[int(ff.split('.')[1]) for ff in files]
+    ind = np.argsort(numff)
+    outff = [None]*len(files)
+    for ii,iind in enumerate(ind):
+        outff[ii]=files[iind]
+
+        # Check if there are missing files
+        if (ii != numff[iind]):
+            print('WARNING (b.get_particle_files): missing file {}.{}.hdf5'.format(root,ii))
+
+    return outff
 
 
 def get_subfind_files(snap,sim,env):
@@ -360,6 +374,7 @@ def get_subfind_files(snap,sim,env):
     ---------
     >>> import bahamas as b
     >>> b.get_subfind_files(8,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_subfind_files(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
     """
 
     # Simulation input
@@ -379,7 +394,17 @@ def get_subfind_files(snap,sim,env):
         print('WARNING (b.get_subfind_files): no files in path {}'.format(path1+'*/'))
         return None
 
-    return files     
+    numff =[int(ff.split('.')[1]) for ff in files]
+    ind = np.argsort(numff)
+    outff = [None]*len(files)
+    for ii,iind in enumerate(ind):
+        outff[ii]=files[iind]
+
+        # Check if there are missing files
+        if (ii != numff[iind]):
+            print('WARNING (b.get_subfind_files): missing file {}.{}.hdf5'.format(root,ii))
+
+    return outff
 
 
 def get_cosmology(sim,env):
