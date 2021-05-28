@@ -721,11 +721,6 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     if allfiles is False: return -999.
 
     # Cycle through the files
-    lenf = len(files)
-    if (lenf<1):
-        print('WARNING (b.get_cenids): Make sure you can see the path {}'.format(path))
-        return -999.
-
     for ii,ff in enumerate(files):
         if (Testing and ii>=nfiles): break
         stop_if_no_file(ff)
@@ -742,6 +737,57 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
         return -999.
 
     return cenids
+
+
+
+def get_fofhmass(snap,sim,env,massdef,Testing=False,nfiles=2):
+    """
+    Get the list of fof masses
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot 
+    sim : string
+        Simulation name
+    env : string
+        ari or cosma, to use the adecuate paths
+    massdef : string
+        Name of the mass definition
+    Testing: boolean
+        True or False
+    nfiles : integer
+        Number of files to be considered for testing
+
+    Returns
+    -----
+    fofhmass : numpy array float
+        Halo mass for FOF groups
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.get_fofhmass(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega','Group_M_Crit200',Testing=True)
+    """
+
+    # Simulation input
+    files, allfiles = get_subfind_files(snap,sim,env)
+    if allfiles is False: return -999.
+
+    # Cycle through the files
+    for ii,ff in enumerate(files):
+        if (Testing and ii>=nfiles): break
+        stop_if_no_file(ff)
+
+        f = h5py.File(ff, 'r')
+
+        if (ii == 0):
+            fofhmass = f['FOF/'+massdef][:]
+        else:
+            fofhmass = np.append(fofhmass, f['FOF/'+massdef][:])
+
+    return fofhmass
 
 
 def resolution(sim,env,zz=0.,dirz=None,verbose=True):
