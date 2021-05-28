@@ -762,7 +762,7 @@ def get_fofhmass(snap,sim,env,massdef,Testing=False,nfiles=2):
     Returns
     -----
     fofhmass : numpy array float
-        Halo mass for FOF groups
+        Halo mass for FOF groups, 10^10Msun/h 
 
     Examples
     ---------
