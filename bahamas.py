@@ -172,7 +172,7 @@ def get_dirb(env):
     return dirb
 
 
-def get_outdirs(env,sim_label=None):
+def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
     """
     Get the output directories given the environment
 
@@ -195,25 +195,29 @@ def get_outdirs(env,sim_label=None):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_outdirs('arilega')
+    >>> outdir, dirz, dirplots = b.get_outdirs('ari')
     """
 
-    outdir = None ; dirz = None ; dirplots = None
+    dirplots = None
     
     # Outdir
-    if (env == 'ari' or env == 'arilega'):
-        outdir = dirbahamasari
-    elif (env == 'cosma' or env == 'cosmalega'): 
-        outdir = dirbahamascosma
-    else:
-        print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
-        return None,None,None
+    if not outdir:
+        if (env == 'ari'):
+            outdir = dirbahamasari
+        if (env == 'arilega'):
+            outdir = dirbahamasarilega
+        elif (env == 'cosma' or env == 'cosmalega'): 
+            outdir = dirbahamascosma
+        else:
+            print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
+            return None,None,None
 
     new_dir = create_dir(outdir) 
     if not new_dir: return None,None,None
 
     # Dirz
-    dirz = outdir 
+    if not dirz:
+        dirz = outdir 
 
     # Dirplots
     if not sim_label:
@@ -1032,19 +1036,24 @@ if __name__== "__main__":
     snap = 18
     zz = 3.
 
-    #env = 'ari'
-    env = 'cosmalega'
+    env = 'arilega'
+    #env = 'cosmalega'
 
     if (env == 'cosmalega'):
         sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
+    if (env == 'arilega'):
+        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+        dirz = '/hpcdata4/arivgonz/BAHAMAS/'
+        outdir = '/hpcdata4/arivgonz/Junk/'
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
     #print(get_zminmaxs([0.,1.],dz=0.5))
-    print(get_outdirs(env))
-    #print(table_z_sn(sim,env,dirz=dirz)
+    print(get_outdirs(env,dirz=dirz,outdir=outdir))
+    #print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
     #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
