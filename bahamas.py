@@ -744,9 +744,9 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
 
 
 
-def get_fofhmass(snap,sim,env,massdef,Testing=False,nfiles=2):
+def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
     """
-    Get the list of fof masses
+    Get a list of fof properties
 
     Parameters
     -----------
@@ -756,7 +756,7 @@ def get_fofhmass(snap,sim,env,massdef,Testing=False,nfiles=2):
         Simulation name
     env : string
         ari or cosma, to use the adecuate paths
-    massdef : string
+    propdef : string
         Name of the mass definition
     Testing: boolean
         True or False
@@ -771,8 +771,7 @@ def get_fofhmass(snap,sim,env,massdef,Testing=False,nfiles=2):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
-    >>> b.get_fofhmass(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega','Group_M_Crit200',Testing=True)
+    >>> b.get_fofprop(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega','Group_M_Crit200',Testing=True)
     """
 
     # Simulation input
@@ -787,11 +786,11 @@ def get_fofhmass(snap,sim,env,massdef,Testing=False,nfiles=2):
         f = h5py.File(ff, 'r')
 
         if (ii == 0):
-            fofhmass = f['FOF/'+massdef][:]
+            fofprop = f['FOF/'+propdef][:]
         else:
-            fofhmass = np.append(fofhmass, f['FOF/'+massdef][:])
+            fofprop = np.append(fofprop, f['FOF/'+propdef][:], axis=0)
 
-    return fofhmass
+    return fofprop
 
 
 def resolution(sim,env,zz=0.,dirz=None,verbose=True):
@@ -1058,7 +1057,8 @@ if __name__== "__main__":
     #print(get_z(-1,sim,env,dirz=dirz))
     #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
-    print(get_cenids(snap,sim,env))
+    #print(get_cenids(snap,sim,env))
+    print(get_fofprop(snap,sim,env,'Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
