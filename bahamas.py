@@ -9,6 +9,13 @@ from iotools import stop_if_no_file, is_sorted, create_dir
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
+unitdefault = {
+    'volume': '(Mpc/h)^3',
+    'mass': 'Msun/h',
+    'sfr': 'to be filled',
+    'ssfr': 'to be filled'
+}
+
 dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
 dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 dirobsari = '/hpcdata0/Obs_Data/'
@@ -434,8 +441,8 @@ def get_cosmology(sim,env):
 
     Returns
     -----
-    omega0, omegab, lambda0, h0 : floats
-        Cosmological parameters
+    omega0, omegab, lambda0, h0, volume : floats
+        Cosmological parameters and volume
 
     Examples
     ---------
@@ -459,7 +466,9 @@ def get_cosmology(sim,env):
     lambda0 = header.attrs['OmegaLambda']
     h0 = header.attrs['HubbleParam']
 
-    return omega0, omegab, lambda0, h0
+    volume = header.attrs['BoxSize']**3 #(Mpc/h)^3
+
+    return omega0, omegab, lambda0, h0, volume
 
 
 def table_z_sn(sim,env,dirz=None):
@@ -746,7 +755,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
 
 def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
     """
-    Get a list of fof properties
+    Get an array with a given FOF property
 
     Parameters
     -----------
@@ -766,7 +775,7 @@ def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
     Returns
     -----
     fofhmass : numpy array float
-        Halo mass for FOF groups, 10^10Msun/h 
+        Property for FOF groups, 10^10Msun/h 
 
     Examples
     ---------
@@ -786,7 +795,11 @@ def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
         f = h5py.File(ff, 'r')
 
         if (ii == 0):
-            fofprop = f['FOF/'+propdef][:]
+            try:
+                fofprop = f['FOF/'+propdef][:]
+            except:
+                print('WARNING (bahamas): no FOF/{} found in {}'.format(propdef,ff))
+                return None
         else:
             fofprop = np.append(fofprop, f['FOF/'+propdef][:], axis=0)
 
@@ -812,7 +825,7 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
 
     Returns
     -----
-    mdm, mgas : float
+    mdm, mgas, volume : float
         Mass resolution (Msun) for DM and gas particles
 
     Examples
@@ -948,7 +961,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
     ---------
     >>> import bahamas as b
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
-    >>> b.get_nh(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata0/arivgonz/BAHAMAS/')
+    >>> b.get_nh(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata4/arivgonz/BAHAMAS/')
     '''
 
     # Get snapshot
@@ -967,6 +980,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
         outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'_test.txt'
     else:
         outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'.txt'
+
     if (os.path.isfile(outfil)):
         #data = subprocess.run(['wc', '-l', outfil], capture_output=True) #python3.7
         process = subprocess.run(['wc', '-l', outfil], universal_newlines=True, 
@@ -976,9 +990,10 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
             if verbose: print('b.get_nh, file already exists: ',outfil)
             return outfil
 
-    # The subfiles to loop over
-    nvols = 'All'
-    if Testing: nvols = 2
+    # Get the halo mass
+    mh = get_fofprop(snap,sim,env,massdef,Testing=Testing)
+    ind = np.where(mh > 0.)
+    lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
 
     # Bins in halo mass
     edges = np.array(np.arange(mmin,mmax,dm))
@@ -988,45 +1003,176 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
     elow  = edges[:-1]
     ehigh = edges[1:]
 
-    # Get subfind files
-    files, allfiles = get_subfind_files(snap,sim,env)
-    if (files is None): return None
-
-    # Loop over the files
-    volume = 0.
-    for iff, ff in enumerate(files):
-        f = h5py.File(ff, 'r')
-        # Read volume in first iteration
-        if (iff == 0):
-            header = f['Header']
-            volume = np.power(header.attrs['BoxSize'],3.)
-
-        haloes = f['FOF']
-        mh = haloes[massdef][:]  #10^10Msun/h
-        ind = np.where(mh > 0.)
-        lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
-
-        # Number of haloes
-        H, bins_edges = np.histogram(lmh,bins=edges)
-        nh[:] = nh[:] + H
-
-        if (nvols != 'All'):
-            if (iff>nvols): break
+    # Number of haloes
+    H, bins_edges = np.histogram(lmh,bins=edges)
+    nh[:] = nh[:] + H
 
     # Output only bins with haloes
     indh = np.where(nh > 0) 
     tofile = np.array([mhist[indh], elow[indh], ehigh[indh], nh[indh]])
 
+    # Get cosmology and volume
+    omega0, omegab, lambda0, h0, volume = get_cosmology(sim,env)
+
     # Write to output file
     with open(outfil, 'w') as outf:
         # Header
         outf.write('# '+sim+', snapshot='+str(snap)+' \n')
-        outf.write('# Volume='+str(volume)+', dm='+str(dm)+' \n' )
+        outf.write('# Volume ((Mpc/h)^3)='+str(volume)+', dm='+str(dm)+' \n' )
+        outf.write('# omega0='+str(omega0)+', omegab='+str(omegab)+
+                   ', lambda0='+str(lambda0)+', h0='+str(h0)+' \n')
         outf.write('# log(Mh/Msun/h)_midpoint, log(Mh)_low, log(Mh)_high, Number of haloes \n')
 
         # Data
         np.savetxt(outf,tofile.T,fmt='%.5f %.5f %.5f %.0f')
 
+    return outfil
+
+
+def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,dm=0.1,
+           dirz=None,outdir=None,Testing=True):
+    '''
+    Calculate the functions of variables (normalized histograms in log scales)
+
+    Parameters
+    -----------
+    zz : float
+        Redshift to get the number of haloes
+    propdef : array of string
+        Name of the properties (needs to include the FOF/ or Subhalo/ part)
+    proplabel : string
+        Short name to identify the properties. E.g. 'mass'
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma, to use the adecuate paths
+    ptype : array of string
+        array containing one of the allowed ptypes
+    mmin : float
+        Mimimum mass to be considered
+    mmax : float
+        Maximum mass to be considered
+    dm : float
+        Intervale step for the halo mass
+    dirz : string
+        Alternative path to table with z and snapshot.
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+
+    Returns
+    -----
+    outfile : string
+        Path to file with the funtion of 'propdefs'
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.get_propfunc(31,['FOF/Group_M_Mean200'],'mass',sim,'arilega',outdir='/hpcdata4/arivgonz/Junk/')
+    '''
+
+    itype = ptypes.index(ptype)
+    
+    keys = [key for key, value in unitdefault.items()]
+    if (proplabel not in keys):
+        print('WARNING (get_propfunc): '+proplabel+' not in ('+','.join(keys)+')')
+        return None
+
+    # Get snapshot
+    zmin,zmax = get_zminmaxs([zz])
+    snap, z_snap = get_snap(zz,zmin,zmax,sim,env,dirz=dirz)
+    
+    # Output file
+    outdir, dirz, plotdir = get_outdirs(env,dirz=dirz,outdir=outdir)
+    path = outdir+sim ; create_dir(path)
+    outfil = path+'/'+proplabel+'F_z'+str(z_snap).replace('.','_')+ \
+             '_min'+str(mmin).replace('.','_')+'_max'+str(mmax).replace('.','_')+ \
+             '_dm'+str(dm).replace('.','_')+'.hdf5'
+
+    # Bins in halo mass
+    edges = np.array(np.arange(mmin,mmax,dm))
+    mhist = edges[1:]-0.5*dm
+    elow  = edges[:-1]
+    ehigh = edges[1:]
+
+    # Get cosmology and volume
+    omega0, omegab, lambda0, h0, volume = get_cosmology(sim,env)
+
+    # Check which properties are already in the file
+    if (os.path.isfile(outfil)):
+        print('File in place:',outfil,propdefs)
+        #check if the property is already there
+        # if so, continue  (#here do I want this?)
+
+    # Separate the FOF and Subhalo properties
+    pfof = [p for p in propdefs if 'FOF' in p]
+    psub = [p for p in propdefs if 'Subhalo' in p]
+
+    # Initialize matrices for arrays
+    propf = np.zeros((len(propdefs),len(mhist)))
+    iprop = -1
+    
+    if (len(pfof) > 0):
+        for propdef in pfof:
+            iprop += 1
+            pdef = propdef.split('/')[1]
+            prop = get_fofprop(snap,sim,env,pdef,Testing=Testing)
+            if (prop is None): continue
+            
+            ind = np.where(prop > 0.)
+            if (np.shape(ind)[1]<1): continue
+            
+            if (proplabel == 'mass'):
+                lprop = np.log10(prop[ind]) + 10. # log10(M/Msun/h)
+            else:
+                lprop = np.log10(prop[ind])
+            
+            # Numbers of haloes
+            H, bins_edges = np.histogram(lprop,bins=edges)
+            propf[iprop][:] = propf[iprop][:] + H
+        
+    if (len(psub) > 0):
+        #here work through subvolumes
+        print(propdef)
+
+    # Take logs
+    ind = np.where(propf > 0)
+    propf[ind] = np.log10(propf[ind]/volume/dm)
+
+    # Output
+    hf = h5py.File(outfil, 'w') #here if appending columns here it'll be the place
+
+    # Output header
+    head = hf.create_dataset('header',(100,))
+    head.attrs[u'sim']          = sim
+    head.attrs[u'snapshot']     = snap
+    head.attrs[u'redshift']     = z_snap
+    head.attrs[u'h0']           = h0
+
+    # Output data
+    units = unitdefault[proplabel]
+    hfdat = hf.create_group('data')
+
+    pn = 'midpoint'
+    hfdat.create_dataset(pn,data=mhist)
+    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
+
+    pn = 'low'
+    hfdat.create_dataset(pn,data=elow)
+    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
+
+    pn = 'high'
+    hfdat.create_dataset(pn,data=ehigh)
+    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
+
+    for ii, propdef in enumerate(propdefs):
+        propii = propf[ii][:]
+        hfdat.create_dataset(propdef,data=ehigh)
+        hfdat[propdef].dims[0].label = 'log10(N/dlog'+propdef.replace('/','_')+'/'+unitdefault['volume']+')'
+
+    hf.close()    
     return outfil
 
 
@@ -1058,8 +1204,10 @@ if __name__== "__main__":
     #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_cenids(snap,sim,env))
-    print(get_fofprop(snap,sim,env,'Group_M_Crit200'))
+    #print(get_fofprop(snap,sim,env,'Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
-
+    print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
+                       'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
+    

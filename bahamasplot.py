@@ -437,7 +437,7 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
 def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
             dirz=None,outdir=None,Testing=False):
     """
-    Compare the halo mass function of different simulations at a given z
+    Compare the mass function of different simulations at a given z
 
     Parameters
     -----------
@@ -448,7 +448,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     sims : list of strings
         Array with the names of the simulation
     env : list of string
-        ari, arilega or cosma, to use the adecuate paths
+        ari(lega) or cosma(lega), to use the adecuate paths
     mmin : float
         Mimimum mass to be considered
     mmax : float
@@ -472,7 +472,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     Examples
     ---------
     >>> import bahamasplot as bp
-    >>> bp.mf_sims(0.,['Group_M_Mean200'],['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
+    >>> bp.mf_sims(0.,['FOF/Group_M_Mean200'],['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
     """ 
 
     # Check that the size of the arrays is the same for sims, massdef and env
@@ -480,6 +480,8 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
         print('WARNING (bp.mf_sims): Input arrays have different lengths {}, {}, {}'.format(
             sims,env,massdef))
         return None
+
+    outdir, dirz, dirplots = b.get_outdirs(env[0],dirz=dirz,outdir=outdir,sim_label=None)
 
     # Get labels or check the arrays
     labels = get_simlabels(sims,labels=labels)
@@ -499,9 +501,14 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
-        outfil = b.get_nh(zz,massdef[ii],sim,env[ii],
-                          mmin=mmin,mmax=mmax,dm=dm,
-                          dirz=dirz,outdir=outdir,Testing=Testing)
+        mnom = massdef[ii]
+        prop = mnom.split('/')[1]
+        
+        if ('FOF' in mnom):
+            mass = b.get_fofprop(snap,sim,env[ii],prop,Testing=Testing)
+        print(mass)
+        print(mnom) ; exit()        
+        
         if outfil is None: continue
         files2plot += 1 ; print(outfil)
 
@@ -537,15 +544,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     for item in leg.legendHandles:
         item.set_visible(False)
 
-    # Path to plot
-    if (outdir == None):
-        dirp = b.get_dirb(env[0])+'plots/'
-    else:
-        dirp = outdir+'plots/'
-
-    if (not os.path.exists(dirp)):
-        os.makedirs(dirp)
-    plotf = dirp+'mf_z'+str(zz)+'_sims'+str(len(sims))+'_mdef'+\
+    plotf = dirplots+'mf_z'+str(zz)+'_sims'+str(len(sims))+'_mdef'+\
             str(len(np.unique(massdef)))+'.pdf'
     fig.savefig(plotf)
 
@@ -557,18 +556,24 @@ if __name__== "__main__":
     snap = 18
     zz = 3.
 
-    env = 'ari'
-    env = 'cosmalega'
+    env = 'arilega'
+    #env = 'cosmalega'
 
     if (env == 'cosmalega'):
         sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
+    if (env == 'arilega'):
+        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        dirz = '/hpcdata4/arivgonz/BAHAMAS/'
+        outdir = '/hpcdata4/arivgonz/Junk/'         
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
     #               'L400N1024/WMAP9/Sims/BAHAMAS']))
-    print(mf_sims(zz,['Group_M_Mean200'],[sim],[env],
+    print(mf_sims(zz,['FOF/Group_M_Mean200','Subhalo/ApertureMeasurements/Mass/030kpc'],
+                  [sim,sim],[env,env],
                   dirz=dirz,outdir=outdir, Testing=True))
+
