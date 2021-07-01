@@ -40,13 +40,16 @@ def stop_if_no_file(infile):
     return
 
 
-def check_file(infile):
+def check_file(infile,verbose=False):
     '''
     Return True if the file exists
     '''
     file_fine = True  
     if (not os.path.isfile(infile)):
         file_fine = False
+        if verbose:
+            print('WARNING (io.check_file): file not found {}'.format(infile))
+
     return file_fine
 
 
