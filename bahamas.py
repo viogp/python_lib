@@ -851,7 +851,7 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
         print('WARNING: negative or 0 input mass, returning -999.')
         return -999., -999.
     else:
-        omega0, omegab, lambda0, h0 = get_cosmology(sim,env)
+        omega0, omegab, lambda0, h0, volume = get_cosmology(sim,env)
 
         mdm = mb2msun(mdm,h0)
 
