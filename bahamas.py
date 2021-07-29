@@ -456,7 +456,7 @@ def get_cosmology(sim,env):
 
     # Initialize arrays for z and sn
     files = glob.glob(path+'groups_*/group_tab*')
-    infile = files[0]
+    infile = files[0] 
     f = h5py.File(infile, 'r')
     header = f['Header']
     #print(list(header.attrs.items()))

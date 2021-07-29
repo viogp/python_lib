@@ -194,7 +194,7 @@ def get_interval(val,low,high):
     return ind
 
 
-def chi2(obs,model,err):
+def chi2(obs,model,err2):
     '''
     Get the chi^2 for a given model
     
@@ -203,8 +203,8 @@ def chi2(obs,model,err):
         The observatioins or target values
     model : array of floats
         The model values (should be the same length as obs)
-    err : array of floats
-        The error of the observations
+    err2 : array of floats
+        The error**2 of the observations
 
     Returns:
     val : float
@@ -212,5 +212,40 @@ def chi2(obs,model,err):
     '''
     val = 0.
     for i,iobs in enumerate(obs):
-        val = val + (iobs-model[i])**2/(err[i]*err[i])
+        val = val + (iobs-model[i])**2/err2[i]
     return val
+
+
+def get_err2Pk(k,Pk,dk,N,vol):
+    '''
+    Get the error of the Power Spectrum
+
+    Parameters:
+    -----------
+    k : numpy array of floats
+       Wavenumber of the modes
+    Pk : numpy array of floats
+       Power spectrum at each k
+    dk : float
+      Size of the step for k
+    N : float
+      Number of elements
+    vol : float
+      Considered volume
+
+    Returns:
+    --------
+    err2Pk : float
+      Square of the power spectrum error
+    '''
+
+    err2Pk = None
+    
+    if (len(k) != len(Pk)):
+        print('STOP (stats.get_err2Pk): k and Pk are different lengths')
+        return err2Pk
+
+    norm = (2*np.pi)**2/(k*k*dk*vol)
+    err2Pk = norm*(Pk + vol/N)**2
+    
+    return err2Pk
