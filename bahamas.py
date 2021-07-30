@@ -270,6 +270,44 @@ def get_dirobs(env):
     return dirobs
 
 
+def get_path2part(sim,env):
+    """
+    Get the path to the directory with all the particle data
+
+    Parameters
+    -----------
+    sims : list of strings
+        Array with the names of the simulation
+    env : string
+        cosma, cosmalega, ari or arilega, to use the adecuate paths
+ 
+    Returns
+    -----
+    path2part : string
+       Path to data
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_path2part('L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_path2part('AGN_TUNED_nu0_L100N256_WMAP9','arilega')
+    """
+
+    # Simulation input
+    if (env == 'ari'):
+        path2part = dirbahamasari+sim+'/data/'
+    elif (env == 'arilega'):
+        path2part = dirbahamasarilega+sim+'/Data/Snapshots/'
+    elif (env == 'cosma'):
+        path2part = dirbahamascosma+sim+'/data/'
+    elif (env == 'cosmalega'):
+        path2part = dirbahamascosmalega+sim+'/data/'
+    else:
+        exit('get_path2data set to handle env=cosma, cosmalega, ari or arilega')
+
+    return path2part    
+
+
 def get_path2data(sim,env):
     """
     Get the path to the directory with the data
@@ -308,9 +346,70 @@ def get_path2data(sim,env):
     return path2data    
 
 
+def get_allparticle_files(snap,sim,env):
+    """
+    Get the particle files (in and out haloes)
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot number
+    sims : list of strings
+        Array with the names of the simulation
+    env : string
+        ari(lega) or cosma(lega), to use the adecuate paths
+ 
+    Returns
+    -----
+    files : array of string
+       Subfind files with full paths
+    allfiles : boolean
+       True if all files encountered given the numbers in the files names
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_allparticle_files(8,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_allparticle_files(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega')
+    """
+
+    allfiles = True
+
+    # Simulation input
+    path1 = get_path2part(sim,env)+'snapshot_'+str(snap).zfill(n0)
+
+    # Get path to particle files
+    paths = glob.glob(path1+'*/') 
+    if (len(paths) == 1):
+        path = paths[0]
+    else:
+        print('WARNING(b.get_allparticle_files): '+
+              'more than one or none directories with root {}'.format(path1+'*/'))
+        return None, False
+
+    root = path+'snap_'+str(snap).zfill(n0)
+    files = glob.glob(root+'*.hdf5')
+    if (len(files)<1):
+        print('WARNING (b.get_allparticle_files): no files in path {}'.format(path1+'*/'))
+        return None, False
+
+    numff =[int(ff.split('.')[1]) for ff in files]
+    ind = np.argsort(numff)
+    outff = [None]*len(files)
+    for ii,iind in enumerate(ind):
+        outff[ii]=files[iind]
+
+        # Check if there are missing files
+        if (ii != numff[iind]):
+            print('WARNING (b.get_allparticle_files): missing file {}.{}.hdf5'.format(root,ii))
+            allfiles = False
+
+    return outff, allfiles
+
+
 def get_particle_files(snap,sim,env):
     """
-    Get the particle files
+    Get the halo particle files
 
     Parameters
     -----------
@@ -1178,7 +1277,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
 
 if __name__== "__main__":
     dirz = None ; outdir = None
-    snap = 18
+    snap = 31
     zz = 3.
 
     env = 'arilega'
@@ -1203,11 +1302,12 @@ if __name__== "__main__":
     #print(get_z(-1,sim,env,dirz=dirz))
     #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+    print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
     #print(get_fofprop(snap,sim,env,'Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
-    print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
-                       'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
+    #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
+    #                   'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
     
