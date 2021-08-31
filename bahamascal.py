@@ -127,7 +127,7 @@ def cal_plots(sims,env,zz=0.,massdef='ApertureMeasurements/Mass/030kpc',
 
     if (labels == None):
         # Generate labels
-        labels = bp.get_simlabels(sims,labels=labels)
+        labels = b.get_simlabels(sims,labels=labels)
 
     # The subfiles to loop over
     nvols = 'All'

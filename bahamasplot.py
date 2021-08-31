@@ -29,83 +29,6 @@ def logformat(y,pos):
     # Return the formatted tick label
     return formatstring.format(y)
 
-def get_simlabels(sims,labels=None):
-    """
-    Check that the arrays sims and inlabels have the same lenght,
-    if not, get labels from the simulation names
-
-    Parameters
-    -----------
-    sims : list of strings
-        Array with the names of the simulation
-    labels : list of strings
-        Array with the labels to be used
-
-    Returns
-    -----
-    outlabels : list of strings
-        Labels for simulations
-
-    Examples
-    ---------
-    >>> import bahamasplot as bp
-    >>> bp.get_simlabels(['HIRES/AGN_RECAL_nu0_L100N512_WMAP9','L400N1024/WMAP9/Sims/BAHAMAS'])
-    """ 
-
-    outlabels = labels
-    # Check that the size of the arrays for the simulations and labels is the same
-    if (labels == None or len(labels) != len(sims)):
-        # Generate labels
-        labels0 = [x.split('/')[0] for x in sims]        
-        labels1 = [x.split('/')[-1] for x in sims]        
-
-        outlabels = labels1 ; newlabel = ''
-        for ii,label in enumerate(labels1):
-            if (label == 'BAHAMAS'):
-                newlabel = labels0[ii]
-
-            val = '_msfof'
-            if val in label:
-                label = label.split(val)[0]
-
-            val = '_beta_'
-            if val in label:
-                l1 = label.split(val)[1].replace('_','.')
-                newlabel=',$\\beta=$'+l1
-                label = label.split(val)[0]
-
-            val = '_BH'
-            if val in label:
-                label = label.split(val)[0]
-            
-            val = '_n_'
-            if val in label:
-                l1 = label.split(val)[1].replace('_','.')
-                newlabel=',$n=$'+l1+newlabel
-                label = label.split(val)[0]
-
-            val = '_dT_'
-            if val in label:
-                l1 = label.split(val)[1].replace('_','.')
-                newlabel=',$\\Delta T=$'+l1+newlabel
-                label = label.split(val)[0]
-
-            val = '_mu_'
-            if val in label:
-                l1 = label.split(val)[1].replace('_','.')
-                newlabel=',$\\mu=$'+l1+newlabel
-                label = label.split(val)[0]
-
-            val = 'ws_'
-            if val in label:
-                l1 = label.split(val)[1].replace('_','.')
-                newlabel='$v_{\\rm wind}=$'+l1+newlabel
-                label = label.split(val)[0]
-
-            if (newlabel != ''):    
-                outlabels[ii] = newlabel
-        
-    return outlabels
 
 def get_zticks(lowestz,xmin,xmax):
     """
@@ -197,7 +120,7 @@ def wctime(sims,env,labels=None,dirplot=None,zrange=None):
     """ 
 
     # Check labels
-    labels = get_simlabels(sims,labels=labels)
+    labels = b.get_simlabels(sims,labels=labels)
 
     # Set up plot variables
     fig = plt.figure()
@@ -317,7 +240,7 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
     """ 
 
     # Check labels
-    labels = get_simlabels(sims,labels=labels)
+    labels = b.get_simlabels(sims,labels=labels)
 
     # Set up plot variables
     fig = plt.figure()
@@ -484,7 +407,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     outdir, dirz, dirplots = b.get_outdirs(env[0],dirz=dirz,outdir=outdir,sim_label=None)
 
     # Get labels or check the arrays
-    labels = get_simlabels(sims,labels=labels)
+    labels = b.get_simlabels(sims,labels=labels)
 
     # Set up plot variables
     fig = plt.figure()
@@ -570,9 +493,6 @@ if __name__== "__main__":
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-    #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
-    #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
-    #               'L400N1024/WMAP9/Sims/BAHAMAS']))
     print(mf_sims(zz,['FOF/Group_M_Mean200','Subhalo/ApertureMeasurements/Mass/030kpc'],
                   [sim,sim],[env,env],
                   dirz=dirz,outdir=outdir, Testing=True))

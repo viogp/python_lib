@@ -80,7 +80,84 @@ def get_zminmaxs(zz,dz=None):
         
     return zmins,zmaxs
 
+    
+def get_simlabels(sims,labels=None):
+    """
+    Check that the arrays sims and inlabels have the same lenght,
+    if not, get labels from the simulation names
 
+    Parameters
+    -----------
+    sims : list of strings
+        Array with the names of the simulation
+    labels : list of strings
+        Array with the labels to be used
+
+    Returns
+    -----
+    outlabels : list of strings
+        Labels for simulations
+
+    Examples
+    ---------
+    >>> import bahamasplot as bp
+    >>> bp.get_simlabels(['HIRES/AGN_RECAL_nu0_L100N512_WMAP9','L400N1024/WMAP9/Sims/BAHAMAS'])
+    """ 
+
+    outlabels = labels
+    # Check that the size of the arrays for the simulations and labels is the same
+    if (labels == None or len(labels) != len(sims)):
+        # Generate labels
+        labels0 = [x.split('/')[0] for x in sims]        
+        labels1 = [x.split('/')[-1] for x in sims]        
+
+        outlabels = labels1 ; newlabel = ''
+        for ii,label in enumerate(labels1):
+            if (label == 'BAHAMAS'):
+                newlabel = labels0[ii]
+
+            val = '_msfof'
+            if val in label:
+                label = label.split(val)[0]
+
+            val = '_beta_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\beta=$'+l1
+                label = label.split(val)[0]
+
+            val = '_BH'
+            if val in label:
+                label = label.split(val)[0]
+            
+            val = '_n_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$n=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = '_dT_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\Delta T=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = '_mu_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel=',$\\mu=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            val = 'ws_'
+            if val in label:
+                l1 = label.split(val)[1].replace('_','.')
+                newlabel='$v_{\\rm wind}=$'+l1+newlabel
+                label = label.split(val)[0]
+
+            if (newlabel != ''):    
+                outlabels[ii] = newlabel
+        
+    return outlabels
 
 def mb2msun(massb,h0):
     """
@@ -1296,13 +1373,16 @@ if __name__== "__main__":
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
     #print(get_zminmaxs([0.,1.],dz=0.5))
+    #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
+    #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
+    #               'L400N1024/WMAP9/Sims/BAHAMAS']))
     #print(get_outdirs(env,dirz=dirz,outdir=outdir))
-    #print(table_z_sn(sim,env,dirz=dirz))
+    print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
     #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
-    print(get_allparticle_files(snap,sim,env))
+    #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
     #print(get_fofprop(snap,sim,env,'Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
@@ -1310,4 +1390,3 @@ if __name__== "__main__":
     #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
     #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
     #                   'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
-    
