@@ -30,6 +30,36 @@ defaultdz = 0.25
 
 n0 = 3
 
+def print_h5attributes(infile,inhead='Header'):
+    """
+    Print out the group attributes of a hdf5 file
+
+    Parameters
+    ----------
+    infile : string
+      Name of input file (this should be a hdf5 file)
+    inhead : string
+      Name of the group to read the attributes from
+
+    Example
+    -------
+    >>> import bahamas as b
+    >>> infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
+    >>> b.print_header5(infile)
+    """
+    try:
+        f = h5py.File(infile, 'r')
+    except:
+        print('Check that the file provided is correct')
+        return
+    
+    header = f[inhead]
+    for hitem in list(header.attrs.items()): 
+        print(hitem)
+    f.close()
+    return
+
+
 def get_zminmaxs(zz,dz=None):
     """
     Get the previous (min) and next (max) values
@@ -387,7 +417,7 @@ def get_path2part(sim,env):
 
 def get_path2data(sim,env):
     """
-    Get the path to the directory with the data
+    Get the path to the directory with the subhalo properties
 
     Parameters
     -----------
@@ -643,7 +673,8 @@ def get_cosmology(sim,env):
     h0 = header.attrs['HubbleParam']
 
     volume = header.attrs['BoxSize']**3 #(Mpc/h)^3
-
+    
+    f.close()
     return omega0, omegab, lambda0, h0, volume
 
 
@@ -1377,7 +1408,7 @@ if __name__== "__main__":
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
     #               'L400N1024/WMAP9/Sims/BAHAMAS']))
     #print(get_outdirs(env,dirz=dirz,outdir=outdir))
-    print(table_z_sn(sim,env,dirz=dirz))
+    #print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
     #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
@@ -1390,3 +1421,7 @@ if __name__== "__main__":
     #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
     #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
     #                   'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
+
+    infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
+    infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/EagleSubGroups_5r200/groups_026/eagle_subfind_tab_026.0.hdf5'
+    print(print_h5attributes(infile,'Constants'))
