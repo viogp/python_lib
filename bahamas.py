@@ -60,7 +60,7 @@ def print_h5attributes(infile,inhead='Header'):
     return
 
 
-def get_zminmaxs(zz,dz=None):
+def get_zminmaxs(zz,dz=None,verbose=False):
     """
     Get the previous (min) and next (max) values
     given an array. If the input is a single value 
@@ -72,6 +72,8 @@ def get_zminmaxs(zz,dz=None):
         Redshift 
     dz : float
         Optional parameter with an interval
+    verbose : bool
+        If True write out warning messages
 
     Returns
     -----
@@ -97,7 +99,8 @@ def get_zminmaxs(zz,dz=None):
         zmins = [iz - dz for iz in zz]
         zmaxs = [iz + dz for iz in zz]
     elif(len(zz)<2):
-        print('WARNING (get_zminmaxs): Setting to default dz={}'.format(defaultdz))
+        if (verbose):
+            print('WARNING (get_zminmaxs): Setting to default dz={}'.format(defaultdz))
         dz = defaultdz
         zmins = [iz - dz for iz in zz]
         zmaxs = [iz + dz for iz in zz]
