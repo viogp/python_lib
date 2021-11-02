@@ -13,7 +13,7 @@ style1 = {
 
     # Axes
     'axes.linewidth': 1.5,
-    'axes.titlesize': 'medium',
+    'axes.titlesize': 'small',
     'axes.labelsize': 'medium',
     'axes.prop_cycle': cycler('color', [
         '#1f77b4',  # blue
