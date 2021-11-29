@@ -16,9 +16,13 @@ unitdefault = {
     'ssfr': 'to be filled'
 }
 
-dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
-dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
-dirobsari = '/hpcdata0/Obs_Data/'
+#dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
+#dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
+#dirobsari = '/hpcdata0/Obs_Data/'
+
+dirbahamasarilega = '/beegfs2/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
+dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
+dirobsari = '/beegfs2/Obs_Data/'
 
 dirbahamascosmalega = '/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
