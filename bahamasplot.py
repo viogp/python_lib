@@ -365,7 +365,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     Parameters
     -----------
     zz : float
-        Redshift to make the plot
+        Redshift
     massdef : list of string
         Names of the mass definitions to be used
     sims : list of strings
@@ -395,7 +395,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     Examples
     ---------
     >>> import bahamasplot as bp
-    >>> bp.mf_sims(0.,['FOF/Group_M_Mean200'],['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
+    >>> bp.mf_sims(27,['FOF/Group_M_Mean200'],['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
     """ 
 
     # Check that the size of the arrays is the same for sims, massdef and env
@@ -424,9 +424,12 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
+        snap = b.get_snap(snap,sim,env[ii]) #here 
+        print(snap); exit()
         mnom = massdef[ii]
         prop = mnom.split('/')[1]
-        
+        print(prop) ; exit()
+
         if ('FOF' in mnom):
             mass = b.get_fofprop(snap,sim,env[ii],prop,Testing=Testing)
         print(mass)
@@ -455,7 +458,7 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
             ax.plot(mhist[ind],np.log10(hmf[ind]),c=cols[ii],label=labels[ii])
 
     if (files2plot<1):
-        print('WARNING (bp.mf_sims): No mf_sims plot made at z={}'.format(zz))
+        print('WARNING (bp.mf_sims): No mf_sims plot made for snapshot={}'.format(snap))
         return None
 
     # Legend

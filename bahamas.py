@@ -20,7 +20,7 @@ unitdefault = {
 #dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 #dirobsari = '/hpcdata0/Obs_Data/'
 
-dirbahamasarilega = '/beegfs2/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
+dirbahamasarilega = '/beegfs2/hpcdata0_backup/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
 dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
 dirobsari = '/beegfs2/Obs_Data/'
 
@@ -836,7 +836,7 @@ def get_z(snap,sim,env,dirz=None):
             return zz
 
 
-def get_snap(zz,zmin,zmax,sim,env,dirz=None):
+def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
     """
     Get the closest snapshot given a redshift and
     a simulation name, within some limits
@@ -845,12 +845,12 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
     -----------
     zz : float
         Redshift
+    sim : string
+        Name of the Bahamas simulation
     zmin : float
         Minimum redsfhit to look for the sanpshot
     zmax : float
         Maximum redsfhit to look for the sanpshot
-    sim : string
-        Name of the Bahamas simulation
     dirz : string
         Alternative directory where the table with z and snapshots is.
     env : string
@@ -874,6 +874,14 @@ def get_snap(zz,zmin,zmax,sim,env,dirz=None):
 
     # Simulation input
     path = get_path2data(sim,env)
+
+    # Check if the redshift range has been provided
+    if (zmin == None and zmax == None):
+        zmin,zmax = get_zminmaxs([zz])
+    elif (zmin == None):
+        zmin,dum = get_zminmaxs([zz])
+    elif (zmax == None):
+        dum,zmax = get_zminmaxs([zz])
 
     # Table with increasing redshifts and corresponding snapshots
     if (dirz == None):
@@ -1175,12 +1183,11 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
     ---------
     >>> import bahamas as b
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
-    >>> b.get_nh(31,'Group_M_Mean200',sim,'arilega',outdir='/hpcdata4/arivgonz/BAHAMAS/')
+    >>> b.get_nh(31,'FOF/Group_M_Mean200',sim,'arilega',outdir='/hpcdata4/arivgonz/BAHAMAS/')
     '''
 
     # Get snapshot
-    zmin,zmax = get_zminmaxs([zz])
-    snap, z_snap = get_snap(zz,zmin,zmax,sim,env,dirz=dirz)
+    snap, z_snap = get_snap(zz,sim,env,dirz=dirz)
 
     # Output file
     if outdir:
@@ -1418,7 +1425,13 @@ if __name__== "__main__":
     #print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
-    #snap, zsnap = get_snap(3.2,2.8,3.8,sim,env,dirz=dirz)
+    #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz)
+    #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+    #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmax=[3.8])
+    #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+    #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmin=[2.8])
+    #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
+    #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmin=[2.8],zmax=[3.8])
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
@@ -1429,6 +1442,6 @@ if __name__== "__main__":
     #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
     #                   'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
 
-    infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
-    infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/EagleSubGroups_5r200/groups_026/eagle_subfind_tab_026.0.hdf5'
-    print(print_h5attributes(infile,'Constants'))
+    #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
+    #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/EagleSubGroups_5r200/groups_026/eagle_subfind_tab_026.0.hdf5'
+    #print(print_h5attributes(infile,'Constants'))
