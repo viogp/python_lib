@@ -424,16 +424,14 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     # Loop over all the simulations to be compared
     lowestz = 999 ; files2plot = 0
     for ii, sim in enumerate(sims):
-        snap = b.get_snap(snap,sim,env[ii]) #here 
-        print(snap); exit()
+        snap, zsnap = b.get_snap(zz,sim,env[ii])
+
         mnom = massdef[ii]
         prop = mnom.split('/')[1]
-        print(prop) ; exit()
-
         if ('FOF' in mnom):
             mass = b.get_fofprop(snap,sim,env[ii],prop,Testing=Testing)
         print(mass)
-        print(mnom) ; exit()        
+        print(mnom) ; exit() #here   
         
         if outfil is None: continue
         files2plot += 1 ; print(outfil)

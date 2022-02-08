@@ -975,9 +975,9 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
 
 
 
-def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
+def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     """
-    Get an array with a given FOF property
+    Get an array with a given property
 
     Parameters
     -----------
@@ -988,7 +988,7 @@ def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
     env : string
         ari or cosma, to use the adecuate paths
     propdef : string
-        Name of the mass definition
+        Name of the property, including path within hdf5 file
     Testing: boolean
         True or False
     nfiles : integer
@@ -1002,7 +1002,7 @@ def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_fofprop(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega','Group_M_Crit200',Testing=True)
+    >>> b.get_prop(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega','FOF/Group_M_Crit200',Testing=True)
     """
 
     # Simulation input
@@ -1018,14 +1018,14 @@ def get_fofprop(snap,sim,env,propdef,Testing=False,nfiles=2):
 
         if (ii == 0):
             try:
-                fofprop = f['FOF/'+propdef][:]
+                prop = f[propdef][:]
             except:
-                print('WARNING (bahamas): no FOF/{} found in {}'.format(propdef,ff))
+                print('WARNING (bahamas): no {} found in {}'.format(propdef,ff))
                 return None
         else:
-            fofprop = np.append(fofprop, f['FOF/'+propdef][:], axis=0)
+            prop = np.append(prop, f[propdef][:], axis=0)
 
-    return fofprop
+    return prop
 
 
 def resolution(sim,env,zz=0.,dirz=None,verbose=True):
@@ -1435,7 +1435,7 @@ if __name__== "__main__":
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
-    #print(get_fofprop(snap,sim,env,'Group_M_Crit200'))
+    #print(get_prop(snap,sim,env,'FOF/Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
