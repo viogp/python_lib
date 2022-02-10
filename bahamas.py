@@ -1183,9 +1183,12 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
     ---------
     >>> import bahamas as b
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
-    >>> b.get_nh(31,'FOF/Group_M_Mean200',sim,'arilega',outdir='/hpcdata4/arivgonz/BAHAMAS/')
+    >>> b.get_nh(0.5,'FOF/Group_M_Mean200',sim,'arilega',outdir='/hpcdata4/arivgonz/BAHAMAS/')
     '''
 
+    # Convert / to _ in massdef name
+    mnom = massdef.replace('/','_')
+    
     # Get snapshot
     snap, z_snap = get_snap(zz,sim,env,dirz=dirz)
 
@@ -1198,10 +1201,10 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
         os.makedirs(path)
 
     if Testing:
-        outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'_test.txt'
+        outfil = path+'/nh_'+mnom+'_sn'+str(snap)+'_dm'+str(dm)+'_test.txt'
     else:
-        outfil = path+'/nh_'+massdef+'_sn'+str(snap)+'_dm'+str(dm)+'.txt'
-
+        outfil = path+'/nh_'+mnom+'_sn'+str(snap)+'_dm'+str(dm)+'.txt'
+        
     if (os.path.isfile(outfil)):
         #data = subprocess.run(['wc', '-l', outfil], capture_output=True) #python3.7
         process = subprocess.run(['wc', '-l', outfil], universal_newlines=True, 
@@ -1212,7 +1215,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
             return outfil
 
     # Get the halo mass
-    mh = get_fofprop(snap,sim,env,massdef,Testing=Testing)
+    mh = get_prop(snap,sim,env,massdef,Testing=Testing)
     ind = np.where(mh > 0.)
     lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
 
@@ -1438,7 +1441,7 @@ if __name__== "__main__":
     #print(get_prop(snap,sim,env,'FOF/Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
-    #print(get_nh(zz,'Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
+    print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
     #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
     #                   'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
 

@@ -357,8 +357,9 @@ def cputime(sims,env,labels=None,dirplot=None,zrange=None):
     return plotf
 
 
-def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
-            dirz=None,outdir=None,Testing=False):
+def propf_sims(zz,propdef,sims,env,dm=0.1,mmin=9.,mmax=16.,
+               xmin=10.,xmax=15.,ymin=-6.5,ymax=0.,proptype='mass',
+               labels=None,dirz=None,outdir=None,Testing=False):
     """
     Compare the mass function of different simulations at a given z
 
@@ -366,18 +367,22 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     -----------
     zz : float
         Redshift
-    massdef : list of string
-        Names of the mass definitions to be used
+    propdef : list of string
+        Names of the properties to be used for each simulation
     sims : list of strings
         Array with the names of the simulation
     env : list of string
         ari(lega) or cosma(lega), to use the adecuate paths
-    mmin : float
-        Mimimum mass to be considered
-    mmax : float
-        Maximum mass to be considered
     dm : float
         Intervale step in halo mass   
+    mmin, mmax : float
+        Mimimum/Maximum or the property to be considered
+    xmin, xmax : float
+        Mimimum/Maximum x range for plot
+    ymin, ymax : float
+        Mimimum/Maximum y range for plot
+    proptype : string
+        Type of properties, allowed: 'mass', 'sfr'
     labels : list of strings
         Array with the labels to be used
     dirz : string
@@ -399,9 +404,9 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     """ 
 
     # Check that the size of the arrays is the same for sims, massdef and env
-    if (len(sims) != len(env) or len(sims) != len(massdef)):
-        print('WARNING (bp.mf_sims): Input arrays have different lengths {}, {}, {}'.format(
-            sims,env,massdef))
+    if (len(sims) != len(env) or len(sims) != len(propdef)):
+        print('WARNING (bp.propf_sims): Input arrays have different lengths {}, {}, {}'.format(
+            sims,env,propdef))
         return None
 
     outdir, dirz, dirplots = b.get_outdirs(env[0],dirz=dirz,outdir=outdir,sim_label=None)
@@ -409,58 +414,62 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     # Get labels or check the arrays
     labels = b.get_simlabels(sims,labels=labels)
 
+    # Get mass ranges
+    edges = np.array(np.arange(mmin,mmax,dm))
+    xhist = edges[1:]-0.5*dm
+    
     # Set up plot variables
     fig = plt.figure()
     ax = plt.subplot()
     cols = get_distinct(len(sims))
-    xtit = '${\\rm log}_{10}(\\rm{M/M_{\odot}}h^{-1})$' 
-    ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}M)$'
+    if (proptype == 'mass'):
+        xtit = '${\\rm log}_{10}(\\rm{M/M_{\odot}}h^{-1})$' 
+        ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}M)$'
+    elif (proptype == 'sfr'): # ssfr to be added
+        xtit = '${\\rm log}_{10}(\\rm{SFR/M_{\odot}}h^{-1})$' #here to update
+        ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}SFR)$'
+    else:
+        return None
     ax.set_xlabel(xtit) ; ax.set_ylabel(ytit)
-
-    xmin = 10. ; xmax = 16.
-    ymin = -6.5 ; ymax = 0.
     ax.set_xlim(xmin,xmax) ;  ax.set_ylim(ymin,ymax) 
 
     # Loop over all the simulations to be compared
-    lowestz = 999 ; files2plot = 0
+    sims2plot = 0
     for ii, sim in enumerate(sims):
         snap, zsnap = b.get_snap(zz,sim,env[ii])
 
-        mnom = massdef[ii]
-        prop = mnom.split('/')[1]
-        if ('FOF' in mnom):
-            mass = b.get_fofprop(snap,sim,env[ii],prop,Testing=Testing)
-        print(mass)
-        print(mnom) ; exit() #here   
-        
-        if outfil is None: continue
-        files2plot += 1 ; print(outfil)
+        # Read the simulation parameters
+        omega0, omegab, lambda0, h0, volume = b.get_cosmology(sim,env[ii])
 
-        # Read data
-        mhist, nh = np.loadtxt(outfil,usecols=(0,3),unpack=True)
+        # Read the mass
+        propall = b.get_prop(snap,sim,env[ii],propdef[ii],Testing=Testing)
 
-        # Read volume and dm
-        ff = open(outfil, 'r')
-        line1 = ff.readline()
-        line2 = ff.readline()
-        ff.close()
-        volume = float(line2.split(',')[0].split('=')[-1])
-        dm = float(line2.split(',')[1].split('=')[-1])
+        if (proptype == 'mass'):
+            # log(M/ Msun/h)
+            prop = np.full(len(propall),-999.)
+            ind = np.where(propall>0)
+            if (np.shape(ind)[1]<=1): continue
+            prop[ind] = np.log10(propall[ind])+10.
+        else:
+            return None    
+            
+        # Number of haloes/gal per bin in property
+        nh = np.zeros(shape=(len(xhist)))
+        nh, bins_edges = np.histogram(prop,bins=edges)
 
-        # Calculate HMF
-        print('Side of sim box = {:.2f} Mpc^3/h^3'.format(np.power(volume,1./3.)))
-        if (volume>0.):
-            hmf = nh/volume/dm  # In Mpc^3/h^3
-
-            ind = np.where(hmf>0.)
-            ax.plot(mhist[ind],np.log10(hmf[ind]),c=cols[ii],label=labels[ii])
-
-    if (files2plot<1):
+        # Calculate MF por bins with haloes
+        ind = np.where(nh>0)
+        if (np.shape(ind)[1]>1 and volume>0.):
+            mf = np.log10(nh[ind]/volume/dm)  # In Mpc^3/h^3
+            ax.plot(xhist[ind],mf,c=cols[ii],label=labels[ii])
+            sims2plot += 1
+            
+    if (sims2plot<1):
         print('WARNING (bp.mf_sims): No mf_sims plot made for snapshot={}'.format(snap))
         return None
 
     # Legend
-    ax.annotate('z='+str(zz),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
+    ax.annotate('z='+str(zsnap),xy=(xmax-0.17*(xmax-xmin),ymax-0.07*(ymax-ymin)))
     leg = ax.legend(loc=3, handlelength=0, handletextpad=0)
     leg.draw_frame(False)
     for ii,text in enumerate(leg.get_texts()):
@@ -468,8 +477,8 @@ def mf_sims(zz,massdef,sims,env,mmin=9.,mmax=16.,dm=0.1,labels=None,
     for item in leg.legendHandles:
         item.set_visible(False)
 
-    plotf = dirplots+'mf_z'+str(zz)+'_sims'+str(len(sims))+'_mdef'+\
-            str(len(np.unique(massdef)))+'.pdf'
+    plotf = dirplots+proptype+'f_z'+str(zz)+'_sims'+str(len(sims))+'_defs'+\
+            str(len(np.unique(propdef)))+'.pdf'
     fig.savefig(plotf)
 
     return plotf
