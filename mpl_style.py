@@ -4,7 +4,7 @@ from cycler import cycler
 
 style1 = {
     # Line styles
-    'lines.linewidth': 2,
+    'lines.linewidth': 2.5,
     'lines.antialiased': True,
 
     # Font

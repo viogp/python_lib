@@ -1037,7 +1037,7 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     sim : string
         Simulation name
     env : string
-        ari or cosma, to use the adecuate paths
+        ari, arilega or cosma, to use the adecuate paths
     zz : float
         Redshift to look (should be the same for all)
     dirz : string
@@ -1057,8 +1057,8 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     >>> b.resolution('L050N256/WMAP9/Sims/ex','cosma')
     """
 
-    snap, z_snap = get_snap(zz,-999.,999.,sim,env,dirz=dirz)
-    
+    snap, z_snap = get_snap(zz,sim,env,dirz=dirz)
+
     # Simulation input
     files, allfiles = get_particle_files(snap,sim,env)
     if (files is None): return -999., -999.
