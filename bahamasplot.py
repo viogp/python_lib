@@ -424,7 +424,7 @@ def propf_sims(zz,propdef,sims,env,dm=0.1,mmin=9.,mmax=16.,
     cols = get_distinct(len(sims))
     if (proptype == 'mass'):
         xtit = '${\\rm log}_{10}(\\rm{M/M_{\odot}}h^{-1})$' 
-        ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}M)$'
+        ytit = '${\\rm log}_{10}(\Phi/{\\rm Mpc}^{-3}h^3 {\\rm dlog}_{10}M)$'
     elif (proptype == 'sfr'): # ssfr to be added
         xtit = '${\\rm log}_{10}(\\rm{SFR/M_{\odot}}h^{-1})$' #here to update
         ytit = '${\\rm log}_{10}(\Phi/ Mpc^{-3}h^3 {\\rm dlog}_{10}SFR)$'
@@ -484,6 +484,52 @@ def propf_sims(zz,propdef,sims,env,dm=0.1,mmin=9.,mmax=16.,
     return plotf
     
 
+def get_selnds(dirf,sims,redshift):
+    """
+    Get the number density cuts from the names of files 'sel_*_z*.hdf5'
+
+    Parameters
+    -----------
+    dirf : string
+        Main directory with outputs
+    sims : list of string
+        Names of the simulations considered
+    redshift : string
+        Redshift as a string with . replaced by _
+
+    Returns
+    -----
+    nds : list of strings
+        Strings with the exponents for the number density (10^nd),
+        with . replaced by _
+
+    Examples
+    ---------
+    >>> import bahamasplot as bp
+    >>> bp.get_selnds('/hpcdata4/arivgonz/Junk/',['HIRES/AGN_RECAL_nu0_L100N512_WMAP9'],'0_75')
+    """
+
+    nds = []
+    
+    for ii,sim in enumerate(sims):
+        print(dirf+sim)
+        # Files with selections based on number densities
+        files = glob.glob(dirf+sim+'/sel_*_z'+redshift+'.hdf5')
+        if (len(files)<1): continue
+
+        nds = sorted(list(set([ff.split('_nd')[1].split('_z')[0] for ff in files])))
+        if (ii == 0):
+            nds0 = nds
+        else:
+            if (nds0 != nds):
+                print('STOP: Different number densities between {} and {}: \n {}\n {}\n'.
+                      format(sim,sims[ii-1],nds,nds0))
+                return []
+            nds0 = nds
+            
+    return nds
+
+
 if __name__== "__main__":
     dirz = None ; outdir = None
     snap = 18
@@ -503,7 +549,7 @@ if __name__== "__main__":
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-    print(mf_sims(zz,['FOF/Group_M_Mean200','Subhalo/ApertureMeasurements/Mass/030kpc'],
-                  [sim,sim],[env,env],
-                  dirz=dirz,outdir=outdir, Testing=True))
-
+    #print(mf_sims(zz,['FOF/Group_M_Mean200','Subhalo/ApertureMeasurements/Mass/030kpc'],
+    #              [sim,sim],[env,env],
+    #              dirz=dirz,outdir=outdir, Testing=True))    
+    print(get_selnds(outdir,[sim],'0_75'))
