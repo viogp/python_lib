@@ -1028,7 +1028,7 @@ def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     return prop
 
 
-def resolution(sim,env,zz=0.,dirz=None,verbose=True):
+def resolution(sim,env,zz=0.,msunh=True,dirz=None,verbose=True):
     """
     Get the mass resolution of a simulation
 
@@ -1040,6 +1040,8 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
         ari, arilega or cosma, to use the adecuate paths
     zz : float
         Redshift to look (should be the same for all)
+    msunh : boolean
+        If True, mass in Msun/h units
     dirz : string
         Alternative path to table with z and snapshot.
     verbose : boolean
@@ -1047,7 +1049,7 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
 
     Returns
     -----
-    mdm, mgas, volume : float
+    mdm, mgas : float
         Mass resolution (Msun) for DM and gas particles
 
     Examples
@@ -1063,7 +1065,7 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     files, allfiles = get_particle_files(snap,sim,env)
     if (files is None): return -999., -999.
 
-    f= h5py.File(files[0],'r')
+    f= h5py.File(files[0],'r') #;print(files[0])
     header=f['Header']
     masstable = header.attrs['MassTable']
 
@@ -1075,13 +1077,19 @@ def resolution(sim,env,zz=0.,dirz=None,verbose=True):
     else:
         omega0, omegab, lambda0, h0, volume = get_cosmology(sim,env)
 
-        mdm = mb2msun(mdm,h0)
-
+        if (msunh):
+            mdm = mdm*10**10
+        else:
+            mdm = mb2msun(mdm,h0)
+            
         mgas = mdm*omegab/(omega0-omegab)
 
         if (verbose):
             print('Particle resolution of sim.: {}'.format(sim))
-            print('mdm (Msun) = {:.2e}, mgas (Msun)=mb= {:.2e}'.format(mdm,mgas))
+            if msunh:
+                print('mdm (Msun/h) = {:.2e}, mgas (Msun/h)=mb= {:.2e}'.format(mdm,mgas))
+            else:
+                print('mdm (Msun) = {:.2e}, mgas (Msun)=mb= {:.2e}'.format(mdm,mgas))
         
         return mdm,mgas
 
@@ -1413,8 +1421,8 @@ if __name__== "__main__":
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
     if (env == 'arilega'):
-        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
-        #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+        #sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
         dirz = '/hpcdata4/arivgonz/BAHAMAS/'
         outdir = '/hpcdata4/arivgonz/Junk/'
     if (env == 'ari'):
@@ -1439,9 +1447,9 @@ if __name__== "__main__":
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
     #print(get_prop(snap,sim,env,'FOF/Group_M_Crit200'))
-    #print(resolution(sim,env,dirz=dirz))
+    print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
-    print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
+    #print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
     #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
     #                   'mass',sim,env,ptype='DM',dirz=dirz,outdir=outdir))
 
