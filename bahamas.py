@@ -1028,7 +1028,7 @@ def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     return prop
 
 
-def resolution(sim,env,zz=0.,msunh=True,dirz=None,verbose=True):
+def resolution(sim,env,zz=0.,msunh=True,dirz=None,verbose=False):
     """
     Get the mass resolution of a simulation
 
@@ -1421,8 +1421,8 @@ if __name__== "__main__":
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
     if (env == 'arilega'):
-        #sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
-        sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
         dirz = '/hpcdata4/arivgonz/BAHAMAS/'
         outdir = '/hpcdata4/arivgonz/Junk/'
     if (env == 'ari'):
