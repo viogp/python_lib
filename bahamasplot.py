@@ -512,7 +512,6 @@ def get_selnds(dirf,sims,redshift):
     nds = []
     
     for ii,sim in enumerate(sims):
-        print(dirf+sim)
         # Files with selections based on number densities
         files = glob.glob(dirf+sim+'/sel_*_z'+redshift+'.hdf5')
         if (len(files)<1): continue

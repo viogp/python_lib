@@ -1408,6 +1408,65 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
     return outfil
 
 
+
+def map_m500(snap,sim,env,ptype='BH',dirz=None,outdir=None,Testing=True):
+    '''
+    Map particle mass into r500 from Subfind
+
+    Parameters
+    -----------
+    snap : int
+        Snapshot number
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma, to use the adecuate paths
+    ptype : array of string
+        array containing one of the allowed ptypes
+    dirz : string
+        Alternative path to table with z and snapshot.
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+
+    Returns
+    -----
+    prop : float array
+        Mapped property
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.get_propfunc(31,sim,'arilega')
+    '''
+
+    prop = []
+
+    # Type of particles to be read
+    itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
+    ptype = 'PartType'+str(itype)
+    print(ptype)
+###here
+    # Get particle files
+    files, allfiles = b.get_particle_files(snap,sim,env)
+    if (files is None): continue
+#    # Read particle information
+#istart = 0
+#       for iff, ff in enumerate(files):
+#           f = h5py.File(ff, 'r') #; print(ff)
+#    p0 = f[ptype] 
+#    groupnum = p0['GroupNumber'][:] # FoF group number particle is in
+#    subgroupnum = p0['SubGroupNumber'][:]
+#    partmass = p0['Mass'][:]*1e10/h0       #Msun
+#    partx = p0['Coordinates'][:,0]/h0 
+#    party = p0['Coordinates'][:,1]/h0 
+#    partz = p0['Coordinates'][:,2]/h0 
+#    
+    return prop
+
+
 if __name__== "__main__":
     dirz = None ; outdir = None
     snap = 31
@@ -1447,7 +1506,7 @@ if __name__== "__main__":
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
     #print(get_prop(snap,sim,env,'FOF/Group_M_Crit200'))
-    print(resolution(sim,env,dirz=dirz))
+    #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
     #print(get_propfunc(zz,['FOF/Group_M_Mean200','FOF/m2'],
@@ -1456,3 +1515,4 @@ if __name__== "__main__":
     #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
     #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/EagleSubGroups_5r200/groups_026/eagle_subfind_tab_026.0.hdf5'
     #print(print_h5attributes(infile,'Constants'))
+    print(map_m500(snap,sim,env,dirz=dirz,outdir=outdir))
