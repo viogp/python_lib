@@ -3,11 +3,14 @@ import numpy as np
 import h5py
 import glob
 import subprocess
+import pandas as pd
 from astropy import constants as const
 from iotools import stop_if_no_file, is_sorted, create_dir
 #print('\n \n')
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
+
+nogroup = 1073741824.
 
 unitdefault = {
     'volume': '(Mpc/h)^3',
@@ -654,8 +657,8 @@ def get_cosmology(sim,env):
 
     Returns
     -----
-    omega0, omegab, lambda0, h0, volume : floats
-        Cosmological parameters and volume
+    omega0, omegab, lambda0, h0, boxsize : floats
+        Cosmological parameters and boxsize
 
     Examples
     ---------
@@ -679,10 +682,10 @@ def get_cosmology(sim,env):
     lambda0 = header.attrs['OmegaLambda']
     h0 = header.attrs['HubbleParam']
 
-    volume = header.attrs['BoxSize']**3 #(Mpc/h)^3
+    boxsize = header.attrs['BoxSize'] # Mpc/h
     
     f.close()
-    return omega0, omegab, lambda0, h0, volume
+    return omega0, omegab, lambda0, h0, boxsize
 
 
 def table_z_sn(sim,env,dirz=None):
@@ -1447,23 +1450,114 @@ def map_m500(snap,sim,env,ptype='BH',dirz=None,outdir=None,Testing=True):
     # Type of particles to be read
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
     ptype = 'PartType'+str(itype)
-    print(ptype)
-###here
+
     # Get particle files
-    files, allfiles = b.get_particle_files(snap,sim,env)
-    if (files is None): continue
-#    # Read particle information
-#istart = 0
-#       for iff, ff in enumerate(files):
-#           f = h5py.File(ff, 'r') #; print(ff)
-#    p0 = f[ptype] 
-#    groupnum = p0['GroupNumber'][:] # FoF group number particle is in
-#    subgroupnum = p0['SubGroupNumber'][:]
-#    partmass = p0['Mass'][:]*1e10/h0       #Msun
-#    partx = p0['Coordinates'][:,0]/h0 
-#    party = p0['Coordinates'][:,1]/h0 
-#    partz = p0['Coordinates'][:,2]/h0 
-#    
+    files, allfiles = get_particle_files(snap,sim,env)
+    if (not allfiles):
+        print('WARNING (bahamas.map_m500): no adequate particle files found, {}, {}'.
+              format(snap,env))
+        return None
+    if (Testing): files = [files[0]]
+
+    # Loop over the particle files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff)
+        p0 = f[ptype]  
+
+        # Read particle information
+        if (iff == 0):
+            groupnum = p0['GroupNumber'][:] # FoF group number particle is in
+            # Negative values: particles within r200 but not part of the halo
+            subgroupnum = p0['SubGroupNumber'][:]
+            partmass = p0['Mass'][:]*1e10       # Msun/h
+            partx = p0['Coordinates'][:,0]      # Mpc/h
+            party = p0['Coordinates'][:,1]
+            partz = p0['Coordinates'][:,2] 
+        else:
+            groupnum    = np.append(groupnum,p0['GroupNumber'][:])
+            subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
+            partmass    = np.append(partmass,p0['Mass'][:]*1e10)
+            partx       = np.append(partx,p0['Coordinates'][:,0])
+            party       = np.append(party,p0['Coordinates'][:,0])
+            partz       = np.append(partz,p0['Coordinates'][:,0])
+
+    # If all groupnum are less than 0, take abs()
+    ind = np.where(groupnum<0)
+    if(np.shape(ind)[1] == len(groupnum)):
+        groupnum = abs(groupnum)
+
+    # Get particle information into a pandas dataset to facilitate merging options
+    df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,partx,party,partz]).T,
+                           columns=['groupnum','subgroupnum','partmass','partx','party','partz'])
+    groupnum,subgroupnum,partmass,partx,party,partz=[[] for i in range(6)] #Empty arrays
+    df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+    df_part.reset_index(inplace=True, drop=True)  
+
+            
+    # Get FOF/Subfind files
+    files, allfiles = get_subfind_files(snap,sim,env)
+    if (not allfiles):
+        print('WARNING (bahamas.map_m500): no adequate Subfind files found, {}, {}'.
+              format(snap,env))
+        return None
+    if (Testing): files = [files[0],files[1]]
+
+    # Loop over the FOF/Subfind files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff)
+        fof = f['FOF']
+
+        # Read particle information  r500,cop_x,cop_y,cop_z
+        if (iff == 0):
+            m500  = fof['Group_M_Crit500'][:]*1e10      #Msun/h
+            r500  = fof['Group_R_Crit500'][:]           #cMpc/h
+            cop_x = fof['GroupCentreOfPotential'][:,0]  #cMpc/h
+            cop_y = fof['GroupCentreOfPotential'][:,1]  #cMpc/h
+            cop_z = fof['GroupCentreOfPotential'][:,2]  #cMpc/h
+        else:
+            m500  = np.append(m500,fof['Group_M_Crit500'][:]*1e10)
+            r500  = np.append(r500,fof['Group_R_Crit500'][:])
+            cop_x  = np.append(cop_x,fof['GroupCentreOfPotential'][:,0])
+            cop_y  = np.append(cop_y,fof['GroupCentreOfPotential'][:,1])
+            cop_z  = np.append(cop_z,fof['GroupCentreOfPotential'][:,2])
+
+    # Get the FOF data into a pandas dataset
+    df_fof = pd.DataFrame(data=np.vstack([m500,r500,cop_x,cop_y,cop_z]).T,
+                          columns=['m500','r500','cop_x','cop_y','cop_z'])
+    m500,r500,cop_x,cop_y,cop_z=[[] for i in range(5)] #Empty individual arrays
+
+    # Generate a groupnum column from 1 to the last halo
+    df_fof.index += 1
+    df_fof.index.names = ['groupnum'] 
+    df_fof.reset_index(inplace=True)
+
+    # Join the particle and FoF information
+    merge = pd.merge(df_part, df_fof, on=['groupnum'])
+
+    # Get the boxsize
+    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    lbox2 = boxsize/2.
+
+    # Position of particles relative to the center of the group
+    merge['partx'] = merge.partx - merge.cop_x
+    merge['party'] = merge.party - merge.cop_y
+    merge['partz'] = merge.partz - merge.cop_z
+
+    # Correct for periodic boundary conditions (for gal. in groups)
+    merge.partx.loc[merge.partx < -lbox2] = merge.partx.loc[merge.partx < -lbox2] + boxsize
+    merge.party.loc[merge.party < -lbox2] = merge.party.loc[merge.party < -lbox2] + boxsize
+    merge.partz.loc[merge.partz < -lbox2] = merge.partz.loc[merge.partz < -lbox2] + boxsize
+
+    merge.partx.loc[merge.partx >= lbox2] = merge.partx.loc[merge.partx >= lbox2] - boxsize
+    merge.party.loc[merge.party >= lbox2] = merge.party.loc[merge.party >= lbox2] - boxsize
+    merge.partz.loc[merge.partz >= lbox2] = merge.partz.loc[merge.partz >= lbox2] - boxsize
+
+    # Distances within groups and clusters
+    
+    
+    print(merge['partx']); exit()
+    ###here cal l.451: do I need to make cuts?
+    
     return prop
 
 
@@ -1487,6 +1581,7 @@ if __name__== "__main__":
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
+    print(map_m500(snap,sim,env,ptype='BH',dirz=dirz,outdir=outdir))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
@@ -1515,4 +1610,3 @@ if __name__== "__main__":
     #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
     #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/EagleSubGroups_5r200/groups_026/eagle_subfind_tab_026.0.hdf5'
     #print(print_h5attributes(infile,'Constants'))
-    print(map_m500(snap,sim,env,dirz=dirz,outdir=outdir))
