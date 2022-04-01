@@ -1412,7 +1412,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
 
 
 
-def map_m500(snap,sim,env,ptype='BH',dirz=None,outdir=None,Testing=True):
+def map_m500(snap,sim,env,ptype='BH',mlim=0.,outfile=False,dirz=None,outdir=None,Testing=True):
     '''
     Map particle mass into r500 from Subfind
 
@@ -1426,6 +1426,10 @@ def map_m500(snap,sim,env,ptype='BH',dirz=None,outdir=None,Testing=True):
         ari, arilega or cosma, to use the adecuate paths
     ptype : array of string
         array containing one of the allowed ptypes
+    mlim : float
+        mass limit for M500 [Msun/h]
+    outfile : boolean
+        If True, return the name of the file; if False, return property
     dirz : string
         Alternative path to table with z and snapshot.
     outdir : string
@@ -1445,8 +1449,10 @@ def map_m500(snap,sim,env,ptype='BH',dirz=None,outdir=None,Testing=True):
     >>> b.get_propfunc(31,sim,'arilega')
     '''
 
-    prop = []
-
+    if (ptype == 'DM'):
+        print('WARNING (bahamas.map_m500): For DM, use directly the halo masses')
+        return None
+    
     # Type of particles to be read
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
     ptype = 'PartType'+str(itype)
@@ -1552,13 +1558,30 @@ def map_m500(snap,sim,env,ptype='BH',dirz=None,outdir=None,Testing=True):
     merge.party.loc[merge.party >= lbox2] = merge.party.loc[merge.party >= lbox2] - boxsize
     merge.partz.loc[merge.partz >= lbox2] = merge.partz.loc[merge.partz >= lbox2] - boxsize
 
-    # Distances within groups and clusters
-    
-    
-    print(merge['partx']); exit()
-    ###here cal l.451: do I need to make cuts?
-    
-    return prop
+    # Distances to selected particles
+    merge = merge.loc[merge.m500 > mlim]
+    merge['distance'] = (merge.partx**2 +     
+                         merge.party**2 +
+                         merge.partz**2) ** 0.5
+
+    # Mass of those particles enclosed in R500
+    merge['inside_r500'] = merge.distance <= merge.r500
+    merge = merge.loc[merge.inside_r500 == True]
+    groups = merge.groupby(['groupnum'], as_index=False)
+    massinr500 = groups.partmass.sum() # partmass now = particle mass
+    final = pd.merge(massinr500, df_fof, on=['groupnum'])
+    print(final); exit()
+    #here: maybe new column with the property we want
+    #here: is this really the difference???
+    if outfile:
+        # Retrurn name of file with output
+        map_m500 = 'name'
+    else:
+        # Return property ?????
+        map_m500 = 0
+    ###here what do I pass? prop or file?
+    #here: l.465 in bahamascal.py
+    return map_m500
 
 
 if __name__== "__main__":
