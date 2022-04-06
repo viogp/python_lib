@@ -39,7 +39,7 @@ def check_file(infile,verbose=False):
 
 def create_dir(outdir):
     '''
-    Return True if directory has been created
+    Return True if directory already exists or it has been created
     '''
     if not os.path.exists(outdir):
         try:

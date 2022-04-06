@@ -5,7 +5,7 @@ import glob
 import subprocess
 import pandas as pd
 from astropy import constants as const
-from iotools import stop_if_no_file, is_sorted, create_dir
+import iotools as io
 #print('\n \n')
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
@@ -336,7 +336,7 @@ def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
             print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
             return None,None,None
 
-    new_dir = create_dir(outdir) 
+    new_dir = io.create_dir(outdir) 
     if not new_dir: return None,None,None
 
     # Dirz
@@ -352,7 +352,7 @@ def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
     else:
         dirplots = outdir+'plots/'+sim_label+'/'
 
-    new_dir = create_dir(dirplots) 
+    new_dir = io.create_dir(dirplots) 
     if not new_dir: return None,None,None
 
     return outdir,dirz,dirplots
@@ -961,7 +961,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     # Cycle through the files
     for ii,ff in enumerate(files):
         if (Testing and ii>=nfiles): break
-        stop_if_no_file(ff)
+        io.stop_if_no_file(ff)
 
         f = h5py.File(ff, 'r')
         haloes = f['FOF/FirstSubhaloID'][:]
@@ -970,7 +970,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
         else:
             cenids = np.append(cenids, np.unique(haloes))  
 
-    if (not is_sorted(cenids)):
+    if (not io.is_sorted(cenids)):
         print('WARNING (b.get_cenids): Not ordered indeces {}'.format(path))
         return -999.
 
@@ -1015,7 +1015,7 @@ def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     # Cycle through the files
     for ii,ff in enumerate(files):
         if (Testing and ii>=nfiles): break
-        stop_if_no_file(ff)
+        io.stop_if_no_file(ff)
 
         f = h5py.File(ff, 'r')
 
@@ -1321,7 +1321,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
     
     # Output file
     outdir, dirz, plotdir = get_outdirs(env,dirz=dirz,outdir=outdir)
-    path = outdir+sim ; create_dir(path)
+    path = outdir+sim ; io.create_dir(path)
     outfil = path+'/'+proplabel+'F_z'+str(z_snap).replace('.','_')+ \
              '_min'+str(mmin).replace('.','_')+'_max'+str(mmax).replace('.','_')+ \
              '_dm'+str(dm).replace('.','_')+'.hdf5'
@@ -1412,7 +1412,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
 
 
 
-def map_m500(snap,sim,env,ptype='BH',mlim=0.,outfile=False,dirz=None,outdir=None,Testing=True):
+def map_m500(snap,sim,env,ptype='BH',mlim=0.,dirz=None,outdir=None,Testing=True):
     '''
     Map particle mass into r500 from Subfind
 
@@ -1428,8 +1428,6 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,outfile=False,dirz=None,outdir=None
         array containing one of the allowed ptypes
     mlim : float
         mass limit for M500 [Msun/h]
-    outfile : boolean
-        If True, return the name of the file; if False, return property
     dirz : string
         Alternative path to table with z and snapshot.
     outdir : string
@@ -1457,8 +1455,35 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,outfile=False,dirz=None,outdir=None
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
     ptype = 'PartType'+str(itype)
 
+    # Output file
+    outdir2 = outdir+'BAHAMAS/'+sim+'/'
+    dir_exists = io.create_dir(outdir2)
+    outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
+    file_exists = io.check_file(outfile)
+    if (not file_exists):
+        # Generate the file
+        hf = h5py.File(outfile, 'w') #here if appending columns here it'll be the place
+#------------to be acomodated
+    # Output header
+    head = hf.create_dataset('header',(100,))
+    head.attrs[u'sim']          = sim
+    head.attrs[u'snapshot']     = snap
+    head.attrs[u'redshift']     = z_snap
+    head.attrs[u'h0']           = h0
+
+    # Output data
+    units = unitdefault[proplabel]
+    hfdat = hf.create_group('data')
+
+    pn = 'midpoint'
+    hfdat.create_dataset(pn,data=mhist)
+    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
+#--------------
+
+        
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
+    print(type(snap));exit()
     if (not allfiles):
         print('WARNING (bahamas.map_m500): no adequate particle files found, {}, {}'.
               format(snap,env))
@@ -1488,8 +1513,10 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,outfile=False,dirz=None,outdir=None
             partz       = np.append(partz,p0['Coordinates'][:,0])
 
     # If all groupnum are less than 0, take abs()
+    allgneg = False
     ind = np.where(groupnum<0)
     if(np.shape(ind)[1] == len(groupnum)):
+        allgneg = True
         groupnum = abs(groupnum)
 
     # Get particle information into a pandas dataset to facilitate merging options
@@ -1569,18 +1596,17 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,outfile=False,dirz=None,outdir=None
     merge = merge.loc[merge.inside_r500 == True]
     groups = merge.groupby(['groupnum'], as_index=False)
     massinr500 = groups.partmass.sum() # partmass now = particle mass
-    final = pd.merge(massinr500, df_fof, on=['groupnum'])
-    print(final); exit()
+    #final = pd.merge(massinr500, df_fof, on=['groupnum']) #here: do I need this?
+
+
+    # add property to alredy existent file?
     #here: maybe new column with the property we want
-    #here: is this really the difference???
-    if outfile:
-        # Retrurn name of file with output
-        map_m500 = 'name'
-    else:
-        # Return property ?????
-        map_m500 = 0
+    map_m500 = 'name'
+    #-groupnum??? (groupnum,massinr500) or only massinr500 for MF
+    map_m500 = 0
     ###here what do I pass? prop or file?
     #here: l.465 in bahamascal.py
+    # Retrurn name of file with output
     return map_m500
 
 
