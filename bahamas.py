@@ -37,36 +37,6 @@ defaultdz = 0.25
 
 n0 = 3
 
-def print_h5attributes(infile,inhead='Header'):
-    """
-    Print out the group attributes of a hdf5 file
-
-    Parameters
-    ----------
-    infile : string
-      Name of input file (this should be a hdf5 file)
-    inhead : string
-      Name of the group to read the attributes from
-
-    Example
-    -------
-    >>> import bahamas as b
-    >>> infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
-    >>> b.print_header5(infile)
-    """
-    try:
-        f = h5py.File(infile, 'r')
-    except:
-        print('Check that the file provided is correct')
-        return
-    
-    header = f[inhead]
-    for hitem in list(header.attrs.items()): 
-        print(hitem)
-    f.close()
-    return
-
-
 def get_zminmaxs(zz,dz=None,verbose=False):
     """
     Get the previous (min) and next (max) values
@@ -1412,7 +1382,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
 
 
 
-def map_m500(snap,sim,env,ptype='BH',mlim=0.,dirz=None,outdir=None,Testing=True):
+def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=None,Testing=True):
     '''
     Map particle mass into r500 from Subfind
 
@@ -1426,6 +1396,8 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,dirz=None,outdir=None,Testing=True)
         ari, arilega or cosma, to use the adecuate paths
     ptype : array of string
         array containing one of the allowed ptypes
+    overwrite : boolean
+        If True the output file will be overwritten
     mlim : float
         mass limit for M500 [Msun/h]
     dirz : string
@@ -1460,30 +1432,11 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,dirz=None,outdir=None,Testing=True)
     dir_exists = io.create_dir(outdir2)
     outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
-    if (not file_exists):
-        # Generate the file
-        hf = h5py.File(outfile, 'w') #here if appending columns here it'll be the place
-#------------to be acomodated
-    # Output header
-    head = hf.create_dataset('header',(100,))
-    head.attrs[u'sim']          = sim
-    head.attrs[u'snapshot']     = snap
-    head.attrs[u'redshift']     = z_snap
-    head.attrs[u'h0']           = h0
-
-    # Output data
-    units = unitdefault[proplabel]
-    hfdat = hf.create_group('data')
-
-    pn = 'midpoint'
-    hfdat.create_dataset(pn,data=mhist)
-    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
-#--------------
-
+    if(overwrite): file_exists = False 
         
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
-    print(type(snap));exit()
+
     if (not allfiles):
         print('WARNING (bahamas.map_m500): no adequate particle files found, {}, {}'.
               format(snap,env))
@@ -1598,6 +1551,41 @@ def map_m500(snap,sim,env,ptype='BH',mlim=0.,dirz=None,outdir=None,Testing=True)
     massinr500 = groups.partmass.sum() # partmass now = particle mass
     #final = pd.merge(massinr500, df_fof, on=['groupnum']) #here: do I need this?
 
+    # Write properties to output file
+    if (not file_exists):
+        # Generate the file
+        hf = h5py.File(outfile, 'w') #here if appending columns here it'll be the place
+        
+        # Output header
+        headnom = 'header'
+        head = hf.create_dataset(headnom,(100,))
+        head.attrs[u'sim']          = sim
+        head.attrs[u'snapshot']     = snap
+        head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
+        head.attrs[u'omega0']       = omega0
+        head.attrs[u'omegab']       = omegab
+        head.attrs[u'lambda0']      = lambda0        
+        head.attrs[u'h0']           = h0
+        head.attrs[u'boxsize']      = boxsize
+
+        # Output data with units
+        hfdat = hf.create_group('data')
+        units = unitdefault[proplabel]
+
+        # Mass #here: all properties or only some?
+        #
+        hf.close()
+        print(outfile)
+        print(io.print_h5attr(outfile,inhead=headnom));exit()
+        ##------------to be acomodated
+#    # Output data
+#    pn = 'midpoint'
+#    hfdat.create_dataset(pn,data=mhist)
+#    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
+##--------------
+
+    
+    
 
     # add property to alredy existent file?
     #here: maybe new column with the property we want
@@ -1630,7 +1618,7 @@ if __name__== "__main__":
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
-    print(map_m500(snap,sim,env,ptype='BH',dirz=dirz,outdir=outdir))
+    print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
