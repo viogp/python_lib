@@ -1394,8 +1394,8 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
         Name of the simulation
     env : string
         ari, arilega or cosma, to use the adecuate paths
-    ptype : array of string
-        array containing one of the allowed ptypes
+    ptype : string
+        Name of one of the allowed ptypes, 0:gas, 4: stars, 5:BH
     overwrite : boolean
         If True the output file will be overwritten
     mlim : float
@@ -1425,7 +1425,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     
     # Type of particles to be read
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
-    ptype = 'PartType'+str(itype)
+    inptype = 'PartType'+str(itype)
 
     # Output file
     outdir2 = outdir+'BAHAMAS/'+sim+'/'
@@ -1446,21 +1446,21 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff)
-        p0 = f[ptype]  
+        p0 = f[inptype]  
 
         # Read particle information
         if (iff == 0):
             groupnum = p0['GroupNumber'][:] # FoF group number particle is in
             # Negative values: particles within r200 but not part of the halo
             subgroupnum = p0['SubGroupNumber'][:]
-            partmass = p0['Mass'][:]*1e10       # Msun/h
+            partmass = p0['Mass'][:]            # 1e10 Msun/h
             partx = p0['Coordinates'][:,0]      # Mpc/h
             party = p0['Coordinates'][:,1]
             partz = p0['Coordinates'][:,2] 
         else:
             groupnum    = np.append(groupnum,p0['GroupNumber'][:])
             subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
-            partmass    = np.append(partmass,p0['Mass'][:]*1e10)
+            partmass    = np.append(partmass,p0['Mass'][:])
             partx       = np.append(partx,p0['Coordinates'][:,0])
             party       = np.append(party,p0['Coordinates'][:,0])
             partz       = np.append(partz,p0['Coordinates'][:,0])
@@ -1548,9 +1548,12 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     merge['inside_r500'] = merge.distance <= merge.r500
     merge = merge.loc[merge.inside_r500 == True]
     groups = merge.groupby(['groupnum'], as_index=False)
-    massinr500 = groups.partmass.sum() # partmass now = particle mass
+    massinr500 = groups.partmass.sum() # partmass now = particle mass (1e10 Msun/h)
+    print(np.shape(massinr500),np.shape(merge)); exit()
+    # Here, size of massinr500 different from merge so might need the next line
     #final = pd.merge(massinr500, df_fof, on=['groupnum']) #here: do I need this?
-
+    # What do I do about the units and taking log or not?
+    
     # Write properties to output file
     if (not file_exists):
         # Generate the file
@@ -1570,17 +1573,19 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
 
         # Output data with units
         hfdat = hf.create_group('data')
-        units = unitdefault[proplabel]
 
         # Mass #here: all properties or only some?
-        #
+        pn = 'm500_'+ptype
+        hfdat.create_dataset(pn,data=massinr500)
+        
         hf.close()
         print(outfile)
         print(io.print_h5attr(outfile,inhead=headnom));exit()
         ##------------to be acomodated
 #    # Output data
 #    pn = 'midpoint'
-#    hfdat.create_dataset(pn,data=mhist)
+# units = unitdefault[proplabel]
+#    
 #    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
 ##--------------
 
