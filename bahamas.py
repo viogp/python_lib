@@ -1422,7 +1422,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     if (ptype == 'DM'):
         print('WARNING (bahamas.map_m500): For DM, use directly the halo masses')
         return None
-    
+
     # Type of particles to be read
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
     inptype = 'PartType'+str(itype)
@@ -1433,7 +1433,11 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
     if(overwrite): file_exists = False 
-        
+
+    # Check if the dataset already exists
+    nompartmass = 'm500_'+ptype
+    #here: to be done the check; print(outfile); exit()    
+    
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
 
@@ -1445,7 +1449,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
 
     # Loop over the particle files
     for iff, ff in enumerate(files):
-        f = h5py.File(ff, 'r') #; print(ff)
+        f = h5py.File(ff, 'r') #; print(ff,inptype)
         p0 = f[inptype]  
 
         # Read particle information
@@ -1471,15 +1475,14 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     if(np.shape(ind)[1] == len(groupnum)):
         allgneg = True
         groupnum = abs(groupnum)
-
+        
     # Get particle information into a pandas dataset to facilitate merging options
+    #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
     df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,partx,party,partz]).T,
                            columns=['groupnum','subgroupnum','partmass','partx','party','partz'])
-    groupnum,subgroupnum,partmass,partx,party,partz=[[] for i in range(6)] #Empty arrays
     df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  
 
-            
     # Get FOF/Subfind files
     files, allfiles = get_subfind_files(snap,sim,env)
     if (not allfiles):
@@ -1493,15 +1496,15 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
         f = h5py.File(ff, 'r') #; print(ff)
         fof = f['FOF']
 
-        # Read particle information  r500,cop_x,cop_y,cop_z
+        # Read halo information
         if (iff == 0):
-            m500  = fof['Group_M_Crit500'][:]*1e10      #Msun/h
+            m500  = fof['Group_M_Crit500'][:]           #1e10Msun/h
             r500  = fof['Group_R_Crit500'][:]           #cMpc/h
             cop_x = fof['GroupCentreOfPotential'][:,0]  #cMpc/h
             cop_y = fof['GroupCentreOfPotential'][:,1]  #cMpc/h
             cop_z = fof['GroupCentreOfPotential'][:,2]  #cMpc/h
         else:
-            m500  = np.append(m500,fof['Group_M_Crit500'][:]*1e10)
+            m500  = np.append(m500,fof['Group_M_Crit500'][:])
             r500  = np.append(r500,fof['Group_R_Crit500'][:])
             cop_x  = np.append(cop_x,fof['GroupCentreOfPotential'][:,0])
             cop_y  = np.append(cop_y,fof['GroupCentreOfPotential'][:,1])
@@ -1516,7 +1519,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     df_fof.index += 1
     df_fof.index.names = ['groupnum'] 
     df_fof.reset_index(inplace=True)
-
+    
     # Join the particle and FoF information
     merge = pd.merge(df_part, df_fof, on=['groupnum'])
 
@@ -1547,13 +1550,13 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     # Mass of those particles enclosed in R500
     merge['inside_r500'] = merge.distance <= merge.r500
     merge = merge.loc[merge.inside_r500 == True]
+    
     groups = merge.groupby(['groupnum'], as_index=False)
     massinr500 = groups.partmass.sum() # partmass now = particle mass (1e10 Msun/h)
-    print(np.shape(massinr500),np.shape(merge)); exit()
-    # Here, size of massinr500 different from merge so might need the next line
-    #final = pd.merge(massinr500, df_fof, on=['groupnum']) #here: do I need this?
-    # What do I do about the units and taking log or not?
-    
+    final = pd.merge(massinr500, df_fof, on=['groupnum'])
+    final.partmass = np.log10(final.partmass) + 10. #log10(M/Msun/h)
+    final.m500     = np.log10(final.m500) + 10.     #log10(M/Msun/h)
+
     # Write properties to output file
     if (not file_exists):
         # Generate the file
@@ -1573,12 +1576,14 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
 
         # Output data with units
         hfdat = hf.create_group('data')
-
-        # Mass #here: all properties or only some?
-        pn = 'm500_'+ptype
-        hfdat.create_dataset(pn,data=massinr500)
-        
         hf.close()
+        
+        # All dataframe to file
+        final.groupnum.to_hdf(outfile, "data/groupnum");
+        final.partmass.to_hdf(outfile, "data/"+nompartmass);
+        final.m500.to_hdf(outfile, "data/m500");
+        final.r500.to_hdf(outfile, "data/r500");
+        #How to create Pos (N, 3) for output???
         print(outfile)
         print(io.print_h5attr(outfile,inhead=headnom));exit()
         ##------------to be acomodated
