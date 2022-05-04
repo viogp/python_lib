@@ -79,11 +79,10 @@ def print_h5attr(infile,inhead='Header'):
     >>> io.print_header5(infile)
     """
 
-    filefine = check_file(infile)
-    print(filefine)
+    filefine = check_file(infile) #print(filefine)
     if (not filefine):
         print('WARNING (iotools.printh5attr): Check that the file provided is correct')
-        return
+        return ' '
     
     f = h5py.File(infile, 'r')
     header = f[inhead]
@@ -91,7 +90,7 @@ def print_h5attr(infile,inhead='Header'):
         print(hitem)
     f.close()
 
-    return
+    return ' '
 
 
 

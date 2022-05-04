@@ -1576,36 +1576,36 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
 
         # Output data with units
         hfdat = hf.create_group('data')
-        hf.close()
         
-        # All dataframe to file
-        final.groupnum.to_hdf(outfile, "data/groupnum");
-        final.partmass.to_hdf(outfile, "data/"+nompartmass);
-        final.m500.to_hdf(outfile, "data/m500");
-        final.r500.to_hdf(outfile, "data/r500");
-        #How to create Pos (N, 3) for output???
-        print(outfile)
-        print(io.print_h5attr(outfile,inhead=headnom));exit()
-        ##------------to be acomodated
-#    # Output data
-#    pn = 'midpoint'
-# units = unitdefault[proplabel]
-#    
-#    hfdat[pn].dims[0].label = 'log10('+proplabel+'_'+pn+' / '+units+')'
-##--------------
+        prop = final[['cop_x', 'cop_y', 'cop_z']].to_numpy()
+        hfdat.create_dataset('pos',data=prop); prop = []
+        hfdat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
+#here error: A value is trying to be set on a copy of a slice from a DataFrame
+        prop = final[['groupnum']].to_numpy()
+        hfdat.create_dataset('groupnum',data=prop); prop = []
+        hfdat['groupnum'].dims[0].label = 'FoF group number' #here TO double check
 
-    
-    
+        prop = final[['partmass']].to_numpy()
+        hfdat.create_dataset(nompartmass,data=prop); prop = []
+        hfdat[nompartmass].dims[0].label = 'log10(M/Msun/h)' 
+
+        prop = final[['m500']].to_numpy()
+        hfdat.create_dataset('m500',data=prop); prop = []
+        hfdat['m500'].dims[0].label = 'log10(M/Msun/h)' 
+
+        prop = final[['r500']].to_numpy()
+        hfdat.create_dataset('r500',data=prop); prop = []
+        hfdat['r500'].dims[0].label = 'cMpc/h' #here TO be checked         
+
+        hf.close()
 
     # add property to alredy existent file?
     #here: maybe new column with the property we want
-    map_m500 = 'name'
     #-groupnum??? (groupnum,massinr500) or only massinr500 for MF
-    map_m500 = 0
     ###here what do I pass? prop or file?
     #here: l.465 in bahamascal.py
     # Retrurn name of file with output
-    return map_m500
+    return outfile
 
 
 if __name__== "__main__":
