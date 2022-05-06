@@ -1433,9 +1433,15 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
     if(overwrite): file_exists = False 
-
+    file_exists = True #here
     # Check if the dataset already exists
     nompartmass = 'm500_'+ptype
+    if (file_exists):
+        f = h5py.File(outfile, 'r')
+        e = 'data/'+nompartmass in f
+        f.close()
+        
+    print(e); exit()
     #here: to be done the check; print(outfile); exit()    
     
     # Get particle files
@@ -1580,14 +1586,10 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
         prop = final[['cop_x', 'cop_y', 'cop_z']].to_numpy()
         hfdat.create_dataset('pos',data=prop); prop = []
         hfdat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
-#here error: A value is trying to be set on a copy of a slice from a DataFrame
+
         prop = final[['groupnum']].to_numpy()
         hfdat.create_dataset('groupnum',data=prop); prop = []
-        hfdat['groupnum'].dims[0].label = 'FoF group number' #here TO double check
-
-        prop = final[['partmass']].to_numpy()
-        hfdat.create_dataset(nompartmass,data=prop); prop = []
-        hfdat[nompartmass].dims[0].label = 'log10(M/Msun/h)' 
+        hfdat['groupnum'].dims[0].label = 'FoF group number' 
 
         prop = final[['m500']].to_numpy()
         hfdat.create_dataset('m500',data=prop); prop = []
@@ -1595,7 +1597,11 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
 
         prop = final[['r500']].to_numpy()
         hfdat.create_dataset('r500',data=prop); prop = []
-        hfdat['r500'].dims[0].label = 'cMpc/h' #here TO be checked         
+        hfdat['r500'].dims[0].label = 'cMpc/h'
+        
+        prop = final[['partmass']].to_numpy()
+        hfdat.create_dataset(nompartmass,data=prop); prop = []
+        hfdat[nompartmass].dims[0].label = 'log10(M/Msun/h)' 
 
         hf.close()
 
