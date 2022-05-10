@@ -1433,16 +1433,16 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
     if(overwrite): file_exists = False 
-    file_exists = True #here
+
     # Check if the dataset already exists
     nompartmass = 'm500_'+ptype
     if (file_exists):
         f = h5py.File(outfile, 'r')
         e = 'data/'+nompartmass in f
         f.close()
-        
-    print(e); exit()
-    #here: to be done the check; print(outfile); exit()    
+        if (e):
+            print('WARNING (bahamas.map_m500): {} already in file.'.format(nompartmass))
+            return outfile
     
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
@@ -1604,12 +1604,14 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
         hfdat[nompartmass].dims[0].label = 'log10(M/Msun/h)' 
 
         hf.close()
+    elif (file_exists):
+        # Open output file to append dataset
+        hf = h5py.File(outfile, 'a') 
+        prop = final[['partmass']].to_numpy()
+        hf.create_dataset('data/'+nompartmass,data=prop); prop = []
+        hf['data/'+nompartmass].dims[0].label = 'log10(M/Msun/h)' 
+        hf.close()
 
-    # add property to alredy existent file?
-    #here: maybe new column with the property we want
-    #-groupnum??? (groupnum,massinr500) or only massinr500 for MF
-    ###here what do I pass? prop or file?
-    #here: l.465 in bahamascal.py
     # Retrurn name of file with output
     return outfile
 
