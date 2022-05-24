@@ -25,11 +25,13 @@ List of functions:
   angular_scale(): calculates the angular scale at redshift, z.
   luminosity_distance(): calculates the luminosity distance at 
                          redshift, z (Mpc/h).
-  comoving_volume(): calculates the comoving volume contained
+  comoving_volume(z): calculates the comoving volume contained
                     within a sphere extending out to redshift,
                     z ((Mpc/h)^3).
   cv_survey(z1,z2,area): calculates the comoving volume of a survey ((Mpc/h)^3).
   dVdz() :  calculates dV/dz at redshift, z  (Mpc/h)^3.
+  distance_modulus(z): DM = 5log10(Dl/10) - 5logh; Dl expected in Mpc/h
+  band_corrected_distance_modulus(z): DM for Galform
   H(): return Hubble constant as measured at redshift, z.
   tHubble(): returns Hubble time at redshift z (Gyr).
   E(): returns Peebles' E(z) function at redshift, z, for
@@ -77,17 +79,20 @@ h = None
 
 kmpersec_to_mpchpergyr = None
 
-nzmax = 10000
 zmax = 20.0
+dz = 0.0005
+nzmax = int(zmax/dz)
 r_comoving = np.zeros(nzmax)
-dz = zmax/float(nzmax) ; redshift = np.arange(0.0,zmax,dz)
+redshift = np.arange(0.0,zmax,dz)
 inv_dz = 1.0/dz
+
+zlow_lim = 0.001
 
 Mpc = constants.mega*constants.parsec #10**6*3.08567758131e+16
 H100 = 100.0*constants.kilo/Mpc # in h/s units
 Gyr = constants.giga*constants.year
 invH0 = (Mpc/(100.0*constants.kilo))/Gyr
-DH = c/(100.*constants.kilo) # Hubble Distance in Mpc/h (c is in m/s)
+DH = c/1000./100. # Hubble Distance in Mpc/h (c is in m/s)
 Mpc2cm = constants.mega*constants.parsec*100.
 zlow = 0.00001 ; dlz = np.log(zmax)/float(nzmax) 
 lredshift = np.arange(np.log(zlow),np.log(zmax),dz)
@@ -426,7 +431,7 @@ def luminosity_distance(z):
     NOTE: requires that a cosmology must first have been
           set using set_cosmology()    
     """
-    dL = np.power(1.0+z,2)*angular_diameter_distance(z)
+    dL = angular_diameter_distance(z)*(1.0+z)**2
     return dL
     
 
@@ -444,7 +449,7 @@ def comoving_volume(z, verbose=False):
     """
     cosmology_set()
 
-    if (z<0.001):
+    if (z<zlow_lim):
         return 0.0
     
     dr = comoving_distance(z)*Mpc/(c/H100) #Unitless: DC/DH
@@ -504,7 +509,7 @@ def cv_survey(z1,z2,area,verbose=False):
     > V survey (dz=0.1) = 3.9e+09 (Mpc/h)^-3
     '''
 
-    if (z1<0.001):
+    if (z1<zlow_lim):
         dV = comoving_volume(z2)
     else:
         dV = comoving_volume(z2) - comoving_volume(z1)
@@ -538,6 +543,20 @@ def dVdz(z):
     return f(z)*np.power(dA,2)*np.power(1.0+z,2)*4.0*np.pi
     
 
+def distance_modulus(z):
+    '''
+    Dinstance modulus 5log10(Dl/10) - 5logh
+    Dl is expected in Mpc/h
+    '''
+    cosmology_set()
+    if (z < zlow_lim):
+        dm = 0.0
+    else:
+        dL = luminosity_distance(z)
+        dm = 5.0*np.log10(dL) + 25
+    return dm
+
+
 def band_corrected_distance_modulus(z):
     """
     band_corrected_distance_modulus(): returns the Band Corrected
@@ -570,7 +589,7 @@ def band_corrected_distance_modulus(z):
     distance modulus. 
     """
     cosmology_set()
-    if (z < 1e-5):
+    if (z < zlow_lim):
         bcdm = 0.0
     else:
         dref = 10.0/constants.mega # 10pc in Mpc
@@ -781,7 +800,9 @@ def emission_line_luminosity(flux_data,z):
         # Luminosity distance in cm/h
         d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
         
-        emission_line_luminosity = np.log10(4.0*np.pi*(d_L**2)*flux_data) - 40. 
+        #emission_line_luminosity = np.log10(4.0*np.pi*(d_L**2)*flux_data) - 40.
+        print('WARNING: unsure (1+z) F to L')
+        emission_line_luminosity = np.log10((1+z)*4.0*np.pi*(d_L**2)*flux_data) - 40. 
         emission_line_luminosity = 10**(emission_line_luminosity)
     else:
         emission_line_luminosity = 0.
@@ -797,3 +818,8 @@ def polar2cartesians(ra,dec,zz):
     cz = dz*np.sin(dec*(np.pi/180.))
     return cx,cy,cz
 
+if __name__== "__main__":
+    #set_Planck13()
+    set_cosmology(0.2,0.0483,0.8,0.6777)
+    zz = 1.
+    print(distance_modulus(zz))
