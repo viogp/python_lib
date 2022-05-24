@@ -1443,7 +1443,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
         if (e):
             print('WARNING (bahamas.map_m500): {} already in file.'.format(nompartmass))
             return outfile
-    
+
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
 
@@ -1481,11 +1481,12 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     if(np.shape(ind)[1] == len(groupnum)):
         allgneg = True
         groupnum = abs(groupnum)
-        
+
     # Get particle information into a pandas dataset to facilitate merging options
     #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
     df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,partx,party,partz]).T,
                            columns=['groupnum','subgroupnum','partmass','partx','party','partz'])
+    groupnum,subgroupnum,partmass,partx,party,partz=[[] for i in range(6)] #Empty individual arrays
     df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  
 
@@ -1525,10 +1526,10 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     df_fof.index += 1
     df_fof.index.names = ['groupnum'] 
     df_fof.reset_index(inplace=True)
-    
+
     # Join the particle and FoF information
     merge = pd.merge(df_part, df_fof, on=['groupnum'])
-
+    print(merge); exit()#print(len(groupnum),len(np.unique(groupnum))); exit() #here
     # Get the boxsize
     omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
     lbox2 = boxsize/2.
@@ -1556,7 +1557,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     # Mass of those particles enclosed in R500
     merge['inside_r500'] = merge.distance <= merge.r500
     merge = merge.loc[merge.inside_r500 == True]
-    
+
     groups = merge.groupby(['groupnum'], as_index=False)
     massinr500 = groups.partmass.sum() # partmass now = particle mass (1e10 Msun/h)
     final = pd.merge(massinr500, df_fof, on=['groupnum'])
