@@ -1529,7 +1529,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
 
     # Join the particle and FoF information
     merge = pd.merge(df_part, df_fof, on=['groupnum'])
-    print(merge); exit()#print(len(groupnum),len(np.unique(groupnum))); exit() #here
+
     # Get the boxsize
     omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
     lbox2 = boxsize/2.
