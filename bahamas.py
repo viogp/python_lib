@@ -839,10 +839,10 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_snap(3.2,2.8,3.6,'AGN_TUNED_nu0_L100N256_WMAP9','ari')
-    >>> b.get_snap(12.3,12.0,12.6,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> b.get_snap(2.8,'AGN_TUNED_nu0_L100N256_WMAP9','ari')
+    >>> b.get_snap(12.6,'L050N256/WMAP9/Sims/ex','cosma')
     >>> (2, 12.5)
-    >>> snap, z_snap = b.get_snap(99.,20.,150.,'L050N256/WMAP9/Sims/ex','cosma')
+    >>> snap, z_snap = b.get_snap(20.,'L050N256/WMAP9/Sims/ex','cosma')
     """
 
     # Simulation input
