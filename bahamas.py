@@ -1381,6 +1381,34 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
     return outfil
 
 
+def get_m500_file(outdir,sim,snap):
+    '''
+    Get the name and existance check of the map_m500 file
+
+    Parameters
+    ----------
+    outdir: string
+       Directory to write or find the file
+    sim: string
+       Simulation name or path
+    snap: string
+       Snapshot of the simulation
+    
+    Returns
+    -------
+    outfile: string
+       Name of the map_m500 file
+    file_exists: boolean
+       True if file exists
+    '''
+    
+    outdir2 = outdir+'BAHAMAS/'+sim+'/'
+    dir_exists = io.create_dir(outdir2)
+    outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
+    file_exists = io.check_file(outfile)
+
+    return outfile, file_exists
+
 
 def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=None,Testing=True):
     '''
@@ -1428,10 +1456,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     inptype = 'PartType'+str(itype)
 
     # Output file
-    outdir2 = outdir+'BAHAMAS/'+sim+'/'
-    dir_exists = io.create_dir(outdir2)
-    outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
-    file_exists = io.check_file(outfile)
+    outfile, file_exists = get_m500_file(outdir,sim,snap)
     if(overwrite): file_exists = False 
 
     # Check if the dataset already exists
@@ -1637,6 +1662,7 @@ if __name__== "__main__":
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
+    #print(get_m500_file(outdir,sim,snap))
     print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
