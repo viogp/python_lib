@@ -953,7 +953,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
 
 
 
-def get_subfind_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
+def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2):
     """
     Get an array with a given property from the Subfind output
 
@@ -967,6 +967,8 @@ def get_subfind_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
         ari or cosma, to use the adecuate paths
     propdef : string
         Name of the property, including path within hdf5 file
+    proptype : string
+        'DM', 'star', 'gas', 'BH', etc. for relevant properties
     Testing: boolean
         True or False
     nfiles : integer
@@ -988,6 +990,9 @@ def get_subfind_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     if allfiles is False: return -999.
     if Testing: print('First file: {}'.format(files[0]))
     
+    if (proptype is not None):
+        itype = ptypes.index(proptype)
+        
     # Cycle through the files
     for ii,ff in enumerate(files):
         if (Testing and ii>=nfiles): break
@@ -996,14 +1001,23 @@ def get_subfind_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
         f = h5py.File(ff, 'r')
 
         if (ii == 0):
-            try:
-                prop = f[propdef][:]
-            except:
-                print('WARNING (bahamas): no {} found in {}'.format(propdef,ff))
-                return None
+            if (proptype is None):
+                try:
+                    prop = f[propdef][:]
+                except:
+                    print('WARNING (bahamas): no {} found in {}'.format(propdef,ff))
+                    return None
+            else:
+                try:
+                    prop = f[propdef][:,itype]
+                except:
+                    print('WARNING (bahamas): no {} found in {}'.format(propdef,ff))
+                    return None
         else:
-            prop = np.append(prop, f[propdef][:], axis=0)
-
+            if (proptype is None):
+                prop = np.append(prop, f[propdef][:], axis=0)
+            else:
+                prop = np.append(prop, f[propdef][:,itype], axis=0)
     return prop
 
 
@@ -1688,7 +1702,8 @@ if __name__== "__main__":
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
-    print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200'))
+    print(get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='star',Testing=True))
+    print('-------'); print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=True))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
