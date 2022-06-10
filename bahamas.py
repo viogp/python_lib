@@ -26,6 +26,7 @@ unitdefault = {
 dirbahamasarilega = '/beegfs2/hpcdata0_backup/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
 dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
 dirobsari = '/beegfs2/Obs_Data/'
+dirplotari = '/home/arivgonz/buds/'
 
 dirbahamascosmalega = '/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
@@ -314,13 +315,17 @@ def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
         dirz = outdir 
 
     # Dirplots
+    outdir1 = outdir
+    if ('ari' in env):
+        outdir1 = dirplotari
+
     if not sim_label:
         if ('lega' in env):
-            dirplots = outdir+'plots/published_models/'
+            dirplots = outdir1+'plots/published_models/'
         else:
-            dirplots = outdir+'plots/compared_models/'
+            dirplots = outdir1+'plots/compared_models/'
     else:
-        dirplots = outdir+'plots/'+sim_label+'/'
+        dirplots = outdir1+'plots/'+sim_label+'/'
 
     new_dir = io.create_dir(dirplots) 
     if not new_dir: return None,None,None
@@ -948,9 +953,9 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
 
 
 
-def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
+def get_subfind_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     """
-    Get an array with a given property
+    Get an array with a given property from the Subfind output
 
     Parameters
     -----------
@@ -970,7 +975,7 @@ def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     Returns
     -----
     fofhmass : numpy array float
-        Property for FOF groups, 10^10Msun/h 
+        Property within Subfind files
 
     Examples
     ---------
@@ -981,7 +986,8 @@ def get_prop(snap,sim,env,propdef,Testing=False,nfiles=2):
     # Simulation input
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False: return -999.
-
+    if Testing: print('First file: {}'.format(files[0]))
+    
     # Cycle through the files
     for ii,ff in enumerate(files):
         if (Testing and ii>=nfiles): break
@@ -1663,7 +1669,7 @@ if __name__== "__main__":
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
     #print(get_m500_file(outdir,sim,snap))
-    print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
+    #print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
@@ -1682,7 +1688,7 @@ if __name__== "__main__":
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
-    #print(get_prop(snap,sim,env,'FOF/Group_M_Crit200'))
+    print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200'))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
