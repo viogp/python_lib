@@ -953,7 +953,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
 
 
 
-def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2):
+def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2,verbose=True):
     """
     Get an array with a given property from the Subfind output
 
@@ -973,22 +973,25 @@ def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2):
         True or False
     nfiles : integer
         Number of files to be considered for testing
+    verbose : boolean
+        True to write first Subfind file out
 
     Returns
     -----
-    fofhmass : numpy array float
+    prop : numpy array float
         Property within Subfind files
 
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_prop(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega','FOF/Group_M_Crit200',Testing=True)
+    >>> b.get_subfind_prop(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega',
+                           'FOF/Group_M_Crit200',Testing=True)
     """
 
     # Simulation input
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False: return -999.
-    if Testing: print('First file: {}'.format(files[0]))
+    if verbose: print('First Subfind file: {}'.format(files[0]))
     
     if (proptype is not None):
         itype = ptypes.index(proptype)
@@ -999,7 +1002,6 @@ def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2):
         io.stop_if_no_file(ff)
 
         f = h5py.File(ff, 'r')
-
         if (ii == 0):
             if (proptype is None):
                 try:
@@ -1662,6 +1664,294 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     return outfile
 
 
+def get_mHMRmap_file(outdir,sim,snap):
+    '''
+    Get the name and existance check of the map_HMR file
+
+    Parameters
+    ----------
+    outdir: string
+       Directory to write or find the file
+    sim: string
+       Simulation name or path
+    snap: string
+       Snapshot of the simulation
+    
+    Returns
+    -------
+    outfile: string
+       Name of the map_HMR file
+    file_exists: boolean
+       True if file exists
+    '''
+    
+    outdir2 = outdir+'BAHAMAS/'+sim+'/'
+    dir_exists = io.create_dir(outdir2)
+    outfile = outdir2+'mHMRmap_snap'+str(snap)+'.hdf5'
+    file_exists = io.check_file(outfile)
+
+    return outfile, file_exists
+
+
+def map_mHMR(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,nhmr=2.,dirz=None,outdir=None,Testing=True):
+    '''
+    Map particle mass into the half mass radius (HMR) of (central) subhaloes
+    Within 'arilega' there is not enough information to map on satellite subhaloes.
+
+    Parameters
+    -----------
+    snap : int
+        Snapshot number
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma, to use the adecuate paths
+    ptype : string
+        Name of one of the allowed ptypes, 0:gas, 4: stars, 5:BH
+    overwrite : boolean
+        If True the output file will be overwritten
+    mlim : float
+        mass limit for subhaloes to be considered, M_30kp [Msun/h] 
+    nhmr : float
+        Enclosure radius = nhmr*HalfMassRadius(DM)
+    dirz : string
+        Alternative path to table with z and snapshot.
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+
+    Returns
+    -----
+    prop : float array
+        Mapped property
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.map_mHMR(31,sim,'arilega',ptype='BH')
+    '''
+    
+    # Stop for environments different to arilega
+    if (env != 'arilega'):
+        print('STOP: Function bahamas.map_mHMR developed for env=arilega.')
+        return None
+
+    # Type of particles to be read
+    itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
+    inptype = 'PartType'+str(itype)
+
+    # Output file
+    outfile, file_exists = get_mHMRmap_file(outdir,sim,snap)
+    if(overwrite): file_exists = False 
+
+    # Check if the dataset already exists
+    nompartmass = 'm'+('%f' % nhmr).rstrip('0').rstrip('.')+'HMR_'+ptype
+    if (file_exists):
+        #here: to be checked
+        f = h5py.File(outfile, 'r')
+        e = 'data/'+nompartmass in f
+        f.close()
+        if (e):
+            print('WARNING (bahamas.map_mHMR): {} already in file.'.format(nompartmass))
+            return outfile
+
+    # Get particle files
+    files, allfiles = get_particle_files(snap,sim,env)
+    if (not allfiles):
+        print('WARNING (bahamas.map_mHMR): no adequate particle files found, {}, {}'.
+              format(snap,env))
+        return None
+    if (Testing): files = [files[0]]
+
+    # Loop over the particle files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff,inptype)
+        p0 = f[inptype]  
+
+        # Read particle information
+        if (iff == 0):
+            groupnum = p0['GroupNumber'][:] # FoF group number particle is in
+            # Negative values: particles within r200 but not part of the halo
+            subgroupnum = p0['SubGroupNumber'][:]
+            partmass = p0['Mass'][:]            # 1e10 Msun/h
+            partx = p0['Coordinates'][:,0]      # Mpc/h
+            party = p0['Coordinates'][:,1]
+            partz = p0['Coordinates'][:,2] 
+        else:
+            groupnum    = np.append(groupnum,p0['GroupNumber'][:])
+            subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
+            partmass    = np.append(partmass,p0['Mass'][:])
+            partx       = np.append(partx,p0['Coordinates'][:,0])
+            party       = np.append(party,p0['Coordinates'][:,0])
+            partz       = np.append(partz,p0['Coordinates'][:,0])
+
+    # If all groupnum are less than 0, take abs()
+    allgneg = False
+    ind = np.where(groupnum<0)
+    if(np.shape(ind)[1] == len(groupnum)):
+        allgneg = True
+        groupnum = abs(groupnum)
+
+    # Get particle information into a pandas dataset to facilitate merging options
+    #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
+    df_part = pd.DataFrame(data=np.vstack([groupnum,subgroupnum,partmass,partx,party,partz]).T,
+                           columns=['groupnum','subgroupnum','partmass','partx','party','partz'])
+    groupnum,subgroupnum,partmass,partx,party,partz=[[] for i in range(6)] #Empty individual arrays
+    df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+    df_part.reset_index(inplace=True, drop=True)  
+
+    # Get FOF&Subfind files
+    files, allfiles = get_subfind_files(snap,sim,env)
+    if (not allfiles):
+        print('WARNING (bahamas.map_mHMR): no adequate Subfind files found, {}, {}'.
+              format(snap,env))
+        return None
+    if (Testing): files = [files[0],files[1]]
+
+    # Prop index
+    stype = ptypes.index('star')
+    dmtype = ptypes.index('DM')
+
+    # Loop over the FOF&Subfind files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff)
+        sh = f['Subhalo']
+
+        # Read halo information
+        if (iff == 0):
+            groupnum  = sh['GroupNumber'][:]      #FOF GroupNumber
+            ms30  = sh['Mass_030kpc'][:,stype]    #1e10Msun/h
+            HMRdm = sh['HalfMassRad'][:,dmtype]   #cMpc/h
+            cop_x = sh['CentreOfPotential'][:,0]  #cMpc/h
+            cop_y = sh['CentreOfPotential'][:,1]  #cMpc/h
+            cop_z = sh['CentreOfPotential'][:,2]  #cMpc/h
+        else:
+            groupnum  = np.append(groupnum,sh['GroupNumber'][:])
+            ms30  = np.append(ms30,sh['Mass_030kpc'][:,stype])
+            HMRdm = np.append(HMRdm,sh['HalfMassRad'][:,dmtype])
+            cop_x = np.append(cop_x,sh['CentreOfPotential'][:,0])
+            cop_y = np.append(cop_y,sh['CentreOfPotential'][:,1])
+            cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
+
+    # Get indexes for centrals
+    cind = get_cenids(snap,sim,env)
+    if (max(cind) > len(groupnum) and Testing):
+        ind = np.where(cind < len(groupnum)-1) 
+        if(np.shape(ind)[1]<1):
+            print('STOP (bahamas.map_mHMR): no centrals in Subfind file.')
+            return None
+        cind = cind[ind]
+    elif (max(cind) > len(groupnum) and not Testing):
+        print('STOP (bahamas.map_mHMR): problem with centrals indexes.')
+        return None
+        
+    # Mapping for central galaxies with stellar mass
+    data = np.vstack([groupnum[cind],ms30[cind],HMRdm[cind],cop_x[cind],cop_y[cind],cop_z[cind]]).T
+    df_sh = pd.DataFrame(data=data,
+                         columns=['groupnum','ms30','HMRdm','cop_x','cop_y','cop_z'])
+    data,groupnum,ms30,HMRdm,cop_x,cop_y,cop_z=[[] for i in range(7)] #Empty individual arrays
+    df_sh = df_sh.loc[df_sh.ms30 > mlim] # With stellar mass
+    if df_sh.empty:
+        print('STOP (bahamas.map_mHMR): no centrals with stellar mass.')
+        return None
+    df_sh.ms30 = np.log10(df_sh.ms30) + 10.    #log10(M/Msun/h)
+    
+    # Join the particle and FoF information
+    merge = pd.merge(df_part, df_sh, on=['groupnum'])
+    del df_part
+
+    # Get the boxsize
+    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    lbox2 = boxsize/2.
+
+    # Position of particles relative to the center of the group
+    merge['partx'] = merge.partx - merge.cop_x
+    merge['party'] = merge.party - merge.cop_y
+    merge['partz'] = merge.partz - merge.cop_z
+
+    # Correct for periodic boundary conditions (for gal. in groups)
+    merge.partx.loc[merge.partx < -lbox2] = merge.partx.loc[merge.partx < -lbox2] + boxsize
+    merge.party.loc[merge.party < -lbox2] = merge.party.loc[merge.party < -lbox2] + boxsize
+    merge.partz.loc[merge.partz < -lbox2] = merge.partz.loc[merge.partz < -lbox2] + boxsize
+
+    merge.partx.loc[merge.partx >= lbox2] = merge.partx.loc[merge.partx >= lbox2] - boxsize
+    merge.party.loc[merge.party >= lbox2] = merge.party.loc[merge.party >= lbox2] - boxsize
+    merge.partz.loc[merge.partz >= lbox2] = merge.partz.loc[merge.partz >= lbox2] - boxsize
+
+    # Distances to selected particles
+    merge['distance'] = (merge.partx**2 +     
+                         merge.party**2 +
+                         merge.partz**2) ** 0.5
+
+    # Mass of those particles enclosed in radius
+    radius = nhmr*merge.HMRdm
+    merge['inside_HMRdm'] = merge.distance <= radius
+    merge = merge.loc[merge.inside_HMRdm == True]
+    if merge.empty:
+        print('STOP (bahamas.map_mHMR): no particles within DM HMR.')
+        return None
+
+    groups = merge.groupby(['groupnum'], as_index=False)
+    massinHMRdm = groups.partmass.sum() # partmass now = particle mass (1e10 Msun/h)
+
+    final = pd.merge(massinHMRdm, df_sh, on=['groupnum'])
+    final.partmass = np.log10(final.partmass) + 10. #log10(M/Msun/h)
+
+    # Write properties to output file
+    if (not file_exists):
+        # Generate the file
+        hf = h5py.File(outfile, 'w') #here if appending columns here it'll be the place
+        
+        # Output header
+        headnom = 'header'
+        head = hf.create_dataset(headnom,(100,))
+        head.attrs[u'sim']          = sim
+        head.attrs[u'snapshot']     = snap
+        head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
+        head.attrs[u'omega0']       = omega0
+        head.attrs[u'omegab']       = omegab
+        head.attrs[u'lambda0']      = lambda0        
+        head.attrs[u'h0']           = h0
+        head.attrs[u'boxsize']      = boxsize
+
+        # Output data with units
+        hfdat = hf.create_group('data')
+        
+        prop = final[['cop_x', 'cop_y', 'cop_z']].to_numpy()
+        hfdat.create_dataset('pos',data=prop); prop = []
+        hfdat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
+
+        prop = final[['groupnum']].to_numpy()
+        hfdat.create_dataset('groupnum',data=prop); prop = []
+        hfdat['groupnum'].dims[0].label = 'FoF group number' 
+
+        prop = final[['ms30']].to_numpy()
+        hfdat.create_dataset('ms30',data=prop); prop = []
+        hfdat['ms30'].dims[0].label = 'log10(M/Msun/h)' 
+
+        prop = final[['HMRdm']].to_numpy()
+        hfdat.create_dataset('HMRdm',data=prop); prop = []
+        hfdat['HMRdm'].dims[0].label = 'cMpc/h'
+        
+        prop = final[['partmass']].to_numpy()
+        hfdat.create_dataset(nompartmass,data=prop); prop = []
+        hfdat[nompartmass].dims[0].label = 'log10(M/Msun/h)' 
+
+        hf.close()
+    elif (file_exists):
+        # Open output file to append dataset
+        hf = h5py.File(outfile, 'a') 
+        prop = final[['partmass']].to_numpy()
+        hf.create_dataset('data/'+nompartmass,data=prop); prop = []
+        hf['data/'+nompartmass].dims[0].label = 'log10(M/Msun/h)' 
+        hf.close()
+
+    # Retrurn name of file with output
+    return outfile
+
+
 if __name__== "__main__":
     dirz = None ; outdir = None
     snap = 31
@@ -1682,6 +1972,8 @@ if __name__== "__main__":
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
 
+    #print(get_mHMRmap_file(outdir,sim,snap))
+    print(map_mHMR(snap,sim,env,ptype='BH',nhmr=10.,overwrite=True,dirz=dirz,outdir=outdir))
     #print(get_m500_file(outdir,sim,snap))
     #print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
     #print(get_zminmaxs([0.,1.],dz=0.5))
@@ -1702,8 +1994,8 @@ if __name__== "__main__":
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
     #print(get_cenids(snap,sim,env))
-    print(get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='star',Testing=True))
-    print('-------'); print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=True))
+    #print(get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='star',Testing=True))
+    #print('-------'); print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=True))
     #print(resolution(sim,env,dirz=dirz))
     #print('log10(SFR (Msun/Gyr)) = {:2f}'.format(np.log10(get_min_sfr(sim,env,dirz=dirz))+9))
     #print(get_nh(zz,'FOF/Group_M_Mean200',sim,env,dirz=dirz,outdir=outdir))
