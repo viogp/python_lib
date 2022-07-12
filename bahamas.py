@@ -2115,7 +2115,6 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
             groupnum = p0['GroupNumber'][:] # FoF group number particle is in
             # Negative values: particles within r200 but not part of the halo
             subgroupnum = p0['SubGroupNumber'][:]
-            partmass = p0['Mass'][:]            # 1e10 Msun/h
             partx = p0['Coordinates'][:,0]      # Mpc/h
             party = p0['Coordinates'][:,1]
             partz = p0['Coordinates'][:,2] 
@@ -2123,7 +2122,6 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
             partID      = np.append(partID,p0['ParticleIDs'][:]) 
             groupnum    = np.append(groupnum,p0['GroupNumber'][:])
             subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
-            partmass    = np.append(partmass,p0['Mass'][:])
             partx       = np.append(partx,p0['Coordinates'][:,0])
             party       = np.append(party,p0['Coordinates'][:,0])
             partz       = np.append(partz,p0['Coordinates'][:,0])
@@ -2137,10 +2135,10 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
 
     # Get particle information into a pandas dataset to facilitate merging options
     #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
-    data = np.vstack([partID,groupnum,subgroupnum,partmass,partx,party,partz]).T 
+    data = np.vstack([partID,groupnum,subgroupnum,partx,party,partz]).T 
     df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum',
-                                              'partmass','partx','party','partz'])
-    partID,groupnum,subgroupnum,partmass,partx,party,partz=[[] for i in range(7)]
+                                              'partx','party','partz'])
+    partID,groupnum,subgroupnum,partx,party,partz=[[] for i in range(6)]
 
     # Join the particle information---------------------------------------------
     df_part = pd.merge(df_psub, df_psnap, on=['partID'])
