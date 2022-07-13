@@ -1762,13 +1762,11 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
     # Type of particles to be read
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
     inptype = 'PartType'+str(itype)
-
+    nompartmass = 'mHMR_'+ptype
+    
     # Output file
     outfile, file_exists = get_mHMRmap_file(outdir,sim,snap,nhmr,com)
-
-    # Check if the dataset already exists
-    nompartmass = 'mHMR_'+ptype
-
+    
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
     if (not allfiles):
@@ -2076,10 +2074,18 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
-        p0 = f[inptype]  
+        p0 = f[inptype]
 
         # Read particle information
         if (iff == 0):
+            # Check that there is data to be read
+            try:
+                partID  = p0['ParticleIDs'][:]
+            except:
+                print('WARNING (b.map_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
+                return None
+
+            # Read the data
             partID  = p0['ParticleIDs'][:] 
             BH_Mass = p0['BH_Mass'][:]  # 1e10 Msun/h
             BH_Mdot = p0['BH_Mdot'][:]  # 1e10 Msun/h/year
