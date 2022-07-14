@@ -948,15 +948,25 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
         io.stop_if_no_file(ff)
 
         f = h5py.File(ff, 'r')
-        haloes = f['FOF/FirstSubhaloID'][:]
+        r500 = f['FOF/Group_R_Crit500'][:]
+        ind = np.where(r500>0)
+
+        cenh = f['FOF/FirstSubhaloID'][ind]
+        ucen = np.unique(f['FOF/FirstSubhaloID'][:])
+        if (len(cenh) > len(ucen)):
+            print('WARNING (b.get_cenids): Not unique central IDs {}'.format(path))
+            return None
+            
         if (ii == 0):
-            cenids = np.unique(haloes)
+            cenids = cenh
+            halos = f['Subhalo/GroupNumber'][:]
         else:
-            cenids = np.append(cenids, np.unique(haloes))  
+            cenids = np.append(cenids, cenh)  
+            halos = np.append(halos,f['Subhalo/GroupNumber'][:])
 
     if (not io.is_sorted(cenids)):
         print('WARNING (b.get_cenids): Not ordered indeces {}'.format(path))
-        return -999.
+        return None
 
     return cenids
 
@@ -2219,7 +2229,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     data = np.vstack([groupnum[cind],ms30[cind],HMRdm[cind],cop_x[cind],cop_y[cind],cop_z[cind]]).T
     df_sh = pd.DataFrame(data=data,columns=['groupnum','ms30','HMRdm','cop_x','cop_y','cop_z'])
     data,groupnum,ms30,HMRdm,cop_x,cop_y,cop_z=[[] for i in range(7)]
-    
+
     df_sh = df_sh.loc[df_sh.ms30 > 0.] # With stellar mass
     if df_sh.empty:
         print('STOP (b.map_subBH): no centrals with stellar mass.')
