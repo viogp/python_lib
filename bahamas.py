@@ -2123,7 +2123,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
-        p0 = f[inptype]  
+        p0 = f[inptype]
 
         # Read particle information
         if (iff == 0):
@@ -2147,7 +2147,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     ind = np.where(groupnum<0)
     if(np.shape(ind)[1] == len(groupnum)):
         allgneg = True
-        groupnum = abs(groupnum)-1 #here is this correct?
+        groupnum = abs(groupnum)-1
 
     # Get particle information into a pandas dataset to facilitate merging options
     #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
@@ -2205,7 +2205,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
                 cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
 
     if verbose: print('{:d} galaxies read'.format(len(groupnum)))
-            
+
     # Get indexes for centrals---------------------------------------
     cind = get_cenids(snap,sim,env)
     if (max(cind) > len(groupnum) and Testing):
@@ -2357,7 +2357,7 @@ if __name__== "__main__":
 
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap))
-    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,verbose=True))
+    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,com=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
