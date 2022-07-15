@@ -21,5 +21,6 @@ rhocsun = 1.48*10**5  #kg m**-3
 Xsun = 0.7            # mass fraction of H
 Ysun = 0.28
 Zsun = 0.02
+Rearth = 6.37*10**6   #m
 
 yr_in_s = 365*24*60*60
