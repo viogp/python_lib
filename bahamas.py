@@ -19,6 +19,8 @@ unitdefault = {
     'ssfr': 'to be filled'
 }
 
+BH_seed_mass = 7.63*10**5 #Msun/h
+
 #dirbahamasarilega = '/hpcdata0/simulations/BAHAMAS/'
 #dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 #dirobsari = '/hpcdata0/Obs_Data/'
