@@ -408,7 +408,7 @@ def get_path2part(sim,env):
     elif (env == 'cosmalega'):
         path2part = dirbahamascosmalega+sim+'/data/'
     else:
-        exit('get_path2data set to handle env=cosma, cosmalega, ari or arilega')
+        exit('b.get_path2part set to handle env=cosma, cosmalega, ari or arilega')
 
     return path2part    
 
@@ -712,11 +712,10 @@ def table_z_sn(sim,env,dirz=None):
     >>> b.table_z_sn('L050N256/WMAP9/Sims/ex','cosma')
     """
 
-    # Simulation input
-    path = get_path2data(sim,env)
-
     # Output file
     if (dirz == None):
+        # Simulation input
+        path = get_path2data(sim,env)
         tablez = path+tblz
     else:
         dirz = dirz+sim+'/'
@@ -872,9 +871,6 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
     >>> snap, z_snap = b.get_snap(20.,'L050N256/WMAP9/Sims/ex','cosma')
     """
 
-    # Simulation input
-    path = get_path2data(sim,env)
-
     # Check if the redshift range has been provided
     if (zmin == None and zmax == None):
         zmin,zmax = get_zminmaxs([zz])
@@ -885,6 +881,8 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
 
     # Table with increasing redshifts and corresponding snapshots
     if (dirz == None):
+        # Simulation input
+        path = get_path2data(sim,env)
         tablez = path+tblz
     else:
         tablez = dirz+sim+'/'+tblz
@@ -1456,7 +1454,7 @@ def get_m500_file(outdir,sim,snap):
        True if file exists
     '''
     
-    outdir2 = outdir+'BAHAMAS/'+sim+'/'
+    outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
     outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
@@ -1722,7 +1720,7 @@ def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,com=False):
        True if file exists
     '''
     
-    outdir2 = outdir+'BAHAMAS/'+sim+'/'
+    outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
     snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
     if com:
@@ -2023,7 +2021,7 @@ def get_subBH_file(outdir,sim,snap,nhmr=2.,com=False):
        True if file exists
     '''
     
-    outdir2 = outdir+'BAHAMAS/'+sim+'/'
+    outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
     snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
     if com:
@@ -2075,7 +2073,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     '''
     
     # Stop for environments different to arilega
-    if (env != 'arilega'):
+    if (env != 'arilega' or env != 'lap'):
         print('STOP: Function bahamas.map_mHMR developed for env=arilega.')
         return None
 
@@ -2085,7 +2083,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
 
     # Output file
     outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr,com)
-
+    print(outfile); exit() #here!!!
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
