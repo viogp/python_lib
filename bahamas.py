@@ -34,6 +34,11 @@ dirbahamascosmalega = '/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 
+dirbahamaslap = '/home/violeta/soil/BAHAMAS/'
+dirobslap = '/home/violeta/soil/Obs_Data/'
+dirplotlap = '/home/violeta/buds/'
+
+
 tblz = 'snap_z.txt'
 
 defaultdz = 0.25
@@ -241,7 +246,7 @@ def get_dirb(env):
     Parameters
     -----------
     env : string
-        cosma, cosmalega, ari or arilega, to use the adecuate paths
+        cosma, cosmalega, ari, arilega or lap, to use the adecuate paths
  
     Returns
     -----
@@ -263,6 +268,8 @@ def get_dirb(env):
         dirb = dirbahamascosma
     elif (env == 'cosmalega'):
         dirb = dirbahamascosmalega
+    elif (env == 'lap'):
+        dirb = dirbahamaslap
     else:
         print('WARNING (b.get_dirb): environment name not cosma, cosmalega, ari or arilega')
 
@@ -276,7 +283,7 @@ def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
     Parameters
     -----------
     env : string
-        cosma, cosmalega, ari or arilega, to use the adecuate paths
+        cosma, cosmalega, ari, arilega or lap, to use the adecuate paths
     sim_label : string
         Simulation label to be used in path, otherwise *'_models'
 
@@ -301,10 +308,12 @@ def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
     if not outdir:
         if (env == 'ari'):
             outdir = dirbahamasari
-        if (env == 'arilega'):
+        elif (env == 'arilega'):
             outdir = dirbahamasarilega
         elif (env == 'cosma' or env == 'cosmalega'): 
             outdir = dirbahamascosma
+        elif (env == 'lap'):
+            outdir = dirbahamaslap
         else:
             print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
             return None,None,None
@@ -360,6 +369,8 @@ def get_dirobs(env):
         dirobs = dirobsari
     elif (env == 'cosma' or env == 'cosmalega'):
         dirobs = dirobscosma
+    elif (env == 'lap'):
+        dirobs = dirobslap
 
     return dirobs
 
@@ -2342,9 +2353,10 @@ if __name__== "__main__":
     snap = 31
     zz = 3.
 
-    env = 'arilega'
+    #env = 'arilega'
     #env = 'cosmalega'
-
+    env = 'lap'
+    
     if (env == 'cosmalega'):
         sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
@@ -2356,10 +2368,15 @@ if __name__== "__main__":
         outdir = '/hpcdata4/arivgonz/Junk/'
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
+    if (env == 'lap'):
+        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+        dirz = '/home/violeta/soil/BAHAMAS/'
+        outdir = '/home/violeta/Downloads/'
 
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap))
-    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,com=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
@@ -2369,6 +2386,7 @@ if __name__== "__main__":
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
     #               'L400N1024/WMAP9/Sims/BAHAMAS']))
     #print(get_outdirs(env,dirz=dirz,outdir=outdir))
+    #print(get_dirb(env),get_dirobs(env))
     #print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))

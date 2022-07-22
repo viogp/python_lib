@@ -361,7 +361,7 @@ def propf_sims(zz,propdef,sims,env,dm=0.1,mmin=9.,mmax=16.,
                xmin=10.,xmax=15.,ymin=-6.5,ymax=0.,proptype='mass',
                labels=None,dirz=None,outdir=None,Testing=False):
     """
-    Compare the mass function of different simulations at a given z
+    Compare the property function of different simulations at a given z
 
     Parameters
     -----------
@@ -403,7 +403,7 @@ def propf_sims(zz,propdef,sims,env,dm=0.1,mmin=9.,mmax=16.,
     >>> bp.mf_sims(27,['FOF/Group_M_Mean200'],['AGN_TUNED_nu0_L100N256_WMAP9'],['ari'])
     """ 
 
-    # Check that the size of the arrays is the same for sims, massdef and env
+    # Check that the size of the arrays is the same for sims, propdef and env
     if (len(sims) != len(env) or len(sims) != len(propdef)):
         print('WARNING (bp.propf_sims): Input arrays have different lengths {}, {}, {}'.format(
             sims,env,propdef))
