@@ -3,51 +3,73 @@ Astronomical functions
 """
 
 import numpy as np
-from scipy.constants import c,pi
+from astropy.constants import c,M_sun,L_sun
+
+c_ms = c.value
+Msun_kg = M_sun.value
 
 J2erg = 10**7
+s_in_year = 365.*24.*3600.
 
-def get_LEdd(mbh):
+def get_lLEdd(lmbh):
     """
-    Following Eq. 3 in Griffin+2020, obtain the Eddington BH accretion mass 
+    Obtain the Eddington luminosity limit, following Eq. 3 in Griffin+2020
 
     Parameters
     ----------
-    Ledd : numpy array of floats
-    Eddington luminosity ()
+    lmbh : numpy array of floats
+        log10(M_BH/Msun)
 
     Returns
     -------
-    mdotedd : numpy array of floats
-
+    lLedd : numpy array of floats
+        log10(LEdd/erg/s)
     """
 
-    LEdd = mbh
-    
-    return LEdd
+    lLEdd = np.log10(1.26) + 46. + lmbh - 8.
+    return lLEdd
 
-def get_mdotEdd(mbh):
+
+def get_lmdotEdd(lmbh,SI=True,h0=None):
     """
-    Following Eq. 4 in Griffin+2020, obtain the Eddington BH accretion mass 
+    Calculate the Eddington BH accretion limit, following Eq. 4 in Griffin+2020.
 
     Parameters
     ----------
-    Ledd : numpy array of floats
-    Eddington luminosity ()
+    lmbh : numpy array of floats
+       BH mass as log10(M_BH).
+    SI : boolean
+       If true, the output log10(Mdot_Edd/kg/s), 
+       otherwise log10(Mdot_Edd/Msun/year).        
+    h0 : float
+       Hubble constant unit, H=100h. 
+       If None, the input is assumed log10(M_BH/Msun),
+       otherwise log10(M_BH/Msun/h0).
 
     Returns
     -------
-    mdotedd : numpy array of floats
-
+    lmdotedd : numpy array of floats
+       Eddington limit for the mass accretion, 
+       log10(Mdot_Edd/kg/s) if SI True
+       log10(Mdot_Edd/Msun/yr) if SI False
+       log10(Mdot_Edd/Msun/h0/yr) if SI False and given h0
     """
 
-    #Can I get a conditional output(return mdotedd and ledd if flag true)?
-    print(c)
-    mdotedd = Ledd/(0.1*c*c)
-    return mdotedd
+    if (h0 is not None):
+        lmbh = lmbh - np.log10(h0)
+
+    ledd = get_lLEdd(lmbh) - 7. #W
+    lmdotedd = ledd + 1 - 2.*np.log10(c_ms)
+
+    if (not SI):
+        lmdotedd = lmdotedd - np.log10(Msun_kg) + np.log10(s_in_year)
+        if (h0 is not None):
+            lmdotedd = lmdotedd + np.log10(h0)
+        
+    return lmdotedd
 
 
 if __name__ == "__main__":
-    lmbh = np.array([7])
-    print(lmbh,type(lmbh),lmbh[0])
-    #print(get_lmdotEdd(lmbh))
+    lmbh = np.array([7.,8.])
+    print(get_lLEdd(lmbh))
+    print(get_lmdotEdd(lmbh,SI=True,h0=0.73))
