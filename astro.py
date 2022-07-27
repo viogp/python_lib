@@ -11,6 +11,46 @@ Msun_kg = M_sun.value
 J2erg = 10**7
 s_in_year = 365.*24.*3600.
 
+er_mcc16 = 0.1
+ef_mcc16 = 0.15
+
+def lbol_coeff(x):
+    match x:
+        case 1:
+            return er_mcc16*(1-ef_mcc16)
+        case _:
+            return 0   # 0 is the default case if x is not found
+
+def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
+    """
+    Obtain the bolometric luminosity given the BH accretion rate
+
+    Parameters
+    ----------
+    lmdotbh : numpy array of floats
+      log10(Mdot_BH/Msun/yr) or log10(Mdot_BH/kg/s)
+    mdot2SI : boolean
+      True if the input given is log10(Mdot_BH/Msun/yr)
+    eq : integer
+      Specifies the equation to be used
+      1 corresponds to that from McCarthy+2016
+    unitsOUT : string
+      SI for W; cgs for erg/s, sun for L_sun
+
+    Returns
+    -------
+    lbol : numpy array of floats
+        log10(Lbol) with units depending on flags
+    """
+
+    if (mdot2SI):
+        lmdotbh = lmdotbh + np.log10(Msun_kg) - np.log10(s_in_year)
+
+    case of     
+    lLEdd = np.log10(1.26) + 46. + lmbh - 8.
+    return lLEdd
+    
+
 def get_lLEdd(lmbh):
     """
     Obtain the Eddington luminosity limit, following Eq. 3 in Griffin+2020
