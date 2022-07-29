@@ -5,8 +5,9 @@ Astronomical functions
 import numpy as np
 from astropy.constants import c,M_sun,L_sun
 
-c_ms = c.value
+c_ms    = c.value
 Msun_kg = M_sun.value
+Lsun_W  = L_sun.value
 
 J2erg = 10**7
 s_in_year = 365.*24.*3600.
@@ -14,13 +15,28 @@ s_in_year = 365.*24.*3600.
 er_mcc16 = 0.1
 ef_mcc16 = 0.15
 
-def lbol_coeff(x):
-    match x:
-        case 1:
-            return er_mcc16*(1-ef_mcc16)
-        case _:
-            return 0   # 0 is the default case if x is not found
+def lbol_coeff(neq):
+    """
+    Return the adequate coefficient to obtain the bolometric luminosity
+    as Lbol = coeff*Mdot_BH*c**2
+    
+    Parameters
+    ----------
+    neq : integer
+      Indicates the allowed options
+      1 for McCarthy+2016 (Sec 7) coefficient 
 
+    Returns
+    -------
+    coeff : float
+       Coefficient in Lbol = coeff*Mdot_BH*c**2
+    """
+    if (neq == 1):
+        return er_mcc16*(1-ef_mcc16)
+    else:
+        return None   # default case if neq is not found
+
+    
 def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
     """
     Obtain the bolometric luminosity given the BH accretion rate
@@ -33,7 +49,7 @@ def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
       True if the input given is log10(Mdot_BH/Msun/yr)
     eq : integer
       Specifies the equation to be used
-      1 corresponds to that from McCarthy+2016
+      1 for McCarthy+2016
     unitsOUT : string
       SI for W; cgs for erg/s, sun for L_sun
 
@@ -46,9 +62,16 @@ def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
     if (mdot2SI):
         lmdotbh = lmdotbh + np.log10(Msun_kg) - np.log10(s_in_year)
 
-    case of     
-    lLEdd = np.log10(1.26) + 46. + lmbh - 8.
-    return lLEdd
+    coeff = lbol_coeff(eq)
+    if (coeff is None): return None
+    
+    lbol = np.log10(coeff) + lmdotbh + 2*np.log10(c_ms)
+    if (units == 'cgs'):
+        lbol = lbol + 7.
+    elif (units == 'sun'):
+        lbol = lbol - np.log10(Lsun_W)
+        
+    return lbol
     
 
 def get_lLEdd(lmbh):
@@ -111,5 +134,9 @@ def get_lmdotEdd(lmbh,SI=True,h0=None):
 
 if __name__ == "__main__":
     lmbh = np.array([7.,8.])
+    lmdotbh = lmbh - 2.
+    print(lbol_coeff(1),lbol_coeff(34))
+    print(get_lbol(lmdotbh),get_lbol(lmdotbh,mdot2SI=False),
+          get_lbol(lmdotbh,units='cgs'),get_lbol(lmdotbh,units='sun'))
     print(get_lLEdd(lmbh))
     print(get_lmdotEdd(lmbh,SI=True,h0=0.73))
