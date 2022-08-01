@@ -50,7 +50,7 @@ def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
     eq : integer
       Specifies the equation to be used
       1 for McCarthy+2016
-    unitsOUT : string
+    units : string
       SI for W; cgs for erg/s, sun for L_sun
 
     Returns
