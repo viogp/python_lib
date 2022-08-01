@@ -1774,7 +1774,7 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
     >>> b.map_mHMR(31,sim,'arilega',ptype='BH')
     '''
-    
+
     # Stop for environments different to arilega
     if (env != 'arilega'):
         print('STOP: Function bahamas.map_mHMR developed for env=arilega.')
@@ -2046,7 +2046,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     sim : string
         Name of the simulation
     env : string
-        ari, arilega or cosma, to use the adecuate paths
+        ari, arilega or cosma to use the adecuate paths
     nhmr : float
         Enclosure radius = nhmr*HalfMassRadius(DM)
     com  : boolean
@@ -2071,10 +2071,10 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
     >>> b.map_subBH(31,sim,'arilega')
     '''
-    
+
     # Stop for environments different to arilega
-    if (env != 'arilega' or env != 'lap'):
-        print('STOP: Function bahamas.map_mHMR developed for env=arilega.')
+    if (env != 'arilega'):
+        print('STOP: Function bahamas.map_subBH developed for env=arilega.')
         return None
 
     # Black hole particles to be read, 5:BH
@@ -2083,7 +2083,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
 
     # Output file
     outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr,com)
-    print(outfile); exit() #here!!!
+
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
@@ -2109,7 +2109,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
             # Read the data
             partID  = p0['ParticleIDs'][:] 
             BH_Mass = p0['BH_Mass'][:]  # 1e10 Msun/h
-            BH_Mdot = p0['BH_Mdot'][:]  # 1e10 Msun/h/year
+            BH_Mdot = p0['BH_Mdot'][:]  # Msun/year
         else:
             partID  = np.append(partID,p0['ParticleIDs'][:]) 
             BH_Mass = np.append(BH_Mass,p0['BH_Mass'][:])
@@ -2287,7 +2287,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
 
     # BH mass and mdot of particles within that radius
     massinHMRdm = groups.BH_Mass.sum() # 1e10 Msun/h
-    mdotinHMRdm = groups.BH_Mdot.sum() # 1e10 Msun/h/year
+    mdotinHMRdm = groups.BH_Mdot.sum() # Msun/year 
     minHMRdm = pd.merge(massinHMRdm, mdotinHMRdm, on=['groupnum'])
     del massinHMRdm, mdotinHMRdm
 
@@ -2295,7 +2295,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     del minHMRdm, df_sh
     
     final.BH_Mass = np.log10(final.BH_Mass) + 10. #log10(M/Msun/h)
-    final.BH_Mdot = np.log10(final.BH_Mdot) + 10. #log10(M/Msun/h/year)
+    final.BH_Mdot = np.log10(final.BH_Mdot) #log10(M/Msun/year)
     if verbose: print(final)
 
     # Write properties to output file        
@@ -2338,7 +2338,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
 
     prop = final[['BH_Mdot']].to_numpy()
     hfdat.create_dataset('BH_Mdot',data=prop); prop = []
-    hfdat['BH_Mdot'].dims[0].label = 'log10(M/Msun/h/year)' 
+    hfdat['BH_Mdot'].dims[0].label = 'log10(M/Msun/year)' 
     
     hf.close()
 
@@ -2351,9 +2351,9 @@ if __name__== "__main__":
     snap = 31
     zz = 3.
 
-    #env = 'arilega'
+    env = 'arilega'
     #env = 'cosmalega'
-    env = 'lap'
+    #env = 'lap'
     
     if (env == 'cosmalega'):
         sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
@@ -2371,10 +2371,10 @@ if __name__== "__main__":
         #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
         dirz = '/home/violeta/soil/BAHAMAS/'
         outdir = '/home/violeta/Downloads/'
-
+        
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap))
-    #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,com=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
