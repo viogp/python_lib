@@ -1996,7 +1996,7 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
     return outfile
 
 
-def get_subBH_file(outdir,sim,snap,nhmr=2.,com=False):
+def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
     '''
     Get the name and existance check of the map_subBH file
 
@@ -2008,6 +2008,10 @@ def get_subBH_file(outdir,sim,snap,nhmr=2.,com=False):
        Simulation name or path
     snap: string
        Snapshot of the simulation
+    part : boolean
+        True for the particle file name; False for the mapped particles into haloes file 
+    addp : boolean
+        True if particle information will be added.
     nhrm: float
        Times the HalfMassRadius is considered
     com: boolean
@@ -2023,21 +2027,27 @@ def get_subBH_file(outdir,sim,snap,nhmr=2.,com=False):
     
     outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
-    snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
-    if com:
-        outfile = outdir2+'subBH_'+snhmr+'HMRmap_com_snap'+str(snap)+'.hdf5'
+
+    if part:
+        outfile = outdir2+'part_subBH_snap'+str(snap)+'.hdf5'
+        if addp:
+            outfile = outdir2+'part_add_subBH_snap'+str(snap)+'.hdf5'
     else:
-        outfile = outdir2+'subBH_'+snhmr+'HMRmap_snap'+str(snap)+'.hdf5'
+        snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
+        if com:
+            outfile = outdir2+'subBH_'+snhmr+'HMRmap_com_snap'+str(snap)+'.hdf5'
+        else:
+            outfile = outdir2+'subBH_'+snhmr+'HMRmap_snap'+str(snap)+'.hdf5'
+
     file_exists = io.check_file(outfile)
 
     return outfile, file_exists
 
 
-def map_subBH(snap,sim,env,nhmr=2.,com=False,
-             dirz=None,outdir=None,Testing=True,verbose=False):
+def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=False):
     '''
-    Map subgrid BH properties into the half mass radius (HMR) of (central) subhaloes
-    Within 'arilega' there is not enough information to map on satellite subhaloes.
+    Produce a file with subgrid BH properties and information on halo identifier, 
+    adding the properties for particles in the same position.
 
     Parameters
     -----------
@@ -2047,10 +2057,8 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
         Name of the simulation
     env : string
         ari, arilega or cosma to use the adecuate paths
-    nhmr : float
-        Enclosure radius = nhmr*HalfMassRadius(DM)
-    com  : boolean
-        True to use the CentreOfMass, False for CentreOfPotential
+    addp : boolean
+        True to add properties of particles in the same position.
     dirz : string
         Alternative path to table with z and snapshot.
     outdir : string
@@ -2062,19 +2070,19 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
 
     Returns
     -----
-    prop : float array
-        Mapped property
+    outfile : string
+        Name of the output file
 
     Examples
     ---------
     >>> import bahamas as b
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
-    >>> b.map_subBH(31,sim,'arilega')
+    >>> b.get_subBH(31,sim,'arilega')
     '''
 
     # Stop for environments different to arilega
     if (env != 'arilega'):
-        print('STOP: Function bahamas.map_subBH developed for env=arilega.')
+        print('WARNING (b.get_subBH): Function developed for env=arilega.')
         return None
 
     # Black hole particles to be read, 5:BH
@@ -2082,15 +2090,16 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     inptype = 'PartType'+str(itype)
 
     # Output file
-    outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr,com)
+    outfile, file_exists = get_subBH_file(outdir,sim,snap,part=True,addp=addp)
 
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
-        print('WARNING (b.map_subBH): no adequate particle files found, {}, {}'.
+        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0],files[1]]
+    if verbose: print('Particles: {} \n'.format(files[0]))
     
     # Loop over the particle files
     for iff, ff in enumerate(files):
@@ -2103,7 +2112,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
             try:
                 partID  = p0['ParticleIDs'][:]
             except:
-                print('WARNING (b.map_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
+                print('WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
                 return None
 
             # Read the data
@@ -2114,8 +2123,11 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
             partID  = np.append(partID,p0['ParticleIDs'][:]) 
             BH_Mass = np.append(BH_Mass,p0['BH_Mass'][:])
             BH_Mdot = np.append(BH_Mdot,p0['BH_Mdot'][:])
-    #mdote = 365*24*60*60*1.26*10**46*(BH_Mass*100/0.67)/(0.1*2.998*10**8*2.998*10**8)/(1.99*10**(40))
-    #a=np.log10(BH_Mdot/mdote) #Mdot/Meddington
+
+    if verbose:
+        print('BH: seed={:.2e}; min={:.2e}, max={:.2e}'.format(BH_seed_mass,
+                                                               min(BH_Mass)*10**10,
+                                                               max(BH_Mass)*10**10))
 
     # Get subgrid information into a pandas dataset to facilitate merging options
     data = np.vstack([partID,BH_Mass,BH_Mdot]).T
@@ -2126,10 +2138,11 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     # Get Subfind particle files----------------------------------------------
     files, allfiles = get_particle_files(snap,sim,env)
     if (not allfiles):
-        print('WARNING (b.map_mHMR): no adequate particle files found, {}, {}'.
+        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0]]
+    if verbose: print('\n Subfind particles: {} \n'.format(files[0]))
 
     # Loop over the particle files
     for iff, ff in enumerate(files):
@@ -2153,6 +2166,12 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
             party       = np.append(party,p0['Coordinates'][:,0])
             partz       = np.append(partz,p0['Coordinates'][:,0])
 
+
+    if verbose:
+        print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
+        print('SubGroupNum: min={:d}, max={:d} (diff={:d})'.format(min(subgroupnum),max(subgroupnum),
+                                                                   min(subgroupnum)-max(subgroupnum)))
+
     # If all groupnum are less than 0, take abs()
     allgneg = False
     ind = np.where(groupnum<0)
@@ -2172,6 +2191,162 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
     df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  
 
+    # Add properties of particles in the same position--------------------------
+    if (addp):
+        # Group particles in the same position
+        groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
+        if(groups.ngroups > len(df_part.index)):
+            print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+              format(snap,sim))
+            return None
+
+        # Add the properties for particles in the same position
+        df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
+        df_addMdot = groups.BH_Mdot.sum() # Msun/year
+        df_addM = pd.merge(df_addM_BH, df_addMdot, on=['groupnum','partx','party','partz'])
+        del df_addM_BH, df_addMdot
+
+        # Remove duplicated columns and row from initial particle information
+        df1 = df_part[['groupnum','partx','party','partz','partID','subgroupnum']]
+        df2 = df1.drop_duplicates(subset=['groupnum','partx','party','partz'])
+        print('frist', df2) # message on 
+        df2.sort_values(by=['groupnum','partx','party','partz'], inplace=True)
+        print('second',df1); exit()
+        df2.reset_index(inplace=True, drop=True)  
+        print('third', df2)
+        del df_part, df2
+        print('df_addM',df_addM); exit() #here!!!!!!!!!!!!!
+        # Generate the final data set with the merge
+        final = pd.merge(df2, df_addM, on=['groupnum','partx','party','partz'])
+        del df2, df_addM
+        print(final); exit()
+        #here-----------------------------
+    else:
+        final = df_part
+        del df_part
+
+    if verbose: print(final)
+    exit()
+    # Write output file---------------------------------------------------------    
+    hf = h5py.File(outfile, 'w') # Generate the file
+
+    # Get the cosmological parameters and boxsize
+    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    
+    # Output header
+    headnom = 'header'
+    head = hf.create_dataset(headnom,(100,))
+    head.attrs[u'sim']          = sim
+    head.attrs[u'snapshot']     = snap
+    head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
+    head.attrs[u'omega0']       = omega0
+    head.attrs[u'omegab']       = omegab
+    head.attrs[u'lambda0']      = lambda0        
+    head.attrs[u'h0']           = h0
+    head.attrs[u'boxsize']      = boxsize
+
+    # Output data with units
+    hfdat = hf.create_group('data')
+
+    prop = final[['partID']].to_numpy()
+    hfdat.create_dataset('partID',data=prop); prop = []
+    hfdat['partID'].dims[0].label = 'Particle ID' 
+    
+    prop = final[['partx', 'party', 'partz']].to_numpy()
+    hfdat.create_dataset('pos',data=prop); prop = []
+    hfdat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
+
+    prop = final[['groupnum']].to_numpy()
+    hfdat.create_dataset('groupnum',data=prop); prop = []
+    hfdat['groupnum'].dims[0].label = 'FoF group number' 
+    
+    prop = final[['BH_Mass']].to_numpy()
+    hfdat.create_dataset('BH_Mass',data=prop); prop = []
+    hfdat['BH_Mass'].dims[0].label = '10**10 Msun/h' 
+
+    prop = final[['BH_Mdot']].to_numpy()
+    hfdat.create_dataset('BH_Mdot',data=prop); prop = []
+    hfdat['BH_Mdot'].dims[0].label = 'Msun/year' 
+    
+    hf.close()
+    
+    # Retrurn name of file with output
+    return outfile
+
+
+def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
+             dirz=None,outdir=None,Testing=True,verbose=False):
+    '''
+    Map subgrid BH properties into the half mass radius (HMR) of central subhaloes.
+    Within 'arilega' there is not enough information to map on satellite subhaloes.
+
+    Parameters
+    -----------
+    snap : int
+        Snapshot number
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma to use the adecuate paths
+    nhmr : float
+        Enclosure radius = nhmr*HalfMassRadius(DM)
+    com  : boolean
+        True to use the CentreOfMass, False for CentreOfPotential
+    addp : boolean
+        True to use the file with added properties for particles in the same position
+    dirz : string
+        Alternative path to table with z and snapshot.
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+    verbose : boolean
+        To output extra information
+
+    Returns
+    -------
+    outfile : string
+        Name of the output file
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.map_subBH(31,sim,'arilega')
+    '''
+
+    # Stop for environments different to arilega
+    if (env != 'arilega'):
+        print('STOP: Function bahamas.map_subBH developed for env=arilega.')
+        return None
+
+    # Black hole particles to be read, 5:BH
+    itype = 5 
+    inptype = 'PartType'+str(itype)
+
+    # Output file
+    outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr=nhmr,com=com)
+    
+    # Get particle information
+    partfile, file_exists = get_subBH_file(outdir,sim,snap,part=True,addp=addp)
+    if not file_exists:
+        partfile = get_subBH(snap,sim,env,addp=addp,
+                             dirz=dirz,outdir=outdir,Testing=Testing,verbose=verbose)
+    f = h5py.File(partfile, 'r') #; print(ff,inptype)
+
+    # Read the data
+    groupnum= f['data/groupnum'][:,0] # FoF group number
+    partx   = f['data/pos'][:,0]      # x (Mpc/h)
+    party   = f['data/pos'][:,1]      # y (Mpc/h)
+    partz   = f['data/pos'][:,2]      # z (Mpc/h)    
+    BH_Mass = f['data/BH_Mass'][:,0]  # 1e10 Msun/h
+    BH_Mdot = f['data/BH_Mdot'][:,0]  # Msun/year
+
+    data = np.vstack([groupnum,partx,party,partz,BH_Mass,BH_Mdot]).T
+    df_part = pd.DataFrame(data=data,columns=['groupnum','partx','party','partz',
+                                              'BH_Mass','BH_Mdot'])
+    groupnum,partx,party,partz,BH_Mass,BH_Mdot=[[] for i in range(6)]
+
     # Get halo information from FOF&Subfind files-------------------------------
     files, allfiles = get_subfind_files(snap,sim,env)
     if (not allfiles):
@@ -2179,6 +2354,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
               format(snap,env))
         return None
     if Testing: files = [files[0],files[1]]
+    if verbose: print('\n Haloes: {} \n'.format(files[0]))
 
     # Prop index
     stype = ptypes.index('star')
@@ -2215,7 +2391,9 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,
                 cop_y = np.append(cop_y,sh['CentreOfPotential'][:,1])
                 cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
 
-    if verbose: print('{:d} galaxies read'.format(len(groupnum)))
+    if verbose:
+        print('{:d} galaxies read; GroupNum: min={:d}, max={:d}'.format(len(groupnum),
+                                                                        min(groupnum),max(groupnum)))
 
     # Get indexes for centrals---------------------------------------
     cind = get_cenids(snap,sim,env)
@@ -2373,8 +2551,9 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
-    #print(get_subBH_file(outdir,sim,snap))
-    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(get_subBH_file(outdir,sim,snap,part=True,addp=True))
+    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
+    #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,com=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
