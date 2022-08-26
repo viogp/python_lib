@@ -2011,7 +2011,7 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
     part : boolean
         True for the particle file name; False for the mapped particles into haloes file 
     addp : boolean
-        True if particle information will be added.
+        True for added particle information.
     nhrm: float
        Times the HalfMassRadius is considered
     com: boolean
@@ -2047,7 +2047,7 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
 def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=False):
     '''
     Produce a file with subgrid BH properties and information on halo identifier, 
-    adding the properties for particles in the same position.
+    adding the properties for particles in the same position if required.
 
     Parameters
     -----------
@@ -2100,7 +2100,7 @@ def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=
         return None
     if Testing: files = [files[0],files[1]]
     if verbose: print('Particles: {} \n'.format(files[0]))
-    
+
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
@@ -2132,8 +2132,7 @@ def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=
     # Get subgrid information into a pandas dataset to facilitate merging options
     data = np.vstack([partID,BH_Mass,BH_Mdot]).T
     df_psnap = pd.DataFrame(data=data,columns=['partID','BH_Mass','BH_Mdot'])
-    partID,BH_Mass,BH_Mdot=[[] for i in range(3)] #Empty individual arrays
-    
+    partID,BH_Mass,BH_Mdot=[[] for i in range(3)] #Empty individual arrays    
     
     # Get Subfind particle files----------------------------------------------
     files, allfiles = get_particle_files(snap,sim,env)
@@ -2165,7 +2164,6 @@ def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=
             partx       = np.append(partx,p0['Coordinates'][:,0])
             party       = np.append(party,p0['Coordinates'][:,0])
             partz       = np.append(partz,p0['Coordinates'][:,0])
-
 
     if verbose:
         print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
@@ -2208,25 +2206,19 @@ def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=
 
         # Remove duplicated columns and row from initial particle information
         df1 = df_part[['groupnum','partx','party','partz','partID','subgroupnum']]
-        df2 = df1.drop_duplicates(subset=['groupnum','partx','party','partz'])
-        print('frist', df2) # message on 
-        df2.sort_values(by=['groupnum','partx','party','partz'], inplace=True)
-        print('second',df1); exit()
-        df2.reset_index(inplace=True, drop=True)  
-        print('third', df2)
-        del df_part, df2
-        print('df_addM',df_addM); exit() #here!!!!!!!!!!!!!
+        df2 = df1.drop_duplicates(subset=['groupnum','partx','party','partz'],
+                                  keep='last',ignore_index=True)
+        df3 = df2.sort_values(by=['groupnum','partx','party','partz'], ignore_index=True)
+        del df_part, df1, df2
+
         # Generate the final data set with the merge
-        final = pd.merge(df2, df_addM, on=['groupnum','partx','party','partz'])
-        del df2, df_addM
-        print(final); exit()
-        #here-----------------------------
+        final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
+        del df3, df_addM
     else:
         final = df_part
         del df_part
-
     if verbose: print(final)
-    exit()
+
     # Write output file---------------------------------------------------------    
     hf = h5py.File(outfile, 'w') # Generate the file
 
@@ -2259,6 +2251,10 @@ def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=
     prop = final[['groupnum']].to_numpy()
     hfdat.create_dataset('groupnum',data=prop); prop = []
     hfdat['groupnum'].dims[0].label = 'FoF group number' 
+
+    prop = final[['subgroupnum']].to_numpy()
+    hfdat.create_dataset('subgroupnum',data=prop); prop = []
+    hfdat['subgroupnum'].dims[0].label = 'Subgroup number particle is in' 
     
     prop = final[['BH_Mass']].to_numpy()
     hfdat.create_dataset('BH_Mass',data=prop); prop = []
