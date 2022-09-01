@@ -12,32 +12,31 @@ Lsun_W  = L_sun.value
 J2erg = 10**7
 s_in_year = 365.*24.*3600.
 
-er_mcc16 = 0.1
-ef_mcc16 = 0.15
-
-def lbol_coeff(neq):
+def lbol_coeff(nomeq):
     """
     Return the adequate coefficient to obtain the bolometric luminosity
     as Lbol = coeff*Mdot_BH*c**2
     
     Parameters
     ----------
-    neq : integer
+    nomeq : string
       Indicates the allowed options
-      1 for McCarthy+2016 (Sec 7) coefficient 
+      mcc16 for McCarthy+2016 (Table 1 and Sec 7) coefficient 
 
     Returns
     -------
     coeff : float
        Coefficient in Lbol = coeff*Mdot_BH*c**2
     """
-    if (neq == 1):
+    if (nomeq == 'mcc16'):
+        er_mcc16 = 0.1
+        ef_mcc16 = 0.15
         return er_mcc16*(1-ef_mcc16)
     else:
         return None   # default case if neq is not found
 
     
-def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
+def get_lbol(lmdotbh,mdot2SI=True,eq='mcc16',units='SI'):
     """
     Obtain the bolometric luminosity given the BH accretion rate
 
@@ -47,9 +46,8 @@ def get_lbol(lmdotbh,mdot2SI=True,eq=1,units='SI'):
       log10(Mdot_BH/Msun/yr) or log10(Mdot_BH/kg/s)
     mdot2SI : boolean
       True if the input given is log10(Mdot_BH/Msun/yr)
-    eq : integer
-      Specifies the equation to be used
-      1 for McCarthy+2016
+    eq : string
+      Specifies the equation to be used (see options in lbol_coeff)
     units : string
       SI for W; cgs for erg/s, sun for L_sun
 
@@ -100,7 +98,7 @@ def get_lmdotEdd(lmbh,SI=True,h0=None):
     Parameters
     ----------
     lmbh : numpy array of floats
-       BH mass as log10(M_BH).
+       BH mass as log10(M_BH/Msun) or log10(M_BH/Msun/h0).
     SI : boolean
        If true, the output log10(Mdot_Edd/kg/s), 
        otherwise log10(Mdot_Edd/Msun/year).        

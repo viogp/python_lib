@@ -2478,14 +2478,15 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
     # Output header
     headnom = 'header'
     head = hf.create_dataset(headnom,(100,))
-    head.attrs[u'sim']          = sim
-    head.attrs[u'snapshot']     = snap
-    head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
-    head.attrs[u'omega0']       = omega0
-    head.attrs[u'omegab']       = omegab
-    head.attrs[u'lambda0']      = lambda0        
-    head.attrs[u'h0']           = h0
-    head.attrs[u'boxsize']      = boxsize
+    head.attrs[u'sim']           = sim
+    head.attrs[u'snapshot']      = snap
+    head.attrs[u'redshift']      = get_z(snap,sim,env,dirz=dirz)
+    head.attrs[u'omega0']        = omega0
+    head.attrs[u'omegab']        = omegab
+    head.attrs[u'lambda0']       = lambda0        
+    head.attrs[u'h0']            = h0
+    head.attrs[u'boxsize']       = boxsize
+    head.attrs[u'units_boxsize'] = u'Mpc/h'
 
     # Output data with units
     hfdat = hf.create_group('data')
