@@ -3,11 +3,13 @@ Astronomical functions
 """
 
 import numpy as np
-from astropy.constants import c,M_sun,L_sun
+from astropy.constants import c,M_sun,L_sun,pc
 
 c_ms    = c.value
 Msun_kg = M_sun.value
 Lsun_W  = L_sun.value
+
+m_in_pc = pc.value
 
 J2erg = 10**7
 s_in_year = 365.*24.*3600.
@@ -31,7 +33,7 @@ def lbol_coeff(nomeq):
     if (nomeq == 'mcc16'):
         er_mcc16 = 0.1
         ef_mcc16 = 0.15
-        return er_mcc16*(1-ef_mcc16)
+        return er_mcc16*(1.-ef_mcc16)
     else:
         return None   # default case if neq is not found
 
@@ -74,7 +76,8 @@ def get_lbol(lmdotbh,mdot2SI=True,eq='mcc16',units='SI'):
 
 def get_lLEdd(lmbh):
     """
-    Obtain the Eddington luminosity limit, following Eq. 3 in Griffin+2020
+    Obtain the Eddington luminosity limit, 
+    following Eq. 9 and 10 in Griffin+2020 (The evolution ...)
 
     Parameters
     ----------

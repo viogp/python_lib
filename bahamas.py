@@ -4,6 +4,7 @@ import h5py
 import glob
 import subprocess
 import pandas as pd
+import astro as ast
 from astropy import constants as const
 import iotools as io
 #print('\n \n')
@@ -2044,7 +2045,7 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
     return outfile, file_exists
 
 
-def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=False):
+def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose=False):
     '''
     Produce a file with subgrid BH properties and information on halo identifier, 
     adding the properties for particles in the same position if required.
@@ -2116,14 +2117,13 @@ def get_subBH(snap,sim,env,addp=True,dirz=None,outdir=None,Testing=True,verbose=
                 return None
 
             # Read the data
-            partID  = p0['ParticleIDs'][:] 
             BH_Mass = p0['BH_Mass'][:]  # 1e10 Msun/h
-            BH_Mdot = p0['BH_Mdot'][:]  # Msun/year
+            BH_Mdot = p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc  # Msun/year
         else:
             partID  = np.append(partID,p0['ParticleIDs'][:]) 
             BH_Mass = np.append(BH_Mass,p0['BH_Mass'][:])
-            BH_Mdot = np.append(BH_Mdot,p0['BH_Mdot'][:])
-
+            BH_Mdot = np.append(BH_Mdot,p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc)
+            
     if verbose:
         print('BH: seed={:.2e}; min={:.2e}, max={:.2e}'.format(BH_seed_mass,
                                                                min(BH_Mass)*10**10,
