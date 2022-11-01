@@ -2198,11 +2198,17 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
               format(snap,sim))
             return None
 
+        # Number of particles with the same position
+        df_nboson = groups.size().reset_index(name='nboson')
+
         # Add the properties for particles in the same position
         df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
         df_addMdot = groups.BH_Mdot.sum() # Msun/year
-        df_addM = pd.merge(df_addM_BH, df_addMdot, on=['groupnum','partx','party','partz'])
+        df_addM1 = pd.merge(df_addM_BH, df_addMdot, on=['groupnum','partx','party','partz'])
         del df_addM_BH, df_addMdot
+
+        df_addM = pd.merge(df_addM1, df_nboson, on=['groupnum','partx','party','partz'])
+        del df_addM1, df_nboson
 
         # Remove duplicated columns and row from initial particle information
         df1 = df_part[['groupnum','partx','party','partz','partID','subgroupnum']]
@@ -2214,6 +2220,8 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
         # Generate the final data set with the merge
         final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
         del df3, df_addM
+        print('final \n',final)  ####here 
+        exit()  ####here
     else:
         final = df_part
         del df_part
