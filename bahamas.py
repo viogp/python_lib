@@ -2200,6 +2200,7 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
 
         # Number of particles with the same position
         df_nboson = groups.size().reset_index(name='nboson')
+        if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
 
         # Add the properties for particles in the same position
         df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
@@ -2220,8 +2221,6 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
         # Generate the final data set with the merge
         final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
         del df3, df_addM
-        print('final \n',final)  ####here 
-        exit()  ####here
     else:
         final = df_part
         del df_part
@@ -2271,6 +2270,10 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
     prop = final[['BH_Mdot']].to_numpy()
     hfdat.create_dataset('BH_Mdot',data=prop); prop = []
     hfdat['BH_Mdot'].dims[0].label = 'Msun/year' 
+
+    prop = final[['nboson']].to_numpy()
+    hfdat.create_dataset('nboson',data=prop); prop = []
+    hfdat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
     
     hf.close()
     
