@@ -178,7 +178,7 @@ def get_simlabels(sims,labels=None):
         
     return outlabels
 
-def mb2msun(massb,h0):
+def mb2msun(massb,h0,verbose=False):
     """
     Provide bahamas masses as M/Msun
 
@@ -188,6 +188,8 @@ def mb2msun(massb,h0):
         Mass in 10^10Msun/h units
     h0 : float
         Hubble constant
+    verbose : bool
+        True for informative messages
 
     Returns
     -----
@@ -202,14 +204,14 @@ def mb2msun(massb,h0):
     """
 
     if(massb <= 0):
-        print('WARNING (get_mb2msun): Input mass <= 0, returning -999.')
+        if (verbose): print('WARNING (get_mb2msun): Input mass <= 0, returning -999.')
         return -999.
     else:
         mass = massb*np.power(10.,10.)/h0
         return mass
 
 
-def mb2lmsun(massb,h0):
+def mb2lmsun(massb,h0,verbose=False):
     """
     Provide bahamas masses as log10(M/Msun)
 
@@ -219,6 +221,8 @@ def mb2lmsun(massb,h0):
         Mass in 10^10Msun/h units
     h0 : float
         Hubble constant
+    verbose : bool
+        True for informative messages
 
     Returns
     -----
@@ -233,7 +237,7 @@ def mb2lmsun(massb,h0):
     """
 
     if(massb <= 0):
-        print('WARNING (get_mb2lmsun): Input mass <= 0, returning -999.')
+        if (verbose): print('WARNING (get_mb2lmsun): Input mass <= 0, returning -999.')
         return -999.
     else:
         lmass = np.log10(massb) + 10. - np.log10(h0)
@@ -2271,9 +2275,10 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
     hfdat.create_dataset('BH_Mdot',data=prop); prop = []
     hfdat['BH_Mdot'].dims[0].label = 'Msun/year' 
 
-    prop = final[['nboson']].to_numpy()
-    hfdat.create_dataset('nboson',data=prop); prop = []
-    hfdat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
+    if (addp):
+        prop = final[['nboson']].to_numpy()
+        hfdat.create_dataset('nboson',data=prop); prop = []
+        hfdat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
     
     hf.close()
     
