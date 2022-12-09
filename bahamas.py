@@ -31,7 +31,7 @@ dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
 dirobsari = '/beegfs2/Obs_Data/'
 dirplotari = '/home/arivgonz/buds/'
 
-dirbahamascosmalega = '/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
+dirbahamascosmalega = '/cosma7/data/dp004/fkgm22/BAHAMAS/' #'/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 
