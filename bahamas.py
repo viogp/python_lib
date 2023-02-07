@@ -31,7 +31,7 @@ dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
 dirobsari = '/beegfs2/Obs_Data/'
 dirplotari = '/home/arivgonz/buds/'
 
-dirbahamascosmalega = '/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
+dirbahamascosmalega = '/cosma7/data/dp004/fkgm22/BAHAMAS/' #'/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
 dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
 dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 
@@ -2051,8 +2051,9 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
 
 def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose=False):
     '''
-    Produce a file with subgrid BH properties and information on halo identifier, 
-    adding the properties for particles in the same position if required.
+    Produce a file joining subgrid BH properties with their positions 
+    and information on halo identifier. Joining done on PartID.
+    There is an option to add the masses and accretion for particles in the same position.
 
     Parameters
     -----------
