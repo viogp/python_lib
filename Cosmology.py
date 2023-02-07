@@ -799,10 +799,11 @@ def emission_line_luminosity(flux_data,z):
     if flux_data>0.:
         # Luminosity distance in cm/h
         d_L = max(luminosity_distance(z),10.**-5)*Mpc2cm
-        
-        #emission_line_luminosity = np.log10(4.0*np.pi*(d_L**2)*flux_data) - 40.
-        print('WARNING: unsure (1+z) F to L')
-        emission_line_luminosity = np.log10((1+z)*4.0*np.pi*(d_L**2)*flux_data) - 40. 
+
+        # Flux in erg/s/cm^2
+        den = 4.0*np.pi*(d_L**2)
+        emission_line_luminosity = np.log10(flux_data*den) - 40.
+        # Luminosities are in 10^40 h-2 erg/s units
         emission_line_luminosity = 10**(emission_line_luminosity)
     else:
         emission_line_luminosity = 0.

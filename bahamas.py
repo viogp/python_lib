@@ -411,7 +411,10 @@ def get_path2part(sim,env):
     elif (env == 'cosma'):
         path2part = dirbahamascosma+sim+'/data/'
     elif (env == 'cosmalega'):
-        path2part = dirbahamascosmalega+sim+'/data/'
+        if (sim==None):
+            path2part = dirbahamascosmalega+'data/'
+        else:
+            path2part = dirbahamascosmalega+sim+'/data/'
     else:
         exit('b.get_path2part set to handle env=cosma, cosmalega, ari or arilega')
 
@@ -424,8 +427,8 @@ def get_path2data(sim,env):
 
     Parameters
     -----------
-    sims : list of strings
-        Array with the names of the simulation
+    sims : string
+        Name of the simulation
     env : string
         cosma, cosmalega, ari or arilega, to use the adecuate paths
  
@@ -449,7 +452,10 @@ def get_path2data(sim,env):
     elif (env == 'cosma'):
         path2data = dirbahamascosma+sim+'/data/'
     elif (env == 'cosmalega'):
-        path2data = dirbahamascosmalega+sim+'/data/'
+        if (sim==None):
+            path2data = dirbahamascosmalega+'data/'
+        else:
+            path2data = dirbahamascosmalega+sim+'/data/'
     else:
         exit('get_path2data set to handle env=cosma, cosmalega, ari or arilega')
 
@@ -717,13 +723,17 @@ def table_z_sn(sim,env,dirz=None):
     >>> b.table_z_sn('L050N256/WMAP9/Sims/ex','cosma')
     """
 
+    # Simulation input
+    path = get_path2data(sim,env)
+
     # Output file
     if (dirz == None):
-        # Simulation input
-        path = get_path2data(sim,env)
         tablez = path+tblz
     else:
-        dirz = dirz+sim+'/'
+        if (sim==None):
+            dirz = dirz
+        else:
+            dirz = dirz+sim+'/'
         if (not os.path.exists(dirz)):
             os.makedirs(dirz)
         tablez = dirz+tblz
@@ -807,7 +817,10 @@ def get_z(snap,sim,env,dirz=None):
     if (dirz == None):
         tablez = path+tblz
     else:
-        tablez = dirz+sim+'/'+tblz
+        if (sim==None):
+            tablez = dirz+tblz
+        else:
+            tablez = dirz+sim+'/'+tblz
 
     if (not os.path.isfile(tablez)):
         # Generate the table if it doesn't exist
@@ -890,7 +903,10 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
         path = get_path2data(sim,env)
         tablez = path+tblz
     else:
-        tablez = dirz+sim+'/'+tblz
+        if (sim==None):
+            tablez = dirz+tblz
+        else:
+            tablez = dirz+sim+'/'+tblz
 
     if (not os.path.isfile(tablez)):
         # Generate the table if it doesn't exist
@@ -1232,9 +1248,15 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
 
     # Output file
     if outdir:
-        path = outdir+sim
+        if (sim==None):
+            path = outdir
+        else:
+            path = outdir+sim
     else:
-        path = get_dirb(env)+sim
+        if (sim==None):
+            path = get_dirb(env)
+        else:
+            path = get_dirb(env)+sim
     if (not os.path.exists(path)):
         os.makedirs(path)
 
@@ -1348,7 +1370,11 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
     
     # Output file
     outdir, dirz, plotdir = get_outdirs(env,dirz=dirz,outdir=outdir)
-    path = outdir+sim ; io.create_dir(path)
+    if (sim==None):
+        path = outdir
+    else:
+        path = outdir+sim
+    io.create_dir(path)
     outfil = path+'/'+proplabel+'F_z'+str(z_snap).replace('.','_')+ \
              '_min'+str(mmin).replace('.','_')+'_max'+str(mmax).replace('.','_')+ \
              '_dm'+str(dm).replace('.','_')+'.hdf5'
@@ -1459,7 +1485,10 @@ def get_m500_file(outdir,sim,snap):
        True if file exists
     '''
     
-    outdir2 = outdir+sim+'/'
+    if (sim==None):
+        outdir2 = outdir
+    else:
+        outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
     outfile = outdir2+'m500_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
@@ -1725,7 +1754,10 @@ def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,com=False):
        True if file exists
     '''
     
-    outdir2 = outdir+sim+'/'
+    if (sim==None):
+        outdir2 = outdir
+    else:
+        outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
     snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
     if com:
@@ -2030,7 +2062,10 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
        True if file exists
     '''
     
-    outdir2 = outdir+sim+'/'
+    if (sim==None):
+        outdir2 = outdir
+    else:
+        outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
 
     if part:
@@ -2543,12 +2578,12 @@ if __name__== "__main__":
     snap = 31
     zz = 3.
 
-    env = 'arilega'
-    #env = 'cosmalega'
+    #env = 'arilega'
+    env = 'cosmalega'
     #env = 'lap'
     
     if (env == 'cosmalega'):
-        sim = 'L400N1024/WMAP9/Sims/BAHAMAS'
+        sim = None #'L400N1024/WMAP9/Sims/BAHAMAS'
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
     if (env == 'arilega'):
@@ -2566,7 +2601,7 @@ if __name__== "__main__":
         
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap,part=True,addp=True))
-    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
+    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,com=True,dirz=dirz,outdir=outdir,verbose=True))
@@ -2581,7 +2616,7 @@ if __name__== "__main__":
     #print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
-    #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz)
+    snap, zsnap = get_snap(3.2,sim,env,dirz=dirz)
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmax=[3.8])
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
