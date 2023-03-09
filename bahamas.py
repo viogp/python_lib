@@ -203,12 +203,13 @@ def mb2msun(massb,h0,verbose=False):
     >>> 68571428.57142857
     """
 
+    mass = -999.
     if(massb <= 0):
         if (verbose): print('WARNING (get_mb2msun): Input mass <= 0, returning -999.')
-        return -999.
     else:
         mass = massb*np.power(10.,10.)/h0
-        return mass
+        
+    return mass
 
 
 def mb2lmsun(massb,h0,verbose=False):
@@ -236,14 +237,15 @@ def mb2lmsun(massb,h0,verbose=False):
     >>> 7.836143197361331
     """
 
+    lmass = -999.
     if(massb <= 0):
         if (verbose): print('WARNING (get_mb2lmsun): Input mass <= 0, returning -999.')
-        return -999.
     else:
         lmass = np.log10(massb) + 10. - np.log10(h0)
-        return lmass
+        
+    return lmass
 
-    
+
 def get_dirb(env):
     """
     Get the Bahamas directory given the environment
@@ -1042,7 +1044,7 @@ def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2,v
     # Simulation input
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False: return -999.
-    if verbose: print('First Subfind file: {}'.format(files[0]))
+    if verbose: print('get_subfind_prop: First Subfind file is {}'.format(files[0]))
     
     if (proptype is not None):
         itype = ptypes.index(proptype)
