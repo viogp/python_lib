@@ -99,7 +99,36 @@ def get_zminmaxs(zz,dz=None,verbose=False):
         
     return zmins,zmaxs
 
-    
+
+def boundary_correction(xin,box):
+    """
+    Correct an array for periodic boundary conditions
+
+    Parameters
+    ----------
+    xin : numpy array of floats
+       Array with 1-D coordinates.
+    box: float
+       Size of the boundary to be used.
+
+    Returns
+    -------
+    xout : numpy array of floats
+       Array with the corrected 1-D coordinates.
+
+    Example
+    -------
+    >>> import bahamas as b; import numpy as np
+    >>> b.boundary_correction(np.array([110.,2,-0.5,100.]),100.)
+    >>> [10.   2.  99.5  0. ]
+    """
+    xout = xin.copy()
+    xout[xin<0] = xout[xin<0] + box
+    xout[xin>=box] = xout[xin>=box] - box
+        
+    return xout
+
+
 def get_simlabels(sims,labels=None):
     """
     Check that the arrays sims and inlabels have the same lenght,
@@ -119,8 +148,8 @@ def get_simlabels(sims,labels=None):
 
     Examples
     ---------
-    >>> import bahamasplot as bp
-    >>> bp.get_simlabels(['HIRES/AGN_RECAL_nu0_L100N512_WMAP9','L400N1024/WMAP9/Sims/BAHAMAS'])
+    >>> import bahamas as b
+    >>> b.get_simlabels(['HIRES/AGN_RECAL_nu0_L100N512_WMAP9','L400N1024/WMAP9/Sims/BAHAMAS'])
     """ 
 
     outlabels = labels
@@ -686,7 +715,7 @@ def get_cosmology(sim,env):
     f = h5py.File(infile, 'r')
     header = f['Header']
     #print(list(header.attrs.items()))
-
+    
     omega0 = header.attrs['Omega0']
     omegab = header.attrs['OmegaBaryon']
     lambda0 = header.attrs['OmegaLambda']
@@ -2618,7 +2647,8 @@ if __name__== "__main__":
     #print(table_z_sn(sim,env,dirz=dirz))
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
-    snap, zsnap = get_snap(3.2,sim,env,dirz=dirz)
+    #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz)
+    print(boundary_correction(np.array([110.,2,-0.5,100.]),100.))
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmax=[3.8])
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
