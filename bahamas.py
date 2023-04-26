@@ -702,7 +702,7 @@ def get_cosmology(sim,env):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_cosmology('AGN_TUNED_nu0_L100N256_WMAP9','ari')
+    >>> b.get_cosmology('AGN_TUNED_nu0_L100N256_WMAP9','arilega')
     >>> b.get_cosmology('L050N256/WMAP9/Sims/ex','cosma')
     """
 
@@ -711,7 +711,7 @@ def get_cosmology(sim,env):
 
     # Initialize arrays for z and sn
     files = glob.glob(path+'groups_*/group_tab*')
-    infile = files[0] 
+    infile = files[0] #; print(infile) 
     f = h5py.File(infile, 'r')
     header = f['Header']
     #print(list(header.attrs.items()))
@@ -2648,7 +2648,7 @@ if __name__== "__main__":
     #print(get_z(27,sim,env,dirz=dirz))
     #print(get_z(-1,sim,env,dirz=dirz))
     #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz)
-    print(boundary_correction(np.array([110.,2,-0.5,100.]),100.))
+    #print(boundary_correction(np.array([110.,2,-0.5,100.]),100.))
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmax=[3.8])
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
