@@ -1760,7 +1760,7 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     return outfile
 
 
-def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,com=False):
+def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,cop=False):
     '''
     Get the name and existance check of the map_HMR file
 
@@ -1774,8 +1774,8 @@ def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,com=False):
        Snapshot of the simulation
     nhrm: float
        Times the HalfMassRadius is considered
-    com: boolean
-       If True, using CentreOfMass, otherwise CentreOfPotential
+    cop: boolean
+       If True, using CentreOfPotential, otherwise CentreOfMass 
     
     Returns
     -------
@@ -1791,8 +1791,8 @@ def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,com=False):
         outdir2 = outdir+sim+'/'
     dir_exists = io.create_dir(outdir2)
     snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
-    if com:
-        outfile = outdir2+'m'+snhmr+'HMRmap_com_snap'+str(snap)+'.hdf5'
+    if cop:
+        outfile = outdir2+'m'+snhmr+'HMRmap_cop_snap'+str(snap)+'.hdf5'
     else:
         outfile = outdir2+'m'+snhmr+'HMRmap_snap'+str(snap)+'.hdf5'
     file_exists = io.check_file(outfile)
@@ -1800,7 +1800,7 @@ def get_mHMRmap_file(outdir,sim,snap,nhmr=2.,com=False):
     return outfile, file_exists
 
 
-def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
+def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,cop=False,
              dirz=None,outdir=None,Testing=True,verbose=False):
     '''
     Map particle mass into the half mass radius (HMR) of (central) subhaloes
@@ -1820,8 +1820,8 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
         mass limit for subhaloes to be considered, M_30kp [Msun/h] 
     nhmr : float
         Enclosure radius = nhmr*HalfMassRadius(DM)
-    com  : boolean
-        True to use the CentreOfMass, False for CentreOfPotential
+    cop  : boolean
+        True to use the CentreOfPotential, False for CentreOfMass
     dirz : string
         Alternative path to table with z and snapshot.
     outdir : string
@@ -1854,7 +1854,7 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
     nompartmass = 'mHMR_'+ptype
     
     # Output file
-    outfile, file_exists = get_mHMRmap_file(outdir,sim,snap,nhmr,com)
+    outfile, file_exists = get_mHMRmap_file(outdir,sim,snap,nhmr,cop)
     
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
@@ -1923,26 +1923,26 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
             groupnum  = sh['GroupNumber'][:]      #FOF GroupNumber
             ms30  = sh['Mass_030kpc'][:,stype]    #1e10Msun/h
             HMRdm = sh['HalfMassRad'][:,dmtype]   #cMpc/h
-            if com:
-                cop_x = sh['CentreOfMass'][:,0]  #cMpc/h
-                cop_y = sh['CentreOfMass'][:,1]  #cMpc/h
-                cop_z = sh['CentreOfMass'][:,2]  #cMpc/h
-            else:
+            if cop:
                 cop_x = sh['CentreOfPotential'][:,0]  #cMpc/h
                 cop_y = sh['CentreOfPotential'][:,1]  #cMpc/h
                 cop_z = sh['CentreOfPotential'][:,2]  #cMpc/h
+            else:
+                cop_x = sh['CentreOfMass'][:,0]  #cMpc/h
+                cop_y = sh['CentreOfMass'][:,1]  #cMpc/h
+                cop_z = sh['CentreOfMass'][:,2]  #cMpc/h
         else:
             groupnum  = np.append(groupnum,sh['GroupNumber'][:])
             ms30  = np.append(ms30,sh['Mass_030kpc'][:,stype])
             HMRdm = np.append(HMRdm,sh['HalfMassRad'][:,dmtype])
-            if com:
-                cop_x = np.append(cop_x,sh['CentreOfMass'][:,0])
-                cop_y = np.append(cop_y,sh['CentreOfMass'][:,1])
-                cop_z = np.append(cop_z,sh['CentreOfMass'][:,2])
-            else:
+            if cop:
                 cop_x = np.append(cop_x,sh['CentreOfPotential'][:,0])
                 cop_y = np.append(cop_y,sh['CentreOfPotential'][:,1])
                 cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
+            else:
+                cop_x = np.append(cop_x,sh['CentreOfMass'][:,0])
+                cop_y = np.append(cop_y,sh['CentreOfMass'][:,1])
+                cop_z = np.append(cop_z,sh['CentreOfMass'][:,2])
 
     if verbose: print('All read galaxies = {:d}'.format(len(groupnum)))
             
@@ -2064,9 +2064,10 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,com=False,
     return outfile
 
 
-def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
+def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=False):
     '''
-    Get the name and existance check of the map_subBH file
+    Get the name and existance check of the files generated with either
+    get_subBH (particle info.) or map_subBH (mapped particles)
 
     Parameters
     ----------
@@ -2082,8 +2083,8 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
         True for added particle information.
     nhrm: float
        Times the HalfMassRadius is considered
-    com: boolean
-       If True, using CentreOfMass, otherwise CentreOfPotential
+    cop: boolean
+       If True, using CentreOfPotential, otherwise CentreOfMass
     
     Returns
     -------
@@ -2105,8 +2106,8 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,com=False):
             outfile = outdir2+'part_add_subBH_snap'+str(snap)+'.hdf5'
     else:
         snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
-        if com:
-            outfile = outdir2+'subBH_'+snhmr+'HMRmap_com_snap'+str(snap)+'.hdf5'
+        if cop:
+            outfile = outdir2+'subBH_'+snhmr+'HMRmap_cop_snap'+str(snap)+'.hdf5'
         else:
             outfile = outdir2+'subBH_'+snhmr+'HMRmap_snap'+str(snap)+'.hdf5'
 
@@ -2353,7 +2354,7 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
     return outfile
 
 
-def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
+def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
              dirz=None,outdir=None,Testing=True,verbose=False):
     '''
     Map subgrid BH properties into the half mass radius (HMR) of central subhaloes.
@@ -2369,8 +2370,8 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
         ari, arilega or cosma to use the adecuate paths
     nhmr : float
         Enclosure radius = nhmr*HalfMassRadius(DM)
-    com  : boolean
-        True to use the CentreOfMass, False for CentreOfPotential
+    cop  : boolean
+        True to use the CentreOfPotential, False for CentreOfMass 
     addp : boolean
         True to use the file with added properties for particles in the same position
     dirz : string
@@ -2404,9 +2405,9 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
     inptype = 'PartType'+str(itype)
 
     # Output file
-    outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr=nhmr,com=com)
-    
-    # Get particle information
+    outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr=nhmr,cop=cop)
+
+    # Get subgrid BH particle information
     partfile, file_exists = get_subBH_file(outdir,sim,snap,part=True,addp=addp)
     if not file_exists:
         partfile = get_subBH(snap,sim,env,addp=addp,
@@ -2449,26 +2450,26 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
             groupnum  = sh['GroupNumber'][:]      #FOF GroupNumber
             ms30  = sh['Mass_030kpc'][:,stype]    #1e10Msun/h
             HMRdm = sh['HalfMassRad'][:,dmtype]   #cMpc/h
-            if com:
-                cop_x = sh['CentreOfMass'][:,0]  #cMpc/h
-                cop_y = sh['CentreOfMass'][:,1]  #cMpc/h
-                cop_z = sh['CentreOfMass'][:,2]  #cMpc/h
-            else:
+            if cop:
                 cop_x = sh['CentreOfPotential'][:,0]  #cMpc/h
                 cop_y = sh['CentreOfPotential'][:,1]  #cMpc/h
                 cop_z = sh['CentreOfPotential'][:,2]  #cMpc/h
+            else:
+                cop_x = sh['CentreOfMass'][:,0]  #cMpc/h
+                cop_y = sh['CentreOfMass'][:,1]  #cMpc/h
+                cop_z = sh['CentreOfMass'][:,2]  #cMpc/h
         else:
             groupnum  = np.append(groupnum,sh['GroupNumber'][:])
             ms30  = np.append(ms30,sh['Mass_030kpc'][:,stype])
             HMRdm = np.append(HMRdm,sh['HalfMassRad'][:,dmtype])
-            if com:
-                cop_x = np.append(cop_x,sh['CentreOfMass'][:,0])
-                cop_y = np.append(cop_y,sh['CentreOfMass'][:,1])
-                cop_z = np.append(cop_z,sh['CentreOfMass'][:,2])
-            else:
+            if cop:
                 cop_x = np.append(cop_x,sh['CentreOfPotential'][:,0])
                 cop_y = np.append(cop_y,sh['CentreOfPotential'][:,1])
                 cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
+            else:
+                cop_x = np.append(cop_x,sh['CentreOfMass'][:,0])
+                cop_y = np.append(cop_y,sh['CentreOfMass'][:,1])
+                cop_z = np.append(cop_z,sh['CentreOfMass'][:,2])
 
     if verbose:
         print('{:d} galaxies read; GroupNum: min={:d}, max={:d}'.format(len(groupnum),
@@ -2502,7 +2503,6 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
     if df_sh.empty:
         print('STOP (b.map_subBH): no centrals with stellar mass.')
         return None
-    df_sh.ms30 = np.log10(df_sh.ms30) + 10.    #log10(M/Msun/h)
 
     # Join the particle and FoF information----------
     merge = pd.merge(df_part, df_sh, on=['groupnum'])
@@ -2550,9 +2550,6 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
 
     final = pd.merge(minHMRdm, df_sh, on=['groupnum'])
     del minHMRdm, df_sh
-    
-    final.BH_Mass = np.log10(final.BH_Mass) + 10. #log10(M/Msun/h)
-    final.BH_Mdot = np.log10(final.BH_Mdot) #log10(M/Msun/year)
     if verbose: print(final)
 
     # Write properties to output file        
@@ -2584,7 +2581,7 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
 
     prop = final[['ms30']].to_numpy()
     hfdat.create_dataset('ms30',data=prop); prop = []
-    hfdat['ms30'].dims[0].label = 'log10(M/Msun/h)' 
+    hfdat['ms30'].dims[0].label = '1e10 Msun/h' 
 
     prop = final[['HMRdm']].to_numpy()
     hfdat.create_dataset('HMRdm',data=prop); prop = []
@@ -2592,11 +2589,11 @@ def map_subBH(snap,sim,env,nhmr=2.,com=False,addp=False,
     
     prop = final[['BH_Mass']].to_numpy()
     hfdat.create_dataset('BH_Mass',data=prop); prop = []
-    hfdat['BH_Mass'].dims[0].label = 'log10(M/Msun/h)' 
+    hfdat['BH_Mass'].dims[0].label = '1e10 Msun/h' 
 
     prop = final[['BH_Mdot']].to_numpy()
     hfdat.create_dataset('BH_Mdot',data=prop); prop = []
-    hfdat['BH_Mdot'].dims[0].label = 'log10(M/Msun/year)' 
+    hfdat['BH_Mdot'].dims[0].label = 'Msun/year' 
     
     hf.close()
 
@@ -2609,8 +2606,8 @@ if __name__== "__main__":
     snap = 31
     zz = 3.
 
-    #env = 'arilega'
-    env = 'cosmalega'
+    env = 'arilega'
+    #env = 'cosmalega'
     #env = 'lap'
     
     if (env == 'cosmalega'):
@@ -2633,9 +2630,9 @@ if __name__== "__main__":
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap,part=True,addp=True))
     #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
-    #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
-    #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,com=True,dirz=dirz,outdir=outdir,verbose=True))
+    #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
     #print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
     #print(get_zminmaxs([0.,1.],dz=0.5))
