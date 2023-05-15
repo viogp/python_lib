@@ -2412,6 +2412,11 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
     if not file_exists:
         partfile = get_subBH(snap,sim,env,addp=addp,
                              dirz=dirz,outdir=outdir,Testing=Testing,verbose=verbose)
+        if (not partfile):
+            print('STOP (b.map_subBH): no adequate particle files found, {}, {}'.
+                  format(snap,env))
+            return None
+
     f = h5py.File(partfile, 'r') #; print(ff,inptype)
 
     # Read the data
@@ -2430,7 +2435,7 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
     # Get halo information from FOF&Subfind files-------------------------------
     files, allfiles = get_subfind_files(snap,sim,env)
     if (not allfiles):
-        print('WARNING (b.map_subBH): no adequate Subfind files found, {}, {}'.
+        print('STOP (b.map_subBH): no adequate Subfind files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0],files[1]]
