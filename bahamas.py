@@ -2064,7 +2064,7 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,cop=False,
     return outfile
 
 
-def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=False):
+def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=True):
     '''
     Get the name and existance check of the files generated with either
     get_subBH (particle info.) or map_subBH (mapped particles)
@@ -2109,7 +2109,7 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=False):
         if cop:
             outfile = outdir2+'subBH_'+snhmr+'HMRmap_cop_snap'+str(snap)+'.hdf5'
         else:
-            outfile = outdir2+'subBH_'+snhmr+'HMRmap_snap'+str(snap)+'.hdf5'
+            outfile = outdir2+'subBH_'+snhmr+'HMRmap_com_snap'+str(snap)+'.hdf5'
 
     file_exists = io.check_file(outfile)
 
@@ -2406,7 +2406,7 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
 
     # Output file
     outfile, file_exists = get_subBH_file(outdir,sim,snap,nhmr=nhmr,cop=cop)
-
+    
     # Get subgrid BH particle information
     partfile, file_exists = get_subBH_file(outdir,sim,snap,part=True,addp=addp)
     if not file_exists:
@@ -2540,16 +2540,19 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
 
     # Particles enclosed in radius n*HMR(DM)
     radius = nhmr*merge.HMRdm
-    merge['inside_HMRdm'] = merge.distance <= radius
+    merge['inside_HMRdm'] = merge.distance <= radius;
     merge = merge.loc[merge.inside_HMRdm == True]
+
     if merge.empty:
         print('STOP (b.map_subBH): no particles within DM HMR.')
         return None
     groups = merge.groupby(['groupnum'], as_index=False)
 
     # BH mass and mdot of particles within that radius
+    #            Output: pandas df w groupnum and prop
     massinHMRdm = groups.BH_Mass.sum() # 1e10 Msun/h
-    mdotinHMRdm = groups.BH_Mdot.sum() # Msun/year 
+    mdotinHMRdm = groups.BH_Mdot.sum() # Msun/year
+
     minHMRdm = pd.merge(massinHMRdm, mdotinHMRdm, on=['groupnum'])
     del massinHMRdm, mdotinHMRdm
 
@@ -2557,9 +2560,10 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
     del minHMRdm, df_sh
     if verbose: print(final)
 
-    # Write properties to output file        
+    # Write properties to output file
     hf = h5py.File(outfile, 'w') # Generate the file
-    
+    if verbose: print('\n Output: {} \n'.format(outfile))
+
     # Output header
     headnom = 'header'
     head = hf.create_dataset(headnom,(100,))
@@ -2597,9 +2601,10 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
     hfdat['BH_Mass'].dims[0].label = '1e10 Msun/h' 
 
     prop = final[['BH_Mdot']].to_numpy()
+
     hfdat.create_dataset('BH_Mdot',data=prop); prop = []
-    hfdat['BH_Mdot'].dims[0].label = 'Msun/year' 
-    
+    hfdat['BH_Mdot'].dims[0].label = 'Msun/year'  
+   
     hf.close()
 
     # Retrurn name of file with output
@@ -2633,7 +2638,7 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
-    #print(get_subBH_file(outdir,sim,snap,part=True,addp=True))
+    #print(get_subBH_file(outdir,sim,snap)) #,part=True,addp=True))
     #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
     print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
