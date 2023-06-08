@@ -93,6 +93,17 @@ def print_h5attr(infile,inhead='Header'):
     return ' '
 
 
+def count_symbol(infile,sym):
+    fileok = check_file(infile)
+    if fileok:
+        total = 0
+        with  open(infile, "r") as f:
+            count = sum(line.count(sym) for line in f)
+            total += count
+        print('There are {} {} in {}'.format(count,sym,infile))
+    else:
+        print('File {} not found'.format(infile))
+    return ' '
 
 if __name__== "__main__":
     infile = 'blu'
@@ -103,5 +114,5 @@ if __name__== "__main__":
     print('Create dir {}: {}'.format(outdir,create_dir(outdir)))
     print(is_sorted([1,3,6]))
     print(is_sorted([1,9,6]))
-
+    print(count_symbol('/home/violeta/Downloads/blu',';'))
     print(stop_if_no_file(infile))
