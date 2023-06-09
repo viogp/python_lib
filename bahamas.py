@@ -2559,7 +2559,7 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
     final = pd.merge(minHMRdm, df_sh, on=['groupnum'])
     del minHMRdm, df_sh
     if verbose: print(final)
-
+    
     # Write properties to output file
     hf = h5py.File(outfile, 'w') # Generate the file
     if verbose: print('\n Output: {} \n'.format(outfile))
