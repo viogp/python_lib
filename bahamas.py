@@ -2259,6 +2259,7 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
     # Join the particle information---------------------------------------------
     df_part = pd.merge(df_psub, df_psnap, on=['partID'])
     df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+    #df_part.sort_values(by=['groupnum', 'partx'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  
 
     # Add properties of particles in the same position--------------------------
@@ -2273,7 +2274,7 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
         # Number of particles with the same position
         df_nboson = groups.size().reset_index(name='nboson')
         if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
-
+        
         # Add the properties for particles in the same position
         df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
         df_addMdot = groups.BH_Mdot.sum() # Msun/year
@@ -2639,8 +2640,8 @@ if __name__== "__main__":
         
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True,addp=True))
-    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
-    print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
+    #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
