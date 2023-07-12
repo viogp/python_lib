@@ -975,6 +975,7 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
 def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     """
     Get the list of indexes for central galaxies
+    using FOF/FirstSubhaloID (index of first subhalos, or centrals)
 
     Parameters
     -----------
@@ -1527,9 +1528,10 @@ def get_m500_file(outdir,sim,snap):
     return outfile, file_exists
 
 
-def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=None,Testing=True):
+def map_m500(snap,sim,env,ptype='gas',overwrite=False,mlim=0.,dirz=None,outdir=None,
+             Testing=True, verbose=False):
     '''
-    Map particle mass into r500 from Subfind
+    Map the mass of a given type of (subfind) particles into FOF's R500 
 
     Parameters
     -----------
@@ -1551,6 +1553,8 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
         Path to output file
     Testing : boolean
         Calculations on part or all the simulation
+    verbose : boolean
+        To output extra information
 
     Returns
     -----
@@ -1571,7 +1575,8 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
     # Type of particles to be read
     itype = ptypes.index(ptype) # 0:gas, 1:DM, 4: stars, 5:BH
     inptype = 'PartType'+str(itype)
-
+    if verbose: print('\n {}: {} \n'.format(ptype,inptype))
+    
     # Output file
     outfile, file_exists = get_m500_file(outdir,sim,snap)
     if(overwrite): file_exists = False 
@@ -1594,7 +1599,8 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
               format(snap,env))
         return None
     if (Testing): files = [files[0]]
-
+    if verbose: print('\n Particles: {} \n'.format(files[0]))
+    
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
@@ -1640,7 +1646,8 @@ def map_m500(snap,sim,env,ptype='BH',overwrite=False,mlim=0.,dirz=None,outdir=No
               format(snap,env))
         return None
     if (Testing): files = [files[0],files[1]]
-
+    if verbose: print('\n Haloes (FoF): {} \n'.format(files[0]))
+    
     # Loop over the FOF/Subfind files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff)
@@ -2640,12 +2647,12 @@ if __name__== "__main__":
         
     #print(get_particle_files(snap,sim,env,subfind=False))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True,addp=True))
-    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
+    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
-    #print(map_m500(snap,sim,env,ptype='BH',overwrite=True,dirz=dirz,outdir=outdir))
+    print(map_m500(snap,sim,env,overwrite=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',

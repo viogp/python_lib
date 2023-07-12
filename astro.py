@@ -14,6 +14,60 @@ m_in_pc = pc.value
 J2erg = 10**7
 s_in_year = 365.*24.*3600.
 
+
+def get_r(x1,y1,z1,x2,y2,z2):
+    """
+    Calculate the distance between 2 objects
+    
+    Parameters
+    ----------
+    x1,y1,z1 : floats
+       Coordinattes of object 1 (subhalo or satellite)
+    x2,y2,z2 : floats
+       Coordinattes of object 2 (halo or central)
+
+    Returns
+    -------
+    r : float
+       Distnace between the objects
+    """
+
+    dx = x1-x2
+    dy = y1-y2
+    dz = z1-z2
+    r = np.sqrt(dx*dx + dy*dy + dz*dz)
+    return r
+
+
+def get_vr(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
+    """
+    Calculate the relative radial velocity of an object
+    
+    Parameters
+    ----------
+    x1,y1,z1 : floats
+       Coordinattes of object 1 (subhalo or satellite)
+    x2,y2,z2 : floats
+       Coordinattes of object 2 (halo or central)
+
+    Returns
+    -------
+    vr : float
+       Radial relative velocity
+    """
+
+    dx = x1-x2
+    dy = y1-y2
+    dz = z1-z2
+    dvx = vx1-vx2
+    dvy = vy1-vy2
+    dvz = vz1-vz2 #check
+
+    ###here checking https://github.com/viogp/outerrim_mocks/blob/master/mocks_props/vdis/r_vdis.py
+    vr = (dx*dvx + dy*dvy + dz*dvz)/np.sqrt(dx*dx + dy*dy + dz*dz)
+    return vr
+
+
 def lbol_coeff(nomeq):
     """
     Return the adequate coefficient to obtain the bolometric luminosity
@@ -134,6 +188,8 @@ def get_lmdotEdd(lmbh,SI=True,h0=None):
 
 
 if __name__ == "__main__":
+    print(get_r(0,0,1,0,1,0))
+    exit()
     lmbh = np.array([7.,8.])
     lmdotbh = lmbh - 2.
     print(lbol_coeff(1),lbol_coeff(34))
@@ -141,3 +197,4 @@ if __name__ == "__main__":
           get_lbol(lmdotbh,units='cgs'),get_lbol(lmdotbh,units='sun'))
     print(get_lLEdd(lmbh))
     print(get_lmdotEdd(lmbh,SI=True,h0=0.73))
+    
