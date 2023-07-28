@@ -13,10 +13,11 @@ ptypes = ['gas','DM','bp1','bp2','star','BH']
 
 nogroup = 1073741824.
 
-unitdefault = {
+# Default units in Bahamas
+unitdefault = { 
     'volume': '(Mpc/h)^3',
-    'mass': 'Msun/h',
-    'sfr': 'to be filled',
+    'mass': '10^10 Msun/h',
+    'sfr': 'Msun/h/yr',     ##here not sure
     'ssfr': 'to be filled'
 }
 
@@ -2071,8 +2072,9 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,cop=False,
     return outfile
 
 
-def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=True):
+def old_get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=True):
     '''
+    TO BE REMOVED once test plots are updated
     Get the name and existance check of the files generated with either
     get_subBH (particle info.) or map_subBH (mapped particles)
 
@@ -2123,8 +2125,10 @@ def get_subBH_file(outdir,sim,snap,part=False,addp=False,nhmr=2.,cop=True):
     return outfile, file_exists
 
 
-def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose=False):
+
+def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose=False):
     '''
+    TO BE REMOVED once testing plots are updated
     Produce a file joining subgrid BH properties with their positions 
     and information on halo identifier. Joining done on PartID.
     There is an option to add the masses and accretion for particles in the same position.
@@ -2170,7 +2174,7 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
     inptype = 'PartType'+str(itype)
 
     # Output file
-    outfile, file_exists = get_subBH_file(outdir,sim,snap,part=True,addp=addp)
+    outfile, file_exists = old_get_subBH_file(outdir,sim,snap,part=True,addp=addp)
 
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
@@ -2236,15 +2240,23 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
             partx = p0['Coordinates'][:,0]      # Mpc/h
             party = p0['Coordinates'][:,1]
             partz = p0['Coordinates'][:,2] 
+            pvx = p0['Velocity'][:,0]           # km/s
+            pvy = p0['Velocity'][:,1]
+            pvz = p0['Velocity'][:,2] 
         else:
             partID      = np.append(partID,p0['ParticleIDs'][:]) 
             groupnum    = np.append(groupnum,p0['GroupNumber'][:])
             subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
             partx       = np.append(partx,p0['Coordinates'][:,0])
-            party       = np.append(party,p0['Coordinates'][:,0])
-            partz       = np.append(partz,p0['Coordinates'][:,0])
+            party       = np.append(party,p0['Coordinates'][:,1])
+            partz       = np.append(partz,p0['Coordinates'][:,2])
+            pvx         = np.append(pvx,p0['Velocity'][:,0])
+            pvy         = np.append(pvy,p0['Velocity'][:,1])
+            pvz         = np.append(pvz,p0['Velocity'][:,2])
 
     if verbose:
+        print('x (Mpc/h): min={:.2f}, max={:.2f}'.format(min(partx),max(partx)))
+        print('vx (km/s): min={:.2f}, max={:.2f}'.format(min(pvy),max(pvy)))
         print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
         print('SubGroupNum: min={:d}, max={:d} (diff={:d})'.format(min(subgroupnum),max(subgroupnum),
                                                                    min(subgroupnum)-max(subgroupnum)))
@@ -2258,10 +2270,11 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
 
     # Get particle information into a pandas dataset to facilitate merging options
     #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
-    data = np.vstack([partID,groupnum,subgroupnum,partx,party,partz]).T 
+    data = np.vstack([partID,groupnum,subgroupnum,partx,party,partz,pvx,pvy,pvz]).T 
     df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum',
-                                              'partx','party','partz'])
-    partID,groupnum,subgroupnum,partx,party,partz=[[] for i in range(6)]
+                                              'partx','party','partz',
+                                              'pvx','pvy','pvz'])
+    partID,groupnum,subgroupnum,partx,party,partz,pvx,pvy,pvz=[[] for i in range(9)]
 
     # Join the particle information---------------------------------------------
     df_part = pd.merge(df_psub, df_psnap, on=['partID'])
@@ -2281,7 +2294,16 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
         # Number of particles with the same position
         df_nboson = groups.size().reset_index(name='nboson')
         if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
-        
+
+        # Number of particles with the same position and velocity
+        groupv = df_part.groupby(['groupnum','partx','party','partz','pvx','pvy','pvz'], as_index=False)
+        if(groupv.ngroups > len(df_part.index)):
+            print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+              format(snap,sim))
+            return None
+        df_nbosonv = groupv.size().reset_index(name='nbosonv')
+        if verbose: print('Max. BH w equal pos. and vel. = {}'.format(df_nbosonv['nbosonv'].max()))
+
         # Add the properties for particles in the same position
         df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
         df_addMdot = groups.BH_Mdot.sum() # Msun/year
@@ -2292,7 +2314,7 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
         del df_addM1, df_nboson
 
         # Remove duplicated columns and row from initial particle information
-        df1 = df_part[['groupnum','partx','party','partz','partID','subgroupnum']]
+        df1 = df_part[['groupnum','partx','party','partz','partID','pvx','pvy','pvz','subgroupnum']]
         df2 = df1.drop_duplicates(subset=['groupnum','partx','party','partz'],
                                   keep='last',ignore_index=True)
         df3 = df2.sort_values(by=['groupnum','partx','party','partz'], ignore_index=True)
@@ -2355,6 +2377,462 @@ def get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,verbose
         prop = final[['nboson']].to_numpy()
         hfdat.create_dataset('nboson',data=prop); prop = []
         hfdat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
+    
+    hf.close()
+    
+    # Retrurn name of file with output
+    return outfile
+
+
+def get_subBH_file(outdir,sim,snap,part=True,nhmr=2.,cop=True):
+    '''
+    Get the name and existance check of the files generated with either
+    get_subBH (particle info.) or map_subBH (mapped particles)
+
+    Parameters
+    ----------
+    outdir: string
+       Directory to write or find the file
+    sim: string
+       Simulation name or path
+    snap: string
+       Snapshot of the simulation
+    part : boolean
+        True for the particle file name; False for the mapped particles into haloes file 
+    nhrm: float
+       Times the HalfMassRadius is considered
+    cop: boolean
+       If True, using CentreOfPotential, otherwise CentreOfMass
+    
+    Returns
+    -------
+    outfile: string
+       Name of the map_HMR file
+    file_exists: boolean
+       True if file exists
+    '''
+    
+    if (sim==None):
+        outdir2 = outdir
+    else:
+        outdir2 = outdir+sim+'/'
+    dir_exists = io.create_dir(outdir2)
+
+    if part:
+        outfile = outdir2+'subBH_part_snap'+str(snap)+'.hdf5'
+    else:
+        snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
+        if cop:
+            outfile = outdir2+'subBH_'+snhmr+'HMRmap_cop_snap'+str(snap)+'.hdf5'
+        else:
+            outfile = outdir2+'subBH_'+snhmr+'HMRmap_com_snap'+str(snap)+'.hdf5'
+
+    file_exists = io.check_file(outfile)
+
+    return outfile, file_exists
+
+
+def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=False):
+    """
+    Get an array with a given property from the Subfind output
+
+    Parameters
+    -----------
+    snap : integer
+        Snapshot 
+    sim : string
+        Simulation name
+    env : string
+        ari or cosma, to use the adecuate paths
+    rewrite: boolean
+        True or False
+    Testing: boolean
+        True or False
+    nfiles : integer
+        Number of files to be considered for testing
+    verbose : boolean
+        True to write first Subfind file out
+
+    Returns
+    -----
+    outfile : string
+        Name of the file with subhalo information
+    file_exists: boolean
+       True if file exists
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_subhalo4BH(27,'L400N1024/WMAP9/Sims/BAHAMAS')
+    """
+
+    # Output file
+    outfile, file_exists = get_subBH_file(outdir,sim,snap,part=True)
+    if (file_exists and not rewrite):
+        return outfile, file_exists
+
+
+    # Get halo information from FOF&Subfind files-------------------------------
+    files, allfiles = get_subfind_files(snap,sim,env)
+    if allfiles is False:
+        print('WARNING (b.get_subhalo4BH): no adequate Subfind files found, {}, {}, {}'.
+              format(files[0],snap,env))
+        return outfile, False
+    if verbose: print('b.get_subhalo4BH: First Subfind file is {}'.format(files[0]))
+
+    # Prop index
+    stype = ptypes.index('star')
+    dmtype = ptypes.index('DM')
+
+    # Loop over the FOF&Subfind files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff)
+        sh = f['Subhalo']
+
+        # Read subhalo information
+        if (iff == 0):
+            groupnum  = sh['GroupNumber'][:]      #FOF GroupNumber
+            ms30  = sh['Mass_030kpc'][:,stype]    #1e10Msun/h
+            SFR   = sh['StarFormationRate'][:]    # Msun/h/yr
+            cop_x = sh['CentreOfPotential'][:,0]  #cMpc/h
+            cop_y = sh['CentreOfPotential'][:,1]  #cMpc/h
+            cop_z = sh['CentreOfPotential'][:,2]  #cMpc/h
+            shv_x = sh['Velocity'][:,0]  # km/s
+            shv_y = sh['Velocity'][:,1]  # km/s
+            shv_z = sh['Velocity'][:,2]  # km/s
+        else:
+            groupnum  = np.append(groupnum,sh['GroupNumber'][:])
+            ms30  = np.append(ms30,sh['Mass_030kpc'][:,stype])
+            SFR   = np.append(SFR,sh['StarFormationRate'][:])
+            cop_x = np.append(cop_x,sh['CentreOfPotential'][:,0])
+            cop_y = np.append(cop_y,sh['CentreOfPotential'][:,1])
+            cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
+            shv_x = np.append(shv_x,sh['Velocity'][:,0])
+            shv_y = np.append(shv_y,sh['Velocity'][:,1])
+            shv_z = np.append(shv_z,sh['Velocity'][:,2])
+
+    # Subhalo number within haloes and indexes to be compared to cenids
+    subnum = np.arange(len(groupnum),dtype=int)
+    
+    # Get sat (0 for cen) from central indexes
+    sat = np.zeros(shape=len(groupnum),dtype=int); sat.fill(1)
+    cind = get_cenids(snap,sim,env)
+    if (max(cind) > len(groupnum) and Testing):
+        ind = np.where(cind < len(groupnum)-1) 
+        if(np.shape(ind)[1]<1):
+            print('STOP (b.get_subhalo4BH): no centrals in Subfind file.')
+            return None
+        cind = cind[ind]
+    elif (max(cind) > len(groupnum) and not Testing):
+        print('STOP (b.get_subhalo4BH): problem with centrals indexes.')
+        return None
+    sat[cind] = 0
+
+    # Save subhaloes with some mass enclosed in 30kpc
+    ind = np.where(ms30 > 0.)
+    if (np.shape(ind)[1] < 1):
+        print('STOP (b.map_subBH): no centrals with stellar mass.')
+        return None
+    data = np.vstack([groupnum[ind],subnum[ind],sat[ind],
+                      cop_x[ind],cop_y[ind],cop_z[ind],
+                      shv_x[ind],shv_y[ind],shv_z[ind],
+                      ms30[ind],SFR[ind]]).T
+    df_sh = pd.DataFrame(data=data,columns=['groupnum','subnum','sat',
+                                            'cop_x','cop_y','cop_z',
+                                            'shv_x','shv_y','shv_z',
+                                            'ms30','SFR'])
+    data,groupnum,subnum,sat,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z,ms30,SFR=[[] for i in range(12)]
+
+            
+    # Obtain Mh, R200c, dr, dv, dvr from FOF ######here
+    
+    # Write output file---------------------------------------------------------    
+    hf = h5py.File(outfile, 'w') # Generate the file
+
+    # Get the cosmological parameters and boxsize
+    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    
+    # Output header
+    headnom = 'header'
+    head = hf.create_dataset(headnom,(100,))
+    head.attrs[u'sim']          = sim
+    head.attrs[u'snapshot']     = snap
+    head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
+    head.attrs[u'omega0']       = omega0
+    head.attrs[u'omegab']       = omegab
+    head.attrs[u'lambda0']      = lambda0        
+    head.attrs[u'h0']           = h0
+    head.attrs[u'boxsize']      = boxsize
+
+    # Output data with units
+    hfdat = hf.create_group('data')
+    shdat = hfdat.create_group('Subhalo')
+
+    # Subhalo/ groupnum, M*30kpc, SFR
+    noms = ['groupnum','subnum','sat','cop_x','cop_y','cop_z',
+            'shv_x','shv_y','shv_z','ms30','SFR']
+    desc = ['FoF group number','Subhalo index corresponding to the initial total array',
+             'sat:1, cen:0','cMpc/h','cMpc/h','cMpc/h','km/s','km/s','km/s',
+             '1e10 Msun/h','Msun/h/yr'] 
+    for ip, iprop in enumerate(noms):
+        nom = noms[ip]
+        prop = df_sh[[nom]].to_numpy()
+        shdat.create_dataset(nom,data=prop); prop = []
+        shdat[nom].dims[0].label = desc[ip]
+    
+    hf.close()
+    file_exists = io.check_file(outfile)
+    
+    return outfile, file_exists
+
+
+def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
+    '''
+    Produce a file joining subgrid BH properties with their positions 
+    and information on halo identifier. Joining done on PartID.
+
+    Parameters
+    -----------
+    snap : int
+        Snapshot number
+    sim : string
+        Name of the simulation
+    env : string
+        ari, arilega or cosma to use the adecuate paths
+    dirz : string
+        Alternative path to table with z and snapshot.
+    outdir : string
+        Path to output file
+    Testing : boolean
+        Calculations on part or all the simulation
+    verbose : boolean
+        To output extra information
+
+    Returns
+    -----
+    outfile : string
+        Name of the output file
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
+    >>> b.get_subBH(31,sim,'arilega')
+    '''
+
+    # Stop for environments different to arilega
+    if (env != 'arilega'):
+        print('WARNING (b.get_subBH): Function developed for env=arilega.')
+        return None
+
+    # Black hole particles to be read, 5:BH
+    itype = 5 
+    inptype = 'PartType'+str(itype)
+
+    # Output file
+    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=Testing,
+                                          Testing=Testing,verbose=Testing)
+    print(outfile, file_exists); exit()
+    ## Get subgrid particle information from snapshots------------------------
+    #files, allfiles = get_particle_files(snap,sim,env,subfind=False)
+    #if (not allfiles):
+    #    print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+    #          format(snap,env))
+    #    return None
+    #if Testing: files = [files[0],files[1]]
+    #if verbose: print('Particles: {} \n'.format(files[0]))
+    #
+    ## Loop over the particle files
+    #for iff, ff in enumerate(files):
+    #    f = h5py.File(ff, 'r') #; print(ff,inptype)
+    #    p0 = f[inptype]
+    #
+    #    # Read particle information
+    #    if (iff == 0):
+    #        # Check that there is data to be read
+    #        try:
+    #            partID  = p0['ParticleIDs'][:]
+    #        except:
+    #            print('WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
+    #            return None
+    #
+    #        # Read the data
+    #        BH_Mass = p0['BH_Mass'][:]  # 1e10 Msun/h
+    #        BH_Mdot = p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc  # Msun/year
+    #    else:
+    #        partID  = np.append(partID,p0['ParticleIDs'][:]) 
+    #        BH_Mass = np.append(BH_Mass,p0['BH_Mass'][:])
+    #        BH_Mdot = np.append(BH_Mdot,p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc)
+    #        
+    #if verbose:
+    #    print('BH: seed={:.2e}; min={:.2e}, max={:.2e}'.format(BH_seed_mass,
+    #                                                           min(BH_Mass)*10**10,
+    #                                                           max(BH_Mass)*10**10))
+    #
+    ## Get subgrid information into a pandas dataset to facilitate merging options
+    #data = np.vstack([partID,BH_Mass,BH_Mdot]).T
+    #df_psnap = pd.DataFrame(data=data,columns=['partID','BH_Mass','BH_Mdot'])
+    #partID,BH_Mass,BH_Mdot=[[] for i in range(3)] #Empty individual arrays    
+    #
+    ## Get Subfind particle files----------------------------------------------
+    #files, allfiles = get_particle_files(snap,sim,env)
+    #if (not allfiles):
+    #    print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+    #          format(snap,env))
+    #    return None
+    #if Testing: files = [files[0]]
+    #if verbose: print('\n Subfind particles: {} \n'.format(files[0]))
+    #
+    ## Loop over the particle files
+    #for iff, ff in enumerate(files):
+    #    f = h5py.File(ff, 'r') #; print(ff,inptype)
+    #    p0 = f[inptype]
+    #
+    #    # Read particle information
+    #    if (iff == 0):
+    #        partID = p0['ParticleIDs'][:] 
+    #        groupnum = p0['GroupNumber'][:] # FoF group number particle is in
+    #        # Negative values: particles within r200 but not part of the halo
+    #        subgroupnum = p0['SubGroupNumber'][:]
+    #        partx = p0['Coordinates'][:,0]      # Mpc/h
+    #        party = p0['Coordinates'][:,1]
+    #        partz = p0['Coordinates'][:,2]
+    #        pvx = p0['Velocity'][:,0]           # km/s??
+    #        pvy = p0['Velocity'][:,1]
+    #        pvz = p0['Velocity'][:,2] 
+    #    else:
+    #        partID      = np.append(partID,p0['ParticleIDs'][:]) 
+    #        groupnum    = np.append(groupnum,p0['GroupNumber'][:])
+    #        subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
+    #        partx       = np.append(partx,p0['Coordinates'][:,0])
+    #        party       = np.append(party,p0['Coordinates'][:,1])
+    #        partz       = np.append(partz,p0['Coordinates'][:,2])
+    #        pvx         = np.append(pvx,p0['Velocity'][:,0])
+    #        pvy         = np.append(pvy,p0['Velocity'][:,1])
+    #        pvz         = np.append(pvz,p0['Velocity'][:,2])
+    #
+    #if verbose:
+    #    print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
+    #    print('SubGroupNum: min={:d}, max={:d} (diff={:d})'.format(min(subgroupnum),max(subgroupnum),
+    #                                                               min(subgroupnum)-max(subgroupnum)))
+    #
+    ## If all groupnum are less than 0, take abs()
+    #allgneg = False
+    #ind = np.where(groupnum<0)
+    #if(np.shape(ind)[1] == len(groupnum)):
+    #    allgneg = True
+    #    groupnum = abs(groupnum)-1
+    #
+    ## Get particle information into a pandas dataset to facilitate merging options
+    ##here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
+    #data = np.vstack([partID,groupnum,subgroupnum,partx,party,partz,pvx,pvy,pvz]).T 
+    #df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum',
+    #                                          'partx','party','partz',
+    #                                          'pvx','pvy','pvz'])
+    #partID,groupnum,subgroupnum,partx,party,partz,pvx,pvy,pvz=[[] for i in range(9)]
+    #
+    ## Join the particle information---------------------------------------------
+    #df_part = pd.merge(df_psub, df_psnap, on=['partID'])
+    #df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+    ##df_part.sort_values(by=['groupnum', 'partx'], inplace=True)
+    #df_part.reset_index(inplace=True, drop=True)  
+    #if verbose: print(df_part)
+    #
+    #print(outfile, file_exists) ####here
+    ##exit()
+    #
+    ## Add properties of particles in the same position--------------------------
+    #groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
+    #if(groups.ngroups > len(df_part.index)):
+    #    print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+    #      format(snap,sim))
+    #    return None
+    #
+    ## Number of particles with the same position
+    #df_nboson = groups.size().reset_index(name='nboson')
+    #if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
+    #
+    ## Add the properties for particles in the same position
+    #df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
+    #df_addMdot = groups.BH_Mdot.sum() # Msun/year
+    #df_addM1 = pd.merge(df_addM_BH, df_addMdot, on=['groupnum','partx','party','partz'])
+    #del df_addM_BH, df_addMdot
+    #
+    #df_addM = pd.merge(df_addM1, df_nboson, on=['groupnum','partx','party','partz'])
+    #del df_addM1, df_nboson
+    #
+    ## Remove duplicated columns and row from initial particle information
+    #df1 = df_part[['groupnum','partx','party','partz','partID','subgroupnum']]
+    #df2 = df1.drop_duplicates(subset=['groupnum','partx','party','partz'],
+    #                          keep='last',ignore_index=True)
+    #df3 = df2.sort_values(by=['groupnum','partx','party','partz'], ignore_index=True)
+    #del df1, df2
+    #
+    ## Generate the final data set with the merge
+    #final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
+    #del df3, df_addM
+
+    # Write output file---------------------------------------------------------    
+    hf = h5py.File(outfile, 'w') # Generate the file
+
+    # Get the cosmological parameters and boxsize
+    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    
+    # Output header
+    headnom = 'header'
+    head = hf.create_dataset(headnom,(100,))
+    head.attrs[u'sim']          = sim
+    head.attrs[u'snapshot']     = snap
+    head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
+    head.attrs[u'omega0']       = omega0
+    head.attrs[u'omegab']       = omegab
+    head.attrs[u'lambda0']      = lambda0        
+    head.attrs[u'h0']           = h0
+    head.attrs[u'boxsize']      = boxsize
+
+    # Output data with units
+    hfdat = hf.create_group('data')
+    shdat = hfdat.create_group('Subhalo')
+    #bhdat = hfdat.create_group('BH')
+    #addat = hfdat.create_group('BHadd')
+    #
+    ##BH/  PartID, MBH, MdotBH
+    #prop = df_part[['partID']].to_numpy()
+    #bhdat.create_dataset('partID',data=prop); prop = []
+    #bhdat['partID'].dims[0].label = 'Particle ID' 
+    #
+    #prop = df_part[['BH_Mass']].to_numpy()
+    #bhdat.create_dataset('BH_Mass',data=prop); prop = []
+    #bhdat['BH_Mass'].dims[0].label = '10**10 Msun/h' 
+    #
+    #prop = df_part[['BH_Mdot']].to_numpy()
+    #bhdat.create_dataset('BH_Mdot',data=prop); prop = []
+    #bhdat['BH_Mdot'].dims[0].label = 'Msun/year' 
+    #
+    ##BHadd/  groupnum, subnum, bhnum, added_MBH, added_MdotBH, pos, vel, nboson
+    #prop = final[['groupnum']].to_numpy()
+    #addat.create_dataset('groupnum',data=prop); prop = []
+    #addat['groupnum'].dims[0].label = 'FoF group number' 
+    #
+    #prop = final[['subgroupnum']].to_numpy()
+    #addat.create_dataset('subgroupnum',data=prop); prop = []
+    #addat['subgroupnum'].dims[0].label = 'Subgroup number particle is in' 
+    #
+    #prop = final[['BH_Mass']].to_numpy()
+    #addat.create_dataset('added_ MBH',data=prop); prop = []
+    #addat['BH_Mass'].dims[0].label = '10**10 Msun/h' 
+    #
+    #prop = final[['BH_Mdot']].to_numpy()
+    #addat.create_dataset('added_MdotBH',data=prop); prop = []
+    #addat['added_MdotBH'].dims[0].label = 'Msun/year' 
+    #
+    #prop = final[['partx', 'party', 'partz']].to_numpy()
+    #addat.create_dataset('pos',data=prop); prop = []
+    #addat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
+    #
+    #prop = final[['nboson']].to_numpy()
+    #addat.create_dataset('nboson',data=prop); prop = []
+    #addat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
     
     hf.close()
     
@@ -2646,13 +3124,14 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
-    #print(get_subBH_file(outdir,sim,snap)) #,part=True,addp=True))
-    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,addp=True,Testing=True,verbose=True))
+    #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(get_subBH_file(outdir,sim,snap)) #,part=True))
+    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
     #print(get_m500_file(outdir,sim,snap))
-    print(map_m500(snap,sim,env,overwrite=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(map_m500(snap,sim,env,overwrite=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_zminmaxs([0.,1.],dz=0.5))
     #print(get_simlabels(['AGN_TUNED_nu0_L100N256_WMAP9',
     #               'HIRES/AGN_RECAL_nu0_L100N512_WMAP9',
