@@ -2434,7 +2434,8 @@ def get_subBH_file(outdir,sim,snap,part=True,nhmr=2.,cop=True):
 
 def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=False):
     """
-    Get an array with a given property from the Subfind output
+    Check if a file with the subhalo properties relevant for the
+    analysis of subgrid BH particles is there, and otherwise create it.
 
     Parameters
     -----------
@@ -2471,7 +2472,6 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     if (file_exists and not rewrite):
         return outfile, file_exists
 
-
     # Get halo information from FOF&Subfind files-------------------------------
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False:
@@ -2483,24 +2483,37 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     # Prop index
     stype = ptypes.index('star')
     dmtype = ptypes.index('DM')
-
+    
     # Loop over the FOF&Subfind files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff)
+        fof = f['FOF']
         sh = f['Subhalo']
 
         # Read subhalo information
         if (iff == 0):
-            groupnum  = sh['GroupNumber'][:]      #FOF GroupNumber
-            ms30  = sh['Mass_030kpc'][:,stype]    #1e10Msun/h
+            mhalo = fof['Group_M_Crit200'][:]           # 1e10Msun/h 
+            rhalo = fof['Group_R_Crit200'][:]           # cMpc/h 
+            fof_x = fof['GroupCentreOfPotential'][:,0]  # cMpc/h 
+            fof_y = fof['GroupCentreOfPotential'][:,1]  # cMpc/h
+            fof_z = fof['GroupCentreOfPotential'][:,2]  # cMpc/h
+            
+            groupnum  = sh['GroupNumber'][:]      # FOF GroupNumber
+            ms30  = sh['Mass_030kpc'][:,stype]    # 1e10Msun/h
             SFR   = sh['StarFormationRate'][:]    # Msun/h/yr
-            cop_x = sh['CentreOfPotential'][:,0]  #cMpc/h
-            cop_y = sh['CentreOfPotential'][:,1]  #cMpc/h
-            cop_z = sh['CentreOfPotential'][:,2]  #cMpc/h
-            shv_x = sh['Velocity'][:,0]  # km/s
-            shv_y = sh['Velocity'][:,1]  # km/s
-            shv_z = sh['Velocity'][:,2]  # km/s
+            cop_x = sh['CentreOfPotential'][:,0]  # cMpc/h
+            cop_y = sh['CentreOfPotential'][:,1]  # cMpc/h
+            cop_z = sh['CentreOfPotential'][:,2]  # cMpc/h
+            shv_x = sh['Velocity'][:,0]           # km/s
+            shv_y = sh['Velocity'][:,1]           # km/s
+            shv_z = sh['Velocity'][:,2]           # km/s
         else:
+            mhalo = np.append(mhalo,fof['Group_M_Crit200'][:])
+            rhalo = np.append(rhalo,fof['Group_R_Crit200'][:])
+            fof_x = np.append(fof_x,fof['GroupCentreOfPotential'][:,0])
+            fof_y = np.append(fof_y,fof['GroupCentreOfPotential'][:,1])
+            fof_z = np.append(fof_z,fof['GroupCentreOfPotential'][:,2])
+            
             groupnum  = np.append(groupnum,sh['GroupNumber'][:])
             ms30  = np.append(ms30,sh['Mass_030kpc'][:,stype])
             SFR   = np.append(SFR,sh['StarFormationRate'][:])
@@ -2509,11 +2522,11 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             cop_z = np.append(cop_z,sh['CentreOfPotential'][:,2])
             shv_x = np.append(shv_x,sh['Velocity'][:,0])
             shv_y = np.append(shv_y,sh['Velocity'][:,1])
-            shv_z = np.append(shv_z,sh['Velocity'][:,2])
-
+            shv_z = np.append(shv_z,sh['Velocity'][:,2])   
+    
     # Subhalo number within haloes and indexes to be compared to cenids
     subnum = np.arange(len(groupnum),dtype=int)
-    
+
     # Get sat (0 for cen) from central indexes
     sat = np.zeros(shape=len(groupnum),dtype=int); sat.fill(1)
     cind = get_cenids(snap,sim,env)
@@ -2528,24 +2541,33 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         return None
     sat[cind] = 0
 
-    # Save subhaloes with some mass enclosed in 30kpc
+    # Only consider subhaloes with some mass enclosed in 30kpc
     ind = np.where(ms30 > 0.)
     if (np.shape(ind)[1] < 1):
         print('STOP (b.map_subBH): no centrals with stellar mass.')
         return None
-    data = np.vstack([groupnum[ind],subnum[ind],sat[ind],
+    gn = groupnum[ind]
+
+    # Main halo properties
+    mh, rh, dr, dv, dvr = [np.zeros(shape=len(gn)) for i in range(5)]
+
+    mh = mhalo[gn]
+    rh = rhalo[gn]
+    #dr =  ####here check out astro.py
+    #print(gn,rh); exit()
+    
+    # Save data in a dataframe
+    data = np.vstack([gn,subnum[ind],sat[ind],mh,rh,
                       cop_x[ind],cop_y[ind],cop_z[ind],
                       shv_x[ind],shv_y[ind],shv_z[ind],
                       ms30[ind],SFR[ind]]).T
     df_sh = pd.DataFrame(data=data,columns=['groupnum','subnum','sat',
+                                            'M200C','R200C',
                                             'cop_x','cop_y','cop_z',
                                             'shv_x','shv_y','shv_z',
                                             'ms30','SFR'])
     data,groupnum,subnum,sat,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z,ms30,SFR=[[] for i in range(12)]
-
             
-    # Obtain Mh, R200c, dr, dv, dvr from FOF ######here
-    
     # Write output file---------------------------------------------------------    
     hf = h5py.File(outfile, 'w') # Generate the file
 
@@ -2567,13 +2589,17 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     # Output data with units
     hfdat = hf.create_group('data')
     shdat = hfdat.create_group('Subhalo')
-
-    # Subhalo/ groupnum, M*30kpc, SFR
-    noms = ['groupnum','subnum','sat','cop_x','cop_y','cop_z',
+    
+    # Subhalo/ groupnum, subnum, sat, pos, vel, M*30kpc, SFR
+    #here include also dr, dv, dvr (from FOF)   
+    noms = ['groupnum','subnum','sat','M200C','R200C',
+            'cop_x','cop_y','cop_z',
             'shv_x','shv_y','shv_z','ms30','SFR']
     desc = ['FoF group number','Subhalo index corresponding to the initial total array',
-             'sat:1, cen:0','cMpc/h','cMpc/h','cMpc/h','km/s','km/s','km/s',
-             '1e10 Msun/h','Msun/h/yr'] 
+            'sat:1, cen:0','1e10Msun/h, Mass within Rcrit200',
+            'cMpc/h, Co-moving radius within which density is 200 times critical density',
+            'cMpc/h','cMpc/h','cMpc/h','km/s','km/s','km/s',
+            '1e10 Msun/h','Msun/h/yr'] 
     for ip, iprop in enumerate(noms):
         nom = noms[ip]
         prop = df_sh[[nom]].to_numpy()
