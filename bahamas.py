@@ -5,6 +5,7 @@ import glob
 import subprocess
 import pandas as pd
 import astro as ast
+import cosmosim as cs
 from astropy import constants as const
 import iotools as io
 #print('\n \n')
@@ -100,34 +101,6 @@ def get_zminmaxs(zz,dz=None,verbose=False):
         
     return zmins,zmaxs
 
-
-def boundary_correction(xin,box):
-    """
-    Correct an array for periodic boundary conditions
-
-    Parameters
-    ----------
-    xin : numpy array of floats
-       Array with 1-D coordinates.
-    box: float
-       Size of the boundary to be used.
-
-    Returns
-    -------
-    xout : numpy array of floats
-       Array with the corrected 1-D coordinates.
-
-    Example
-    -------
-    >>> import bahamas as b; import numpy as np
-    >>> b.boundary_correction(np.array([110.,2,-0.5,100.]),100.)
-    >>> [10.   2.  99.5  0. ]
-    """
-    xout = xin.copy()
-    xout[xin<0] = xout[xin<0] + box
-    xout[xin>=box] = xout[xin>=box] - box
-        
-    return xout
 
 
 def get_simlabels(sims,labels=None):
@@ -2548,13 +2521,25 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         return None
     gn = groupnum[ind]
 
+    # Get the cosmological parameters and boxsize
+    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    
     # Main halo properties
-    mh, rh, dr, dv, dvr = [np.zeros(shape=len(gn)) for i in range(5)]
+    mh, rh, dv, dvr = [np.zeros(shape=len(gn)) for i in range(4)]
 
     mh = mhalo[gn]
     rh = rhalo[gn]
-    #dr =  ####here check out astro.py
-    #print(gn,rh); exit()
+    
+    # Distance to halo center
+    dx = boundary_correction(cop_x[ind] - fof_x[gn], boxsize, groups=True)
+    dy = boundary_correction(cop_y[ind] - fof_y[gn], boxsize, groups=True)
+    dz = boundary_correction(cop_z[ind] - fof_z[gn], boxsize, groups=True)
+
+    print(min(dx),max(dx))
+    print(min(dy),max(dy))
+    print(min(dz),max(dz)); exit()
+    dr = np.sqrt(dx*dx + dy*dy + dz*dz) 
+    print(gn,dr,len(dr),len(gn),dr[0],dr[1]); exit()
     
     # Save data in a dataframe
     data = np.vstack([gn,subnum[ind],sat[ind],mh,rh,
@@ -2570,9 +2555,6 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             
     # Write output file---------------------------------------------------------    
     hf = h5py.File(outfile, 'w') # Generate the file
-
-    # Get the cosmological parameters and boxsize
-    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
     
     # Output header
     headnom = 'header'

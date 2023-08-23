@@ -15,122 +15,6 @@ J2erg = 10**7
 s_in_year = 365.*24.*3600.
 
 
-def get_r(x1,y1,z1,x2,y2,z2):
-    """
-    Calculate the distance between 2 objects
-    
-    Parameters
-    ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (subhalo or satellite)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (halo or central)
-
-    Returns
-    -------
-    r : float
-       Distnace between the objects
-    """
-
-    dx = x1-x2
-    dy = y1-y2
-    dz = z1-z2
-    r = np.sqrt(dx*dx + dy*dy + dz*dz)
-    return r
-
-
-def get_vr(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
-    """
-    Calculate the relative radial velocity of an object
-    
-    Parameters
-    ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (halo or central)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (subhalo or satellite)
-
-    Returns
-    -------
-    vr : float
-       Radial relative velocity
-    """
-
-    dx = x2-x1
-    dy = y2-y1
-    dz = z2-z1
-    dvx = vx2-vx1
-    dvy = vy2-vy1
-    dvz = vz2-vz1
-
-    r = get_r(x1,y1,z1,x2,y2,z2)
-    
-    vr = (dx*dvx + dy*dvy + dz*dvz)/r
-    return vr
-
-
-def get_vt(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
-    """
-    Calculate the relative radial velocity of an object
-    
-    Parameters
-    ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (halo or central)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (subhalo or satellite)
-
-    Returns
-    -------
-    vt : float
-       Tangential relative velocity in the x-y plane (v theta)
-    """
-
-    dx = x2-x1
-    dy = y2-y1
-    dz = z2-z1
-    dvx = vx2-vx1
-    dvy = vy2-vy1
-    dvz = vz2-vz1
-
-    vt =  (dx*dvy - dy*dvx)/np.sqrt(dx*dx + dy*dy) 
-    return vt
-
-
-
-def get_vg(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
-    """
-    Calculate the relative radial velocity of an object
-    
-    Parameters
-    ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (halo or central)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (subhalo or satellite)
-
-    Returns
-    -------
-    vg : float
-       Tangential relative velocity perpendicular to the x-y plane (v gamma)
-    """
-
-    dx = x2-x1
-    dy = y2-y1
-    dz = z2-z1
-    dvx = vx2-vx1
-    dvy = vy2-vy1
-    dvz = vz2-vz1
-
-    r = get_r(x1,y1,z1,x2,y2,z2)
-
-    den = r*r*np.sqrt(dx*dx + dy*dy) 
-    num = dz*(dx*dvx + dy*dvy) - dvz*(dx*dx + dy*dy)
-    vg =  num/den
-    return vg
-
-
-
 def lbol_coeff(nomeq):
     """
     Return the adequate coefficient to obtain the bolometric luminosity
@@ -251,9 +135,6 @@ def get_lmdotEdd(lmbh,SI=True,h0=None):
 
 
 if __name__ == "__main__":
-    print(get_r(0,0,1,0,1,0))
-    print(get_vg(1,0,0,0,1,0,0,0,0,0,0,0))
-    exit()
     lmbh = np.array([7.,8.])
     lmdotbh = lmbh - 2.
     print(lbol_coeff(1),lbol_coeff(34))
