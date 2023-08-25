@@ -89,10 +89,10 @@ def get_r(x1,y1,z1,x2,y2,z2,box=None):
     
     Parameters
     ----------
-    x1,y1,z1 : array of floats
-       If groups, coordinates of subhalo or satellites
-    x2,y2,z2 : array of floats
-       If groups, oordinattes of haloes or centrals
+    x1,y1,z1 : (array of) floats
+       Coordinattes of object 1 (halo or central). Array for simulations.
+    x2,y2,z2 : (array of) floats
+       Coordinattes of object 2 (subhalo or satellite). Array for simulations.
     box : float
        If a simulation, side of the simulation box
 
@@ -113,16 +113,22 @@ def get_r(x1,y1,z1,x2,y2,z2,box=None):
     return np.sqrt(dx*dx + dy*dy + dz*dz)
 
 
-def get_vr(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
+def get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
     Calculate the relative radial velocity of an object
     
     Parameters
     ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (halo or central)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (subhalo or satellite)
+    x1,y1,z1 : (array of) floats
+       Coordinattes of object 1 (halo or central). Array for simulations.
+    x2,y2,z2 : (array of) floats
+       Coordinattes of object 2 (subhalo or satellite). Array for simulations.
+    vx1,vy1,vz1 : (array of) floats
+       Velocity of object 1 (halo or central). Array for simulations.
+    vx2,vy2,vz2 : (array of) floats
+       Velocity of object 2 (subhalo or satellite). Array for simulations.
+    box : float
+       If a simulation, side of the simulation box
 
     Returns
     -------
@@ -130,29 +136,31 @@ def get_vr(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
        Radial relative velocity
     """
 
-    dx = x2-x1
-    dy = y2-y1
-    dz = z2-z1
-    dvx = vx2-vx1
-    dvy = vy2-vy1
-    dvz = vz2-vz1
+    r = get_r(x1,y1,z1,x2,y2,z2,box)
 
-    r = get_r(x1,y1,z1,x2,y2,z2)
+    dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
+    dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
     
     vr = (dx*dvx + dy*dvy + dz*dvz)/r
     return vr
 
 
-def get_vt(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
+def get_vt(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
     Calculate the relative radial velocity of an object
     
     Parameters
     ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (halo or central)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (subhalo or satellite)
+    x1,y1,z1 : (array of) floats
+       Coordinattes of object 1 (halo or central). Array for simulations.
+    x2,y2,z2 : (array of) floats
+       Coordinattes of object 2 (subhalo or satellite). Array for simulations.
+    vx1,vy1,vz1 : (array of) floats
+       Velocity of object 1 (halo or central). Array for simulations.
+    vx2,vy2,vz2 : (array of) floats
+       Velocity of object 2 (subhalo or satellite). Array for simulations.
+    box : float
+       If a simulation, side of the simulation box
 
     Returns
     -------
@@ -160,59 +168,72 @@ def get_vt(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
        Tangential relative velocity in the x-y plane (v theta)
     """
 
-    dx = x2-x1
-    dy = y2-y1
-    dz = z2-z1
-    dvx = vx2-vx1
-    dvy = vy2-vy1
-    dvz = vz2-vz1
+    dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
+    dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
 
     vt =  (dx*dvy - dy*dvx)/np.sqrt(dx*dx + dy*dy) 
     return vt
 
 
-
-def get_vg(x1,y1,z1,vx1,vy1,vz1,x2,y2,z2,vx2,vy2,vz2):
+def get_vg(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
     Calculate the relative radial velocity of an object
     
     Parameters
     ----------
-    x1,y1,z1 : floats
-       Coordinattes of object 1 (halo or central)
-    x2,y2,z2 : floats
-       Coordinattes of object 2 (subhalo or satellite)
+    x1,y1,z1 : (array of) floats
+       Coordinattes of object 1 (halo or central). Array for simulations.
+    x2,y2,z2 : (array of) floats
+       Coordinattes of object 2 (subhalo or satellite). Array for simulations.
+    vx1,vy1,vz1 : (array of) floats
+       Velocity of object 1 (halo or central). Array for simulations.
+    vx2,vy2,vz2 : (array of) floats
+       Velocity of object 2 (subhalo or satellite). Array for simulations.
+    box : float
+       If a simulation, side of the simulation box
 
     Returns
     -------
     vg : float
        Tangential relative velocity perpendicular to the x-y plane (v gamma)
     """
+    r = get_r(x1,y1,z1,x2,y2,z2,box)
 
-    dx = x2-x1
-    dy = y2-y1
-    dz = z2-z1
-    dvx = vx2-vx1
-    dvy = vy2-vy1
-    dvz = vz2-vz1
+    dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
+    dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
 
-    r = get_r(x1,y1,z1,x2,y2,z2)
-
-    den = r*r*np.sqrt(dx*dx + dy*dy) 
     num = dz*(dx*dvx + dy*dvy) - dvz*(dx*dx + dy*dy)
+    den = r*r*np.sqrt(dx*dx + dy*dy) 
     vg =  num/den
     return vg
 
 
-
-
 if __name__ == "__main__":
+    x1 = np.array([2.])
+    y1 = np.array([95.])
+    z1 = np.array([2.])
+
+    x2 = np.array([5.])
+    y2 = np.array([5.])
+    z2 = np.array([80.])
+
+    vx1 = np.array([-3.])
+    vy1 = np.array([-10.])
+    vz1 = np.array([22.])
+
+    vx2 = np.array([0.])
+    vy2 = np.array([0.])
+    vz2 = np.array([0.])
+        
     print(boundary_correction(np.array([110.,2,-0.5,100.]),100.))
     print(boundary_correction(np.array([110.,2,-0.5,100.,-49,-51,49,51]),100.,groups=True))
-    print(get_diffpos(np.array([2.]),np.array([95.]),np.array([2.]),np.array([5.]),np.array([5.]),np.array([80.]))) 
-    print(get_diffpos(np.array([2.]),np.array([95.]),np.array([2.]),np.array([5.]),np.array([5.]),np.array([80.]),100.))
-    print(get_r(np.array([2.]),np.array([95.]),np.array([2.]),np.array([5.]),np.array([5.]),np.array([80.]),100.)) 
-    print(get_r(0,0,1,0,1,0),100.)
-    #print(get_vg(1,0,0,0,1,0,0,0,0,0,0,0))
-
-    
+    print(get_diffpos(x1,y1,z1,x2,y2,z2)) 
+    print(get_diffpos(x1,y1,z1,x2,y2,z2,100.))
+    print('r(0,0,1,0,1,0)={}'.format(get_r(0,0,1,0,1,0)))
+    print('vr(1,0,0,0,1,0,0,0,0,0,0,0)={}'.format(get_vr(1,0,0,0,1,0,0,0,0,0,0,0)))
+    print('vt(5,3,9,2,0,9,2,3,9,0,1,9)={}'.format(get_vt(5,3,9,2,0,9,2,3,9,0,1,9)))
+    print('vg(1,2,0,3,4,0,1,2,0,3,4,0)={}'.format(get_vg(1,2,0,3,4,0,1,2,0,3,4,0)))
+    print('r(box)={}'.format(get_r(x1,y1,z1,x2,y2,z2,100.)))
+    print('vr(box)={}'.format(get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
+    print('vt(box)={}'.format(get_vt(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
+    print('vg(box)={}'.format(get_vg(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
