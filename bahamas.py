@@ -5,10 +5,9 @@ import glob
 import subprocess
 import pandas as pd
 import astro as ast
-import cosmosim as cs
+from cosmosim import get_r, get_vr, get_vphi
 from astropy import constants as const
 import iotools as io
-#print('\n \n')
 
 ptypes = ['gas','DM','bp1','bp2','star','BH']
 
@@ -40,7 +39,6 @@ dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 dirbahamaslap = '/home/violeta/soil/BAHAMAS/'
 dirobslap = '/home/violeta/soil/Obs_Data/'
 dirplotlap = '/home/violeta/buds/'
-
 
 tblz = 'snap_z.txt'
 
@@ -2521,33 +2519,71 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         return None
     gn = groupnum[ind]
 
+    cop_x = cop_x[ind]; cop_y = cop_y[ind]; cop_z = cop_z[ind]
+    shv_x = shv_x[ind]; shv_y = shv_y[ind]; shv_z = shv_z[ind]    
+    sat = sat[ind]
+    cind = np.where(sat == 0)
+    
     # Get the cosmological parameters and boxsize
     omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
     
     # Main halo properties
-    mh, rh, dv, dvr = [np.zeros(shape=len(gn)) for i in range(4)]
+    mh, rh, dr, dvr, dvphi = [np.zeros(shape=len(gn)) for i in range(5)]
 
     mh = mhalo[gn]
     rh = rhalo[gn]
-    
-    # Distance to halo center
-    dx = boundary_correction(cop_x[ind] - fof_x[gn], boxsize, groups=True)
-    dy = boundary_correction(cop_y[ind] - fof_y[gn], boxsize, groups=True)
-    dz = boundary_correction(cop_z[ind] - fof_z[gn], boxsize, groups=True)
 
-    print(min(dx),max(dx))
-    print(min(dy),max(dy))
-    print(min(dz),max(dz)); exit()
-    dr = np.sqrt(dx*dx + dy*dy + dz*dz) 
-    print(gn,dr,len(dr),len(gn),dr[0],dr[1]); exit()
-    
+    # Distance to halo center for centrals
+    dr_fof = get_r(cop_x,cop_y,cop_z,
+                   fof_x[gn],fof_y[gn],fof_z[gn],box=boxsize)
+    dr[cind] = dr_fof[cind]
+
+    # Distance and velocities from satellite to central galaxies
+    for ig in np.unique(gn):
+        #if(ig>2): print(min(dr),max(dr));exit() ####here
+        ii = np.where(gn == ig)
+        if (np.shape(ii)[1] < 1): continue
+
+        isats = np.where(sat[ii] > 0)
+        nsats = np.shape(isats)[1]
+        if (nsats < 1): continue
+
+        icens = np.where(sat[ii] < 1)
+        ncens = np.shape(icens)[1]
+        if (ncens > 1):
+            print('WARNING (get_subhalo4BH): {} centrals in halo {}'.format(ncens,ig))
+            continue
+        else:
+            cx,cy,cz,cvx,cvy,cvz = [np.zeros(shape=nsats,dtype=float) for i in range(6)]
+            if (ncens < 1): # Distance to halo COP
+                print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
+                cx.fill(fof_x[ig]); cy.fill(fof_y[ig]); cz.fill(fof_z[ig])
+            else: # Distance to central galaxy
+                cx.fill(cop_x[icens][0]); cy.fill(cop_y[icens][0]); cz.fill(cop_z[icens][0])
+                cvx.fill(shv_x[icens][0]); cvy.fill(shv_y[icens][0]); cvz.fill(shv_z[icens][0])
+
+        sx = cop_x[isats]; sy = cop_y[isats]; sz = cop_z[isats]
+        svx = shv_x[isats]; svy = shv_y[isats]; svz = shv_z[isats] 
+
+        # Radial distance
+        satd = get_r(cx,cy,cz,sx,sy,sz,box=boxsize)
+        dr[isats] = satd
+
+        # Radial velocity ###here
+        satd = get_vr(cx,cy,cz,sx,sy,sz,
+                         cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+        dvr[isats] = satd
+
+    print(min(dr),max(dr))#; exit() ###here
+    #####here for velocities
+
     # Save data in a dataframe
-    data = np.vstack([gn,subnum[ind],sat[ind],mh,rh,
-                      cop_x[ind],cop_y[ind],cop_z[ind],
-                      shv_x[ind],shv_y[ind],shv_z[ind],
+    data = np.vstack([gn,subnum[ind],sat,mh,rh,dr,
+                      cop_x,cop_y,cop_z,
+                      shv_x,shv_y,shv_z,
                       ms30[ind],SFR[ind]]).T
     df_sh = pd.DataFrame(data=data,columns=['groupnum','subnum','sat',
-                                            'M200C','R200C',
+                                            'M200C','R200C','dr',
                                             'cop_x','cop_y','cop_z',
                                             'shv_x','shv_y','shv_z',
                                             'ms30','SFR'])
@@ -2571,15 +2607,17 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     # Output data with units
     hfdat = hf.create_group('data')
     shdat = hfdat.create_group('Subhalo')
-    
+
     # Subhalo/ groupnum, subnum, sat, pos, vel, M*30kpc, SFR
     #here include also dr, dv, dvr (from FOF)   
-    noms = ['groupnum','subnum','sat','M200C','R200C',
+    noms = ['groupnum','subnum','sat',
+            'M200C','R200C','dr',
             'cop_x','cop_y','cop_z',
             'shv_x','shv_y','shv_z','ms30','SFR']
     desc = ['FoF group number','Subhalo index corresponding to the initial total array',
             'sat:1, cen:0','1e10Msun/h, Mass within Rcrit200',
             'cMpc/h, Co-moving radius within which density is 200 times critical density',
+            'Relative distance to FOF COP for centrals, and to central COP for sat. gal. (cMpc/h)',
             'cMpc/h','cMpc/h','cMpc/h','km/s','km/s','km/s',
             '1e10 Msun/h','Msun/h/yr'] 
     for ip, iprop in enumerate(noms):

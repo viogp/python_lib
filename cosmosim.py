@@ -105,12 +105,14 @@ def get_r(x1,y1,z1,x2,y2,z2,box=None):
     Example
     -------
     >>> from cosmosim import get_r; import numpy as np
-    >>> get_r(np.array([2.]),np.array([95.]),np.array([2.]),np.array([5.]),np.array([5.]),np.array([80.]),100.,groups=True)
-    >>> (array([]))
+    >>> get_r(np.array([2.,3.]),np.array([95.,5.]),np.array([2.,0.]),np.array([5.,-5.]),np.array([5.,50.]),np.array([80.,90.]),100.)
+    >>> array([24.35159132, 46.78675026])
     """
 
     dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
-    return np.sqrt(dx*dx + dy*dy + dz*dz)
+
+    dr = np.sqrt(dx*dx + dy*dy + dz*dz)
+    return dr
 
 
 def get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
@@ -145,7 +147,7 @@ def get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     return vr
 
 
-def get_vt(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
+def get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
     Calculate the relative radial velocity of an object
     
@@ -164,18 +166,18 @@ def get_vt(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
 
     Returns
     -------
-    vt : float
+    vtheta : float
        Tangential relative velocity in the x-y plane (v theta)
     """
 
     dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
     dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
 
-    vt =  (dx*dvy - dy*dvx)/np.sqrt(dx*dx + dy*dy) 
-    return vt
+    vtheta =  (dx*dvy - dy*dvx)/np.sqrt(dx*dx + dy*dy) 
+    return vtheta
 
 
-def get_vg(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
+def get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
     Calculate the relative radial velocity of an object
     
@@ -194,8 +196,8 @@ def get_vg(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
 
     Returns
     -------
-    vg : float
-       Tangential relative velocity perpendicular to the x-y plane (v gamma)
+    vphi : float
+       Tangential relative velocity perpendicular to the x-y plane (v phi)
     """
     r = get_r(x1,y1,z1,x2,y2,z2,box)
 
@@ -204,8 +206,8 @@ def get_vg(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
 
     num = dz*(dx*dvx + dy*dvy) - dvz*(dx*dx + dy*dy)
     den = r*r*np.sqrt(dx*dx + dy*dy) 
-    vg =  num/den
-    return vg
+    vphi = num/den
+    return vphi
 
 
 if __name__ == "__main__":
@@ -231,9 +233,9 @@ if __name__ == "__main__":
     print(get_diffpos(x1,y1,z1,x2,y2,z2,100.))
     print('r(0,0,1,0,1,0)={}'.format(get_r(0,0,1,0,1,0)))
     print('vr(1,0,0,0,1,0,0,0,0,0,0,0)={}'.format(get_vr(1,0,0,0,1,0,0,0,0,0,0,0)))
-    print('vt(5,3,9,2,0,9,2,3,9,0,1,9)={}'.format(get_vt(5,3,9,2,0,9,2,3,9,0,1,9)))
-    print('vg(1,2,0,3,4,0,1,2,0,3,4,0)={}'.format(get_vg(1,2,0,3,4,0,1,2,0,3,4,0)))
+    print('vtheta(5,3,9,2,0,9,2,3,9,0,1,9)={}'.format(get_vtheta(5,3,9,2,0,9,2,3,9,0,1,9)))
+    print('vphi(1,2,0,3,4,0,1,2,0,3,4,0)={}'.format(get_vphi(1,2,0,3,4,0,1,2,0,3,4,0)))
     print('r(box)={}'.format(get_r(x1,y1,z1,x2,y2,z2,100.)))
     print('vr(box)={}'.format(get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
-    print('vt(box)={}'.format(get_vt(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
-    print('vg(box)={}'.format(get_vg(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
+    print('vtheta(box)={}'.format(get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
+    print('vphi(box)={}'.format(get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
