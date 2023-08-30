@@ -149,7 +149,7 @@ def get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
 
 def get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
-    Calculate the relative radial velocity of an object
+    Calculate the relative tangential velocity in the x-y plane (v theta).
     
     Parameters
     ----------
@@ -167,7 +167,7 @@ def get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     Returns
     -------
     vtheta : float
-       Tangential relative velocity in the x-y plane (v theta)
+       Relative tangential velocity in the x-y plane (v theta)
     """
 
     dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
@@ -179,7 +179,7 @@ def get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
 
 def get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     """
-    Calculate the relative radial velocity of an object
+    Calculate the relative tangential velocity (perpendicular to the x-y plane) of an object
     
     Parameters
     ----------
@@ -197,7 +197,7 @@ def get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     Returns
     -------
     vphi : float
-       Tangential relative velocity perpendicular to the x-y plane (v phi)
+       Relative tangential velocity perpendicular to the x-y plane (v phi)
     """
     r = get_r(x1,y1,z1,x2,y2,z2,box)
 
@@ -208,6 +208,42 @@ def get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     den = r*r*np.sqrt(dx*dx + dy*dy) 
     vphi = num/den
     return vphi
+
+
+
+def get_vlos(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
+    """
+    Calculate the relative velocity on the line of sight (assumed z-axis)
+    
+    Parameters
+    ----------
+    x1,y1,z1 : (array of) floats
+       Coordinattes of object 1 (halo or central). Array for simulations.
+    x2,y2,z2 : (array of) floats
+       Coordinattes of object 2 (subhalo or satellite). Array for simulations.
+    vx1,vy1,vz1 : (array of) floats
+       Velocity of object 1 (halo or central). Array for simulations.
+    vx2,vy2,vz2 : (array of) floats
+       Velocity of object 2 (subhalo or satellite). Array for simulations.
+    box : float
+       If a simulation, side of the simulation box
+
+    Returns
+    -------
+    vphi : float
+       Relative velocity on the line of sight (z-axis)
+    """
+
+    vr = get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box)
+    vphi = get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box)
+
+    dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)    
+    r = get_r(x1,y1,z1,x2,y2,z2,box)
+    cosphi = dz/r
+    sinphi = np.sqrt(1-cosphi*cosphi)
+
+    vlos = vr*cosphi - vphi*sinphi
+    return vlos
 
 
 if __name__ == "__main__":
@@ -235,7 +271,9 @@ if __name__ == "__main__":
     print('vr(1,0,0,0,1,0,0,0,0,0,0,0)={}'.format(get_vr(1,0,0,0,1,0,0,0,0,0,0,0)))
     print('vtheta(5,3,9,2,0,9,2,3,9,0,1,9)={}'.format(get_vtheta(5,3,9,2,0,9,2,3,9,0,1,9)))
     print('vphi(1,2,0,3,4,0,1,2,0,3,4,0)={}'.format(get_vphi(1,2,0,3,4,0,1,2,0,3,4,0)))
+    print('vlos(1,2,0,3,4,0,1,2,0,3,4,0)={}'.format(get_vlos(1,2,0,3,4,0,1,2,0,3,4,0)))
     print('r(box)={}'.format(get_r(x1,y1,z1,x2,y2,z2,100.)))
     print('vr(box)={}'.format(get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
     print('vtheta(box)={}'.format(get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
     print('vphi(box)={}'.format(get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))
+    print('vlos(box)={}'.format(get_vlos(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,100.)))

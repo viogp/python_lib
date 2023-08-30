@@ -5,7 +5,7 @@ import glob
 import subprocess
 import pandas as pd
 import astro as ast
-from cosmosim import get_r, get_vr, get_vphi
+from cosmosim import get_r, get_vr, get_vphi, get_vlos
 from astropy import constants as const
 import iotools as io
 
@@ -2527,8 +2527,8 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     # Get the cosmological parameters and boxsize
     omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
     
-    # Main halo properties
-    mh, rh, dr, dvr, dvphi = [np.zeros(shape=len(gn)) for i in range(5)]
+    # Halo properties and relative distances and velocities
+    mh, rh, dr, dvr, dvphi, dvlos = [np.zeros(shape=len(gn)) for i in range(6)]
 
     mh = mhalo[gn]
     rh = rhalo[gn]
@@ -2540,9 +2540,12 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
     # Distance and velocities from satellite to central galaxies
     for ig in np.unique(gn):
-        #if(ig>2): print(min(dr),max(dr));exit() ####here
+        if(ig>2): break ####here
         ii = np.where(gn == ig)
         if (np.shape(ii)[1] < 1): continue
+
+        x = cop_x[ii]; y = cop_y[ii]; z = cop_z[ii]
+        vx = shv_x[ii]; vy = shv_y[ii]; vz = shv_z[ii]    
 
         isats = np.where(sat[ii] > 0)
         nsats = np.shape(isats)[1]
@@ -2559,35 +2562,49 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
                 print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
                 cx.fill(fof_x[ig]); cy.fill(fof_y[ig]); cz.fill(fof_z[ig])
             else: # Distance to central galaxy
-                cx.fill(cop_x[icens][0]); cy.fill(cop_y[icens][0]); cz.fill(cop_z[icens][0])
-                cvx.fill(shv_x[icens][0]); cvy.fill(shv_y[icens][0]); cvz.fill(shv_z[icens][0])
+                cx.fill(x[icens][0]); cy.fill(y[icens][0]); cz.fill(z[icens][0])
+                cvx.fill(vx[icens][0]); cvy.fill(vy[icens][0]); cvz.fill(vz[icens][0])
 
-        sx = cop_x[isats]; sy = cop_y[isats]; sz = cop_z[isats]
-        svx = shv_x[isats]; svy = shv_y[isats]; svz = shv_z[isats] 
+        sx = x[isats]; sy = y[isats]; sz = z[isats]
+        svx = vx[isats]; svy = vy[isats]; svz = vz[isats] 
 
         # Radial distance
         satd = get_r(cx,cy,cz,sx,sy,sz,box=boxsize)
         dr[isats] = satd
 
-        # Radial velocity ###here
+        # Radial velocity
         satd = get_vr(cx,cy,cz,sx,sy,sz,
-                         cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                      cvx,cvy,cvz,svx,svy,svz,box=boxsize)
         dvr[isats] = satd
 
-    print(min(dr),max(dr))#; exit() ###here
+        # Tangential velocity
+        satd = get_vphi(cx,cy,cz,sx,sy,sz,
+                        cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+        dvphi[isats] = satd
+
+        # Line of site (z-axis) velocity
+        satd = get_vlos(cx,cy,cz,sx,sy,sz,
+                        cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+        dvlos[isats] = satd
+        print(ig,min(satd),max(satd),len(satd),len(dvlos))
+
+    
     #####here for velocities
 
     # Save data in a dataframe
-    data = np.vstack([gn,subnum[ind],sat,mh,rh,dr,
+    data = np.vstack([gn,subnum[ind],sat,mh,rh,
+                      dr,dvr,dvphi,dvlos,
                       cop_x,cop_y,cop_z,
                       shv_x,shv_y,shv_z,
                       ms30[ind],SFR[ind]]).T
     df_sh = pd.DataFrame(data=data,columns=['groupnum','subnum','sat',
-                                            'M200C','R200C','dr',
+                                            'M200C','R200C',
+                                            'dr','dvr','dvphi','dvlos',
                                             'cop_x','cop_y','cop_z',
                                             'shv_x','shv_y','shv_z',
                                             'ms30','SFR'])
-    data,groupnum,subnum,sat,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z,ms30,SFR=[[] for i in range(12)]
+    data,groupnum,subnum,sat,mh,rh,dr,dvr,dvphi,dvlos = [[] for i in range(10)]
+    cop_x,cop_y,cop_z,shv_x,shv_y,shv_z,ms30,SFR = [[] for i in range(8)]
             
     # Write output file---------------------------------------------------------    
     hf = h5py.File(outfile, 'w') # Generate the file
@@ -2611,13 +2628,17 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     # Subhalo/ groupnum, subnum, sat, pos, vel, M*30kpc, SFR
     #here include also dr, dv, dvr (from FOF)   
     noms = ['groupnum','subnum','sat',
-            'M200C','R200C','dr',
+            'M200C','R200C',
+            'dr','dvr','dvphi','dvlos',
             'cop_x','cop_y','cop_z',
             'shv_x','shv_y','shv_z','ms30','SFR']
     desc = ['FoF group number','Subhalo index corresponding to the initial total array',
             'sat:1, cen:0','1e10Msun/h, Mass within Rcrit200',
             'cMpc/h, Co-moving radius within which density is 200 times critical density',
             'Relative distance to FOF COP for centrals, and to central COP for sat. gal. (cMpc/h)',
+            'Relative radial velocity to central gal. (km/s)',
+            'Relative tangential (phi) velocity to central gal. (km/s)',
+            'Relative velocity to central gal. on the line of sight, assumed z-axis (km/s)',
             'cMpc/h','cMpc/h','cMpc/h','km/s','km/s','km/s',
             '1e10 Msun/h','Msun/h/yr'] 
     for ip, iprop in enumerate(noms):
