@@ -2529,6 +2529,9 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     
     # Halo properties and relative distances and velocities
     mh, rh, dr, dvr, dvphi, dvlos = [np.zeros(shape=len(gn)) for i in range(6)]
+    dvr.fill(np.nan)
+    dvphi.fill(np.nan)
+    dvlos.fill(np.nan)
 
     mh = mhalo[gn]
     rh = rhalo[gn]
@@ -2544,14 +2547,15 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         ii = np.where(gn == ig)
         if (np.shape(ii)[1] < 1): continue
 
-        x = cop_x[ii]; y = cop_y[ii]; z = cop_z[ii]
-        vx = shv_x[ii]; vy = shv_y[ii]; vz = shv_z[ii]    
-
-        isats = np.where(sat[ii] > 0)
+        isats = np.where((gn == ig) & (sat > 0))
         nsats = np.shape(isats)[1]
         if (nsats < 1): continue
 
-        icens = np.where(sat[ii] < 1)
+        sx = cop_x[isats]; sy = cop_y[isats]; sz = cop_z[isats]
+        svx = shv_x[isats]; svy = shv_y[isats]; svz = shv_z[isats]    
+        print(ig,nsats,isats[0][0],isats[0][nsats-1],min(sz),max(sz),min(svz),max(svz))
+        continue; print('hola') ####here testing an adequate storage
+        icens = np.where((gn == ig) & (sat <1))
         ncens = np.shape(icens)[1]
         if (ncens > 1):
             print('WARNING (get_subhalo4BH): {} centrals in halo {}'.format(ncens,ig))
@@ -2561,36 +2565,32 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             if (ncens < 1): # Distance to halo COP
                 print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
                 cx.fill(fof_x[ig]); cy.fill(fof_y[ig]); cz.fill(fof_z[ig])
-            else: # Distance to central galaxy
-                cx.fill(x[icens][0]); cy.fill(y[icens][0]); cz.fill(z[icens][0])
-                cvx.fill(vx[icens][0]); cvy.fill(vy[icens][0]); cvz.fill(vz[icens][0])
+            else: # Distance and velocities relative to central galaxy
+                cx.fill(cop_x[icens][0]); cy.fill(cop_y[icens][0]); cz.fill(cop_z[icens][0])
+                cvx.fill(shv_x[icens][0]); cvy.fill(shv_y[icens][0]); cvz.fill(shv_z[icens][0])
 
-        sx = x[isats]; sy = y[isats]; sz = z[isats]
-        svx = vx[isats]; svy = vy[isats]; svz = vz[isats] 
+                # Radial velocity
+                satd = get_vr(cx,cy,cz,sx,sy,sz,
+                              cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                dvr[isats] = satd
 
+                # Tangential velocity
+                satd = get_vphi(cx,cy,cz,sx,sy,sz,
+                                cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                dvphi[isats] = satd
+
+                # Line of site (z-axis) velocity
+                satd = get_vlos(cx,cy,cz,sx,sy,sz,
+                                cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                dvlos[isats] = satd
+                print(ig,min(satd),max(satd),np.nanmin(dvlos),np.nanmax(dvlos))
         # Radial distance
         satd = get_r(cx,cy,cz,sx,sy,sz,box=boxsize)
         dr[isats] = satd
 
-        # Radial velocity
-        satd = get_vr(cx,cy,cz,sx,sy,sz,
-                      cvx,cvy,cvz,svx,svy,svz,box=boxsize)
-        dvr[isats] = satd
-
-        # Tangential velocity
-        satd = get_vphi(cx,cy,cz,sx,sy,sz,
-                        cvx,cvy,cvz,svx,svy,svz,box=boxsize)
-        dvphi[isats] = satd
-
-        # Line of site (z-axis) velocity
-        satd = get_vlos(cx,cy,cz,sx,sy,sz,
-                        cvx,cvy,cvz,svx,svy,svz,box=boxsize)
-        dvlos[isats] = satd
-        print(ig,min(satd),max(satd),len(satd),len(dvlos))
-
-    
-    #####here for velocities
-
+    #print(dvlos[498:700])
+    #print(np.nanmin(dvlos),np.nanmax(dvlos));exit()
+    exit()
     # Save data in a dataframe
     data = np.vstack([gn,subnum[ind],sat,mh,rh,
                       dr,dvr,dvphi,dvlos,
