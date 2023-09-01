@@ -2523,19 +2523,21 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     shv_x = shv_x[ind]; shv_y = shv_y[ind]; shv_z = shv_z[ind]    
     sat = sat[ind]
     cind = np.where(sat == 0)
+
+    # Halo properties
+    mh, rh = [np.zeros(shape=len(gn)) for i in range(2)]
+    mh = mhalo[gn]
+    rh = rhalo[gn]
+    
+    # Initialize relative distances and velocities
+    dr, dvr, dvphi, dvlos = [np.zeros(shape=len(gn)) for i in range(4)]
+    dvr.fill(np.nan)
+    dvphi.fill(np.nan)
+    dvlos.fill(np.nan)
     
     # Get the cosmological parameters and boxsize
     omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
     
-    # Halo properties and relative distances and velocities
-    mh, rh, dr, dvr, dvphi, dvlos = [np.zeros(shape=len(gn)) for i in range(6)]
-    dvr.fill(np.nan)
-    dvphi.fill(np.nan)
-    dvlos.fill(np.nan)
-
-    mh = mhalo[gn]
-    rh = rhalo[gn]
-
     # Distance to halo center for centrals
     dr_fof = get_r(cop_x,cop_y,cop_z,
                    fof_x[gn],fof_y[gn],fof_z[gn],box=boxsize)
@@ -2543,7 +2545,6 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
     # Distance and velocities from satellite to central galaxies
     for ig in np.unique(gn):
-        if(ig>2): break ####here
         ii = np.where(gn == ig)
         if (np.shape(ii)[1] < 1): continue
 
@@ -2553,8 +2554,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
         sx = cop_x[isats]; sy = cop_y[isats]; sz = cop_z[isats]
         svx = shv_x[isats]; svy = shv_y[isats]; svz = shv_z[isats]    
-        print(ig,nsats,isats[0][0],isats[0][nsats-1],min(sz),max(sz),min(svz),max(svz))
-        continue; print('hola') ####here testing an adequate storage
+
         icens = np.where((gn == ig) & (sat <1))
         ncens = np.shape(icens)[1]
         if (ncens > 1):
@@ -2565,6 +2565,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             if (ncens < 1): # Distance to halo COP
                 print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
                 cx.fill(fof_x[ig]); cy.fill(fof_y[ig]); cz.fill(fof_z[ig])
+
             else: # Distance and velocities relative to central galaxy
                 cx.fill(cop_x[icens][0]); cy.fill(cop_y[icens][0]); cz.fill(cop_z[icens][0])
                 cvx.fill(shv_x[icens][0]); cvy.fill(shv_y[icens][0]); cvz.fill(shv_z[icens][0])
@@ -2583,14 +2584,11 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
                 satd = get_vlos(cx,cy,cz,sx,sy,sz,
                                 cvx,cvy,cvz,svx,svy,svz,box=boxsize)
                 dvlos[isats] = satd
-                print(ig,min(satd),max(satd),np.nanmin(dvlos),np.nanmax(dvlos))
+
         # Radial distance
         satd = get_r(cx,cy,cz,sx,sy,sz,box=boxsize)
         dr[isats] = satd
 
-    #print(dvlos[498:700])
-    #print(np.nanmin(dvlos),np.nanmax(dvlos));exit()
-    exit()
     # Save data in a dataframe
     data = np.vstack([gn,subnum[ind],sat,mh,rh,
                       dr,dvr,dvphi,dvlos,
@@ -2697,18 +2695,19 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     inptype = 'PartType'+str(itype)
 
     # Output file
-    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=Testing,
+    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=False,
                                           Testing=Testing,verbose=Testing)
-    print(outfile, file_exists); exit()
-    ## Get subgrid particle information from snapshots------------------------
-    #files, allfiles = get_particle_files(snap,sim,env,subfind=False)
-    #if (not allfiles):
-    #    print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
-    #          format(snap,env))
-    #    return None
-    #if Testing: files = [files[0],files[1]]
-    #if verbose: print('Particles: {} \n'.format(files[0]))
-    #
+    if verbose: print('Outfile: {} \n'.format(outfile))
+    
+    # Get subgrid particle information from snapshots------------------------
+    files, allfiles = get_particle_files(snap,sim,env,subfind=False)
+    if (not allfiles):
+        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+              format(snap,env))
+        return None
+    if Testing: files = [files[0],files[1]]
+    if verbose: print('Particles: {} \n'.format(files[0]))
+    
     ## Loop over the particle files
     #for iff, ff in enumerate(files):
     #    f = h5py.File(ff, 'r') #; print(ff,inptype)
