@@ -2494,6 +2494,10 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             shv_x = np.append(shv_x,sh['Velocity'][:,0])
             shv_y = np.append(shv_y,sh['Velocity'][:,1])
             shv_z = np.append(shv_z,sh['Velocity'][:,2])   
+
+    #print('SubGroupNum: min={:d}, max={:d} (diff={:d})'.format(min(subgroupnum),max(subgroupnum),
+    #min(subgroupnum)-max(subgroupnum))
+    ###here check if subgroupnum is useful
     
     # Subhalo number within haloes and indexes to be compared to cenids
     subnum = np.arange(len(groupnum),dtype=int)
@@ -2694,7 +2698,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     itype = 5 
     inptype = 'PartType'+str(itype)
 
-    # Output file
+    # File with information on subhaloes and to output BH information
     outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=False,
                                           Testing=Testing,verbose=Testing)
     if verbose: print('Outfile: {} \n'.format(outfile))
@@ -2707,106 +2711,107 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
         return None
     if Testing: files = [files[0],files[1]]
     if verbose: print('Particles: {} \n'.format(files[0]))
+
+    # Loop over the particle files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff,inptype)
+        p0 = f[inptype]
     
-    ## Loop over the particle files
-    #for iff, ff in enumerate(files):
-    #    f = h5py.File(ff, 'r') #; print(ff,inptype)
-    #    p0 = f[inptype]
-    #
-    #    # Read particle information
-    #    if (iff == 0):
-    #        # Check that there is data to be read
-    #        try:
-    #            partID  = p0['ParticleIDs'][:]
-    #        except:
-    #            print('WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
-    #            return None
-    #
-    #        # Read the data
-    #        BH_Mass = p0['BH_Mass'][:]  # 1e10 Msun/h
-    #        BH_Mdot = p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc  # Msun/year
-    #    else:
-    #        partID  = np.append(partID,p0['ParticleIDs'][:]) 
-    #        BH_Mass = np.append(BH_Mass,p0['BH_Mass'][:])
-    #        BH_Mdot = np.append(BH_Mdot,p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc)
-    #        
-    #if verbose:
-    #    print('BH: seed={:.2e}; min={:.2e}, max={:.2e}'.format(BH_seed_mass,
-    #                                                           min(BH_Mass)*10**10,
-    #                                                           max(BH_Mass)*10**10))
-    #
-    ## Get subgrid information into a pandas dataset to facilitate merging options
-    #data = np.vstack([partID,BH_Mass,BH_Mdot]).T
-    #df_psnap = pd.DataFrame(data=data,columns=['partID','BH_Mass','BH_Mdot'])
-    #partID,BH_Mass,BH_Mdot=[[] for i in range(3)] #Empty individual arrays    
-    #
-    ## Get Subfind particle files----------------------------------------------
-    #files, allfiles = get_particle_files(snap,sim,env)
-    #if (not allfiles):
-    #    print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
-    #          format(snap,env))
-    #    return None
-    #if Testing: files = [files[0]]
-    #if verbose: print('\n Subfind particles: {} \n'.format(files[0]))
-    #
-    ## Loop over the particle files
-    #for iff, ff in enumerate(files):
-    #    f = h5py.File(ff, 'r') #; print(ff,inptype)
-    #    p0 = f[inptype]
-    #
-    #    # Read particle information
-    #    if (iff == 0):
-    #        partID = p0['ParticleIDs'][:] 
-    #        groupnum = p0['GroupNumber'][:] # FoF group number particle is in
-    #        # Negative values: particles within r200 but not part of the halo
-    #        subgroupnum = p0['SubGroupNumber'][:]
-    #        partx = p0['Coordinates'][:,0]      # Mpc/h
-    #        party = p0['Coordinates'][:,1]
-    #        partz = p0['Coordinates'][:,2]
-    #        pvx = p0['Velocity'][:,0]           # km/s??
-    #        pvy = p0['Velocity'][:,1]
-    #        pvz = p0['Velocity'][:,2] 
-    #    else:
-    #        partID      = np.append(partID,p0['ParticleIDs'][:]) 
-    #        groupnum    = np.append(groupnum,p0['GroupNumber'][:])
-    #        subgroupnum = np.append(subgroupnum,p0['SubGroupNumber'][:])
-    #        partx       = np.append(partx,p0['Coordinates'][:,0])
-    #        party       = np.append(party,p0['Coordinates'][:,1])
-    #        partz       = np.append(partz,p0['Coordinates'][:,2])
-    #        pvx         = np.append(pvx,p0['Velocity'][:,0])
-    #        pvy         = np.append(pvy,p0['Velocity'][:,1])
-    #        pvz         = np.append(pvz,p0['Velocity'][:,2])
-    #
-    #if verbose:
-    #    print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
-    #    print('SubGroupNum: min={:d}, max={:d} (diff={:d})'.format(min(subgroupnum),max(subgroupnum),
-    #                                                               min(subgroupnum)-max(subgroupnum)))
-    #
-    ## If all groupnum are less than 0, take abs()
-    #allgneg = False
-    #ind = np.where(groupnum<0)
-    #if(np.shape(ind)[1] == len(groupnum)):
-    #    allgneg = True
-    #    groupnum = abs(groupnum)-1
-    #
-    ## Get particle information into a pandas dataset to facilitate merging options
-    ##here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
-    #data = np.vstack([partID,groupnum,subgroupnum,partx,party,partz,pvx,pvy,pvz]).T 
-    #df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum',
-    #                                          'partx','party','partz',
-    #                                          'pvx','pvy','pvz'])
-    #partID,groupnum,subgroupnum,partx,party,partz,pvx,pvy,pvz=[[] for i in range(9)]
-    #
-    ## Join the particle information---------------------------------------------
-    #df_part = pd.merge(df_psub, df_psnap, on=['partID'])
-    #df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
-    ##df_part.sort_values(by=['groupnum', 'partx'], inplace=True)
-    #df_part.reset_index(inplace=True, drop=True)  
-    #if verbose: print(df_part)
-    #
+        # Read particle information
+        if (iff == 0):
+            # Check that there is data to be read
+            try:
+                partID  = p0['ParticleIDs'][:]
+            except:
+                print('WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
+                return None
+    
+            # Read the data
+            BH_Mass = p0['BH_Mass'][:]  # 1e10 Msun/h
+            BH_Mdot = p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc  # Msun/year
+            partx = p0['Coordinates'][:,0]      # Mpc/h
+            party = p0['Coordinates'][:,1]
+            partz = p0['Coordinates'][:,2]
+            pvx = p0['Velocity'][:,0]           # km/s
+            pvy = p0['Velocity'][:,1]
+            pvz = p0['Velocity'][:,2] 
+        else:
+            partID  = np.append(partID,p0['ParticleIDs'][:]) 
+            BH_Mass = np.append(BH_Mass,p0['BH_Mass'][:])
+            BH_Mdot = np.append(BH_Mdot,p0['BH_Mdot'][:]*10**7*ast.s_in_year/ast.m_in_pc)
+            partx       = np.append(partx,p0['Coordinates'][:,0])
+            party       = np.append(party,p0['Coordinates'][:,1])
+            partz       = np.append(partz,p0['Coordinates'][:,2])
+            pvx         = np.append(pvx,p0['Velocity'][:,0])
+            pvy         = np.append(pvy,p0['Velocity'][:,1])
+            pvz         = np.append(pvz,p0['Velocity'][:,2])
+            
+    if verbose:
+        print('BH: seed={:.2e}; min={:.2e}, max={:.2e}'.format(BH_seed_mass,
+                                                               min(BH_Mass)*10**10,
+                                                               max(BH_Mass)*10**10))
+
+    # Get subgrid information into a pandas dataset to facilitate merging options
+    #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
+    #      tried dtype=[np.uint32,np.int32,np.int32,np.float64,np.float64,np.float64,np.float32,np.float32,np.float32]
+    data = np.vstack([partID,BH_Mass,BH_Mdot,partx,party,partz,pvx,pvy,pvz]).T
+    df_pbh = pd.DataFrame(data=data,columns=['partID','BH_Mass','BH_Mdot',
+                                             'partx','party','partz',
+                                             'pvx','pvy','pvz'])
+    #Empty individual arrays    
+    partID,BH_Mass,BH_Mdot,partx,party,partz,pvx,pvy,pvz=[[] for i in range(9)] 
+
+    # Get the halo the BH particles belong to ----------------------------------
+    files, allfiles = get_particle_files(snap,sim,env,subfind=True)
+    if (not allfiles):
+        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+              format(snap,env))
+        return None
+    if Testing: files = [files[0]]
+    if verbose: print('\n Subfind particles: {} \n'.format(files[0]))
+
+    # Loop over the particle files
+    for iff, ff in enumerate(files):
+        f = h5py.File(ff, 'r') #; print(ff,inptype)
+        p0 = f[inptype]
+    
+        # Read particle information
+        if (iff == 0):
+            partID = p0['ParticleIDs'][:] 
+            groupnum = p0['GroupNumber'][:] # FoF group number particle is in
+            # Negative values: particles within r200 but not part of the halo
+        else:
+            partID      = np.append(partID,p0['ParticleIDs'][:]) 
+            groupnum    = np.append(groupnum,p0['GroupNumber'][:])
+    
+    if verbose:
+        print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum))))
+    #####here
+    # If all groupnum are less than 0, take abs()
+    allgneg = False
+    ind = np.where(groupnum<0)
+    if(np.shape(ind)[1] == len(groupnum)):
+        allgneg = True
+        groupnum = abs(groupnum)-1
+    
+    # Get particle information into a pandas dataset to facilitate merging options
+    data = np.vstack([partID,groupnum]).T 
+    df_psub = pd.DataFrame(data=data,columns=['partID','groupnum'])
+    partID,groupnum = [[] for i in range(2)]
+
+    # Join the particle information---------------------------------------------
+    df_part = pd.merge(df_psub, df_pbh, on=['partID'])
+    df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+    df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
+    if verbose: print(df_part)
+    
     #print(outfile, file_exists) ####here
-    ##exit()
-    #
+    exit() ##here
+
+    #BHadd/  bhnum, nboson, added_MBH, added_Mdot
+    #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
+
+    
     ## Add properties of particles in the same position--------------------------
     #groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
     #if(groups.ngroups > len(df_part.index)):
