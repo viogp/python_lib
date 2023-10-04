@@ -944,7 +944,7 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
             return -999,-999.
 
 
-def get_cenids(snap,sim,env,Testing=False,nfiles=2):
+def get_cenids(snap,sim,env,Testing=False,nfiles=2,allhaloes=True):
     """
     Get the list of indexes for central galaxies
     using FOF/FirstSubhaloID (index of first subhalos, or centrals)
@@ -961,6 +961,8 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
         True or False
     nfiles : integer
         Number of files to be considered for testing
+    allhaloes : boolean
+        False if only haloes without problems (r500>0)
 
     Returns
     -----
@@ -970,7 +972,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','ari')
+    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega',allhaloes=False)
     >>> b.get_cenids(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega',Testing=True)
     """
 
@@ -984,15 +986,19 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
         io.stop_if_no_file(ff)
 
         f = h5py.File(ff, 'r')
-        r500 = f['FOF/Group_R_Crit500'][:]
-        ind = np.where(r500>0)
+        
+        # Index of first subhalo in SubHalo list (starts at 0) 
+        if (allhaloes):
+            cenh = np.unique(f['FOF/FirstSubhaloID'][:])
+        else:
+            r500 = f['FOF/Group_R_Crit500'][:]
+            ind = np.where(r500>0)
+            cenh = f['FOF/FirstSubhaloID'][ind]
+            ucen = np.unique(f['FOF/FirstSubhaloID'][:])
+            if (len(cenh) > len(ucen)):
+                print('WARNING (b.get_cenids): Not unique central IDs {}'.format(ff))
+                return None
 
-        cenh = f['FOF/FirstSubhaloID'][ind]
-        ucen = np.unique(f['FOF/FirstSubhaloID'][:])
-        if (len(cenh) > len(ucen)):
-            print('WARNING (b.get_cenids): Not unique central IDs {}'.format(path))
-            return None
-            
         if (ii == 0):
             cenids = cenh
             halos = f['Subhalo/GroupNumber'][:]
@@ -1001,7 +1007,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
             halos = np.append(halos,f['Subhalo/GroupNumber'][:])
 
     if (not io.is_sorted(cenids)):
-        print('WARNING (b.get_cenids): Not ordered indeces {}'.format(path))
+        print('WARNING (b.get_cenids): Not ordered indeces {}'.format(ff))
         return None
 
     return cenids
@@ -1047,7 +1053,7 @@ def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2,v
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False: return -999.
     if verbose: print('get_subfind_prop: First Subfind file is {}'.format(files[0]))
-    
+
     if (proptype is not None):
         itype = ptypes.index(proptype)
         
@@ -2403,6 +2409,72 @@ def get_subBH_file(outdir,sim,snap,part=True,nhmr=2.,cop=True):
     return outfile, file_exists
 
 
+def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
+    """
+    Create an array with indexes 0 (central) to N satellites, 
+    within each halo, given by the "groupnum"
+
+    Parameters
+    -----------
+    sim : string
+        Simulation name
+    snap : integer
+        Snapshot 
+    env : string
+        ari or cosma, to use the adecuate paths
+    Testing: boolean
+        True or False
+    nfiles : integer
+        Number of files to be considered for testing
+    verbose : boolean
+        True to write first Subfind file out
+
+    Returns
+    -----
+    subnum : array of (long) integers
+        Indexes 0 (central) to N galaxies within each subhalo
+
+    Examples
+    ---------
+    >>> import bahamas as b
+    >>> b.get_subnum('HIRES/AGN_TUNED_nu0_L050N256_WMAP9',31,'arilega',Testing=True)
+    """
+
+    # Read the FOF Group Number subhalo belongs to and its mass (1e10Msun/h)
+    groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',Testing=Testing)
+    msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass',Testing=Testing)
+    
+    # Initialize output
+    subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(-1.);
+    
+    # Index of first subhalo in SubHalo list (starts at 0) 
+    cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=True)
+    
+    if (max(cind) > (len(groupnum)-1) and Testing):
+        ind = np.where(cind < len(groupnum)-1) 
+        if(np.shape(ind)[1]<1):
+            print('STOP (b.get_subhalo4BH): no centrals in Subfind file.')
+            return None
+        cind = cind[ind]
+    elif (max(cind) > (len(groupnum)-1) and not Testing):
+        print('STOP (b.get_subhalo4BH): problem with centrals indexes.')
+        return None
+
+    subgroupnum[cind] = 0
+
+    for i, subg in enumerate(subgroupnum):
+        if subg == 0:
+            isub = 0;
+            maxmass = msubh[i];
+        else:
+            isub += 1;
+            subgroupnum[i] = isub;
+            if (msubh[i]>maxmass):
+                print('WARNING b.subgroupnum: mass for halo {} is not ordered, {} {} {}'.format(groupnum[i],i,msubh[i],maxmass))
+
+    return subgroupnum
+
+
 def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=False):
     """
     Check if a file with the subhalo properties relevant for the
@@ -2456,8 +2528,9 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     dmtype = ptypes.index('DM')
     
     # Loop over the FOF&Subfind files
+    new_subnum = False
     for iff, ff in enumerate(files):
-        f = h5py.File(ff, 'r') #; print(ff)
+        f = h5py.File(ff, 'r') #; print(ff); exit()
         fof = f['FOF']
         sh = f['Subhalo']
 
@@ -2478,6 +2551,12 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             shv_x = sh['Velocity'][:,0]           # km/s
             shv_y = sh['Velocity'][:,1]           # km/s
             shv_z = sh['Velocity'][:,2]           # km/s
+
+            try:
+                # SubGroup Number of subhalo, begins at 0 for most massive subhalo within a group 
+                subnum  = sh['SubGroupNumber'][:]
+            except:
+                new_subnum = True
         else:
             mhalo = np.append(mhalo,fof['Group_M_Crit200'][:])
             rhalo = np.append(rhalo,fof['Group_R_Crit200'][:])
@@ -2495,27 +2574,16 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             shv_y = np.append(shv_y,sh['Velocity'][:,1])
             shv_z = np.append(shv_z,sh['Velocity'][:,2])   
 
-    #print('SubGroupNum: min={:d}, max={:d} (diff={:d})'.format(min(subgroupnum),max(subgroupnum),
-    #min(subgroupnum)-max(subgroupnum))
-    ###here check if subgroupnum is useful
-    
-    # Subhalo number within haloes and indexes to be compared to cenids
-    subnum = np.arange(len(groupnum),dtype=int)
+            if (not new_subnum):
+                subgroupnum = np.append(groupnum,sh['SubGroupNumber'][:])
 
-    # Get sat (0 for cen) from central indexes
-    sat = np.zeros(shape=len(groupnum),dtype=int); sat.fill(1)
-    cind = get_cenids(snap,sim,env)
-    if (max(cind) > len(groupnum) and Testing):
-        ind = np.where(cind < len(groupnum)-1) 
-        if(np.shape(ind)[1]<1):
-            print('STOP (b.get_subhalo4BH): no centrals in Subfind file.')
-            return None
-        cind = cind[ind]
-    elif (max(cind) > len(groupnum) and not Testing):
-        print('STOP (b.get_subhalo4BH): problem with centrals indexes.')
-        return None
-    sat[cind] = 0
-
+    if (not new_subnum):
+        # Check the IDs of subhaloes make sense
+        if (abs(max(subgroupnum)-min(subgroupnum))<1):
+            new_subnum = True
+    if (new_subnum):
+        subgroupnum = get_subnum(sim,snap,env,Testing=True,verbose=True)
+    exit(); ###here
     # Only consider subhaloes with some mass enclosed in 30kpc
     ind = np.where(ms30 > 0.)
     if (np.shape(ind)[1] < 1):
@@ -2525,8 +2593,10 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
     cop_x = cop_x[ind]; cop_y = cop_y[ind]; cop_z = cop_z[ind]
     shv_x = shv_x[ind]; shv_y = shv_y[ind]; shv_z = shv_z[ind]    
-    sat = sat[ind]
-    cind = np.where(sat == 0)
+    subgroupnum = subgroupnum[ind]
+    
+    # Get indexes for centrals
+    cind = np.where(subgroupnum == 0)
 
     # Halo properties
     mh, rh = [np.zeros(shape=len(gn)) for i in range(2)]
@@ -2699,10 +2769,25 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     inptype = 'PartType'+str(itype)
 
     # File with information on subhaloes and to output BH information
-    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=False,
+    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=True,
                                           Testing=Testing,verbose=Testing)
     if verbose: print('Outfile: {} \n'.format(outfile))
-    
+    f = h5py.File(outfile, 'r')
+    sh = f['data/Subhalo/']
+    groupnum = sh['groupnum'][:]
+    subnum = sh['subnum'][:]
+    cop_x = sh['cop_x'][:]
+    cop_y = sh['cop_y'][:]
+    cop_z = sh['cop_z'][:]
+    shv_x = sh['shv_x'][:]
+    shv_y = sh['shv_y'][:]
+    shv_z = sh['shv_z'][:]
+    f.close()
+    data = np.c_[groupnum,subnum,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
+    groupnum,subnum,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
+    df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subnum','cop_x','cop_y','cop_z',
+                                              'shv_x','shv_y','shv_z'])
+
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
@@ -2754,12 +2839,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     # Get subgrid information into a pandas dataset to facilitate merging options
     #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
     #      tried dtype=[np.uint32,np.int32,np.int32,np.float64,np.float64,np.float64,np.float32,np.float32,np.float32]
-    data = np.vstack([partID,BH_Mass,BH_Mdot,partx,party,partz,pvx,pvy,pvz]).T
+    data = np.c_[partID,BH_Mass,BH_Mdot,partx,party,partz,pvx,pvy,pvz]
+    partID,BH_Mass,BH_Mdot,partx,party,partz,pvx,pvy,pvz=[[] for i in range(9)] 
     df_pbh = pd.DataFrame(data=data,columns=['partID','BH_Mass','BH_Mdot',
                                              'partx','party','partz',
                                              'pvx','pvy','pvz'])
-    #Empty individual arrays    
-    partID,BH_Mass,BH_Mdot,partx,party,partz,pvx,pvy,pvz=[[] for i in range(9)] 
 
     # Get the halo the BH particles belong to ----------------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=True)
@@ -2780,33 +2864,35 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
             partID = p0['ParticleIDs'][:] 
             groupnum = p0['GroupNumber'][:] # FoF group number particle is in
             # Negative values: particles within r200 but not part of the halo
+            subnum = p0['SubGroupNumber'][:]
         else:
-            partID      = np.append(partID,p0['ParticleIDs'][:]) 
-            groupnum    = np.append(groupnum,p0['GroupNumber'][:])
+            partID    = np.append(partID,p0['ParticleIDs'][:]) 
+            groupnum  = np.append(groupnum,p0['GroupNumber'][:])
+            subnum    = np.append(groupnum,p0['SubGroupNumber'][:])
     
     if verbose:
-        print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum))))
-    #####here
-    # If all groupnum are less than 0, take abs()
+        print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
+
+    # If all groupnum are less than 0, take abs(), returning the Subhalo/GroupNumber values
     allgneg = False
     ind = np.where(groupnum<0)
     if(np.shape(ind)[1] == len(groupnum)):
         allgneg = True
         groupnum = abs(groupnum)-1
-    
+        
     # Get particle information into a pandas dataset to facilitate merging options
-    data = np.vstack([partID,groupnum]).T 
-    df_psub = pd.DataFrame(data=data,columns=['partID','groupnum'])
+    data = np.c_[partID,groupnum,subnum]
     partID,groupnum = [[] for i in range(2)]
-
+    df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
+####here
     # Join the particle information---------------------------------------------
     df_part = pd.merge(df_psub, df_pbh, on=['partID'])
-    df_part.sort_values(by=['groupnum', 'subgroupnum'], inplace=True)
+    df_part.sort_values(by=['groupnum'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
     if verbose: print(df_part)
-    
+
     #print(outfile, file_exists) ####here
-    exit() ##here
+    print(df_part); exit() ##here
 
     #BHadd/  bhnum, nboson, added_MBH, added_Mdot
     #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
@@ -3195,9 +3281,10 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
+    print(get_subnum(sim,snap,env,Testing=False))
     #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True))
-    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
