@@ -2443,7 +2443,9 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     # Read the FOF Group Number subhalo belongs to and its mass (1e10Msun/h)
     groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',Testing=Testing)
     msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass',Testing=Testing)
-    
+    #msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='DM',Testing=Testing)
+    #mh = get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=Testing)
+
     # Initialize output
     subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(-1.);
     
@@ -2453,11 +2455,11 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     if (max(cind) > (len(groupnum)-1) and Testing):
         ind = np.where(cind < len(groupnum)-1) 
         if(np.shape(ind)[1]<1):
-            print('STOP (b.get_subhalo4BH): no centrals in Subfind file.')
+            print('STOP (b.get_subnum): no centrals in Subfind file.')
             return None
         cind = cind[ind]
     elif (max(cind) > (len(groupnum)-1) and not Testing):
-        print('STOP (b.get_subhalo4BH): problem with centrals indexes.')
+        print('STOP (b.get_subnum): problem with centrals indexes.')
         return None
 
     subgroupnum[cind] = 0
@@ -2469,8 +2471,8 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
         else:
             isub += 1;
             subgroupnum[i] = isub;
-            if (msubh[i]>maxmass):
-                print('WARNING b.subgroupnum: mass for halo {} is not ordered, {} {} {}'.format(groupnum[i],i,msubh[i],maxmass))
+            if (msubh[i]>maxmass and verbose):
+                print('WARNING b.subgroupnum: mass not ordered for halo {}; {:.2f} {:.2f}'.format(groupnum[i],msubh[i],maxmass))
 
     return subgroupnum
 
@@ -2554,7 +2556,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
             try:
                 # SubGroup Number of subhalo, begins at 0 for most massive subhalo within a group 
-                subnum  = sh['SubGroupNumber'][:]
+                subgroupnum  = sh['SubGroupNumber'][:]
             except:
                 new_subnum = True
         else:
@@ -2575,15 +2577,19 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
             shv_z = np.append(shv_z,sh['Velocity'][:,2])   
 
             if (not new_subnum):
-                subgroupnum = np.append(groupnum,sh['SubGroupNumber'][:])
+                subgroupnum = np.append(subgroupnum,sh['SubGroupNumber'][:])
 
     if (not new_subnum):
         # Check the IDs of subhaloes make sense
         if (abs(max(subgroupnum)-min(subgroupnum))<1):
             new_subnum = True
     if (new_subnum):
-        subgroupnum = get_subnum(sim,snap,env,Testing=True,verbose=True)
-    exit(); ###here
+        subgroupnum = get_subnum(sim,snap,env,verbose=False)
+        if Testing:
+            subgroupnum = subgroupnum[0:len(groupnum)-1]
+        if (len(groupnum) != len(subgroupnum)):
+            print('STOP b.get_subhalo4BH: different lenghts for subgroupnum and groupnum, {}'.format(ff))
+
     # Only consider subhaloes with some mass enclosed in 30kpc
     ind = np.where(ms30 > 0.)
     if (np.shape(ind)[1] < 1):
@@ -2593,28 +2599,28 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
     cop_x = cop_x[ind]; cop_y = cop_y[ind]; cop_z = cop_z[ind]
     shv_x = shv_x[ind]; shv_y = shv_y[ind]; shv_z = shv_z[ind]    
-    subgroupnum = subgroupnum[ind]
-    
-    # Get indexes for centrals
-    cind = np.where(subgroupnum == 0)
+    sgn = subgroupnum[ind]
 
     # Halo properties
     mh, rh = [np.zeros(shape=len(gn)) for i in range(2)]
     mh = mhalo[gn]
     rh = rhalo[gn]
-    
+
     # Initialize relative distances and velocities
     dr, dvr, dvphi, dvlos = [np.zeros(shape=len(gn)) for i in range(4)]
     dvr.fill(np.nan)
     dvphi.fill(np.nan)
     dvlos.fill(np.nan)
-    
+
     # Get the cosmological parameters and boxsize
     omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
-    
-    # Distance to halo center for centrals
+
+    # Distance to halo center
     dr_fof = get_r(cop_x,cop_y,cop_z,
                    fof_x[gn],fof_y[gn],fof_z[gn],box=boxsize)
+
+    # Get indexes for centrals
+    cind = np.where(sgn == 0)
     dr[cind] = dr_fof[cind]
 
     # Distance and velocities from satellite to central galaxies
@@ -2622,24 +2628,26 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         ii = np.where(gn == ig)
         if (np.shape(ii)[1] < 1): continue
 
-        isats = np.where((gn == ig) & (sat > 0))
+        isats = np.where((gn == ig) & (sgn > 0))
         nsats = np.shape(isats)[1]
         if (nsats < 1): continue
 
         sx = cop_x[isats]; sy = cop_y[isats]; sz = cop_z[isats]
         svx = shv_x[isats]; svy = shv_y[isats]; svz = shv_z[isats]    
 
-        icens = np.where((gn == ig) & (sat <1))
+        icens = np.where((gn == ig) & (sgn <1))
         ncens = np.shape(icens)[1]
         if (ncens > 1):
-            print('WARNING (get_subhalo4BH): {} centrals in halo {}'.format(ncens,ig))
+            if verbose:
+                print('WARNING (get_subhalo4BH): {} centrals in halo {}'.format(ncens,ig))
             continue
         else:
             cx,cy,cz,cvx,cvy,cvz = [np.zeros(shape=nsats,dtype=float) for i in range(6)]
             if (ncens < 1): # Distance to halo COP
-                print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
                 cx.fill(fof_x[ig]); cy.fill(fof_y[ig]); cz.fill(fof_z[ig])
-
+                if verbose:
+                    print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
+        
             else: # Distance and velocities relative to central galaxy
                 cx.fill(cop_x[icens][0]); cy.fill(cop_y[icens][0]); cz.fill(cop_z[icens][0])
                 cvx.fill(shv_x[icens][0]); cvy.fill(shv_y[icens][0]); cvz.fill(shv_z[icens][0])
@@ -2662,20 +2670,20 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         # Radial distance
         satd = get_r(cx,cy,cz,sx,sy,sz,box=boxsize)
         dr[isats] = satd
-
+        
     # Save data in a dataframe
-    data = np.vstack([gn,subnum[ind],sat,mh,rh,
+    data = np.vstack([gn,sgn,mh,rh,
                       dr,dvr,dvphi,dvlos,
                       cop_x,cop_y,cop_z,
                       shv_x,shv_y,shv_z,
                       ms30[ind],SFR[ind]]).T
-    df_sh = pd.DataFrame(data=data,columns=['groupnum','subnum','sat',
+    df_sh = pd.DataFrame(data=data,columns=['groupnum','subgroupnum',
                                             'M200C','R200C',
                                             'dr','dvr','dvphi','dvlos',
                                             'cop_x','cop_y','cop_z',
                                             'shv_x','shv_y','shv_z',
                                             'ms30','SFR'])
-    data,groupnum,subnum,sat,mh,rh,dr,dvr,dvphi,dvlos = [[] for i in range(10)]
+    data, gn,sgn,mh,rh,dr,dvr,dvphi,dvlos = [[] for i in range(9)]
     cop_x,cop_y,cop_z,shv_x,shv_y,shv_z,ms30,SFR = [[] for i in range(8)]
             
     # Write output file---------------------------------------------------------    
@@ -2699,13 +2707,13 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
     # Subhalo/ groupnum, subnum, sat, pos, vel, M*30kpc, SFR
     #here include also dr, dv, dvr (from FOF)   
-    noms = ['groupnum','subnum','sat',
+    noms = ['groupnum','subgroupnum',
             'M200C','R200C',
             'dr','dvr','dvphi','dvlos',
             'cop_x','cop_y','cop_z',
             'shv_x','shv_y','shv_z','ms30','SFR']
-    desc = ['FoF group number','Subhalo index corresponding to the initial total array',
-            'sat:1, cen:0','1e10Msun/h, Mass within Rcrit200',
+    desc = ['FoF group number','Subhalo index, cen:0',
+            '1e10Msun/h, Mass within Rcrit200',
             'cMpc/h, Co-moving radius within which density is 200 times critical density',
             'Relative distance to FOF COP for centrals, and to central COP for sat. gal. (cMpc/h)',
             'Relative radial velocity to central gal. (km/s)',
@@ -2721,7 +2729,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     
     hf.close()
     file_exists = io.check_file(outfile)
-    
+
     return outfile, file_exists
 
 
@@ -2771,11 +2779,12 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     # File with information on subhaloes and to output BH information
     outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=True,
                                           Testing=Testing,verbose=Testing)
+
     if verbose: print('Outfile: {} \n'.format(outfile))
     f = h5py.File(outfile, 'r')
     sh = f['data/Subhalo/']
-    groupnum = sh['groupnum'][:]
-    subnum = sh['subnum'][:]
+    gn    = sh['groupnum'][:]
+    sgn   = sh['subgroupnum'][:]
     cop_x = sh['cop_x'][:]
     cop_y = sh['cop_y'][:]
     cop_z = sh['cop_z'][:]
@@ -2783,11 +2792,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     shv_y = sh['shv_y'][:]
     shv_z = sh['shv_z'][:]
     f.close()
-    data = np.c_[groupnum,subnum,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
-    groupnum,subnum,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
+    data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
+    gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
     df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subnum','cop_x','cop_y','cop_z',
                                               'shv_x','shv_y','shv_z'])
-
+    print(df_s4bh);exit() ######here
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
@@ -3281,10 +3290,10 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
-    print(get_subnum(sim,snap,env,Testing=False))
+    #print(get_subnum(sim,snap,env,Testing=False))
     #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True))
-    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
