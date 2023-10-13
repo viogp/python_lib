@@ -1014,7 +1014,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2,allhaloes=True):
 
 
 
-def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2,verbose=True):
+def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2,verbose=False):
     """
     Get an array with a given property from the Subfind output
 
@@ -2441,8 +2441,10 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     """
 
     # Read the FOF Group Number subhalo belongs to and its mass (1e10Msun/h)
-    groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',Testing=Testing)
-    msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass',Testing=Testing)
+    groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',
+                                Testing=Testing,verbose=verbose)
+    msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass',
+                                Testing=Testing,verbose=verbose)
     #msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='DM',Testing=Testing)
     #mh = get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=Testing)
 
@@ -2584,9 +2586,9 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         if (abs(max(subgroupnum)-min(subgroupnum))<1):
             new_subnum = True
     if (new_subnum):
-        subgroupnum = get_subnum(sim,snap,env,verbose=False)
-        if Testing:
-            subgroupnum = subgroupnum[0:len(groupnum)-1]
+        subgroupnum = get_subnum(sim,snap,env,verbose=verbose)
+        if Testing and (len(subgroupnum)>len(groupnum)):
+            subgroupnum = subgroupnum[0:len(groupnum)]
         if (len(groupnum) != len(subgroupnum)):
             print('STOP b.get_subhalo4BH: different lenghts for subgroupnum and groupnum, {}'.format(ff))
 
@@ -2700,6 +2702,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     head.attrs[u'lambda0']      = lambda0        
     head.attrs[u'h0']           = h0
     head.attrs[u'boxsize']      = boxsize
+    head.attrs[u'new_subnum']   = new_subnum
 
     # Output data with units
     hfdat = hf.create_group('data')
@@ -2778,10 +2781,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
 
     # File with information on subhaloes and to output BH information
     outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=True,
-                                          Testing=Testing,verbose=Testing)
-
-    if verbose: print('Outfile: {} \n'.format(outfile))
+                                          Testing=Testing,verbose=False)
+    ### leave rewrite=Testing, verbose=verbose
+    if verbose: print('Outfile (Testing={}): {} \n'.format(Testing,outfile))
     f = h5py.File(outfile, 'r')
+    new_subnum = f['header'].attrs['new_subnum']
     sh = f['data/Subhalo/']
     gn    = sh['groupnum'][:]
     sgn   = sh['subgroupnum'][:]
@@ -2796,7 +2800,8 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
     df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subnum','cop_x','cop_y','cop_z',
                                               'shv_x','shv_y','shv_z'])
-    print(df_s4bh);exit() ######here
+    data=[]
+    
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
@@ -2853,6 +2858,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     df_pbh = pd.DataFrame(data=data,columns=['partID','BH_Mass','BH_Mdot',
                                              'partx','party','partz',
                                              'pvx','pvy','pvz'])
+    data= []
 
     # Get the halo the BH particles belong to ----------------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=True)
@@ -2862,7 +2868,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
         return None
     if Testing: files = [files[0]]
     if verbose: print('\n Subfind particles: {} \n'.format(files[0]))
-
+    new_subnum=False    ####here-------------------------------------------------
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
@@ -2873,11 +2879,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
             partID = p0['ParticleIDs'][:] 
             groupnum = p0['GroupNumber'][:] # FoF group number particle is in
             # Negative values: particles within r200 but not part of the halo
-            subnum = p0['SubGroupNumber'][:]
+            if (not new_subnum): subnum = p0['SubGroupNumber'][:]
         else:
             partID    = np.append(partID,p0['ParticleIDs'][:]) 
             groupnum  = np.append(groupnum,p0['GroupNumber'][:])
-            subnum    = np.append(groupnum,p0['SubGroupNumber'][:])
+            if (not new_subnum): subnum = np.append(groupnum,p0['SubGroupNumber'][:])
     
     if verbose:
         print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
@@ -2888,24 +2894,28 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     if(np.shape(ind)[1] == len(groupnum)):
         allgneg = True
         groupnum = abs(groupnum)-1
-        
-    # Get particle information into a pandas dataset to facilitate merging options
-    data = np.c_[partID,groupnum,subnum]
-    partID,groupnum = [[] for i in range(2)]
-    df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
-####here
-    # Join the particle information---------------------------------------------
-    df_part = pd.merge(df_psub, df_pbh, on=['partID'])
-    df_part.sort_values(by=['groupnum'], inplace=True)
-    df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
-    if verbose: print(df_part)
 
+    # Get particle information into a pandas dataset to facilitate merging options
+    if (not new_subnum):
+        data = np.c_[partID,groupnum,subnum]
+        partID,groupnum = [[] for i in range(2)]
+        df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
+
+        # Join the particle information---------------------------------------------
+        df_part = pd.merge(df_psub, df_pbh, on=['partID'])
+        df_part.sort_values(by=['groupnum'], inplace=True)
+        df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
+
+    else:
+        # Assign subgrid BH particles to subhaloes
+        
+    if verbose: print(df_part)
+    ####here
     #print(outfile, file_exists) ####here
-    print(df_part); exit() ##here
+    exit() ##here
 
     #BHadd/  bhnum, nboson, added_MBH, added_Mdot
     #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
-
     
     ## Add properties of particles in the same position--------------------------
     #groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
@@ -2938,27 +2948,14 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     #final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
     #del df3, df_addM
 
-    # Write output file---------------------------------------------------------    
+    #####here
+    # Write into output file------------------------------------------------------    
     hf = h5py.File(outfile, 'w') # Generate the file
-
-    # Get the cosmological parameters and boxsize
-    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
-    
-    # Output header
-    headnom = 'header'
-    head = hf.create_dataset(headnom,(100,))
-    head.attrs[u'sim']          = sim
-    head.attrs[u'snapshot']     = snap
-    head.attrs[u'redshift']     = get_z(snap,sim,env,dirz=dirz)
-    head.attrs[u'omega0']       = omega0
-    head.attrs[u'omegab']       = omegab
-    head.attrs[u'lambda0']      = lambda0        
-    head.attrs[u'h0']           = h0
-    head.attrs[u'boxsize']      = boxsize
+    f = h5py.File(outfile, 'a') ###???
 
     # Output data with units
-    hfdat = hf.create_group('data')
-    shdat = hfdat.create_group('Subhalo')
+    #hfdat = hf.create_group('data')
+    #shdat = hfdat.create_group('Subhalo')
     #bhdat = hfdat.create_group('BH')
     #addat = hfdat.create_group('BHadd')
     #
