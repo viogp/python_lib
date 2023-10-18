@@ -668,8 +668,8 @@ def get_cosmology(sim,env):
 
     Returns
     -----
-    omega0, omegab, lambda0, h0, boxsize : floats
-        Cosmological parameters and boxsize
+    omega0, omegab, lambda0, h0, boxside : floats
+        Cosmological parameters and boxside
 
     Examples
     ---------
@@ -693,10 +693,10 @@ def get_cosmology(sim,env):
     lambda0 = header.attrs['OmegaLambda']
     h0 = header.attrs['HubbleParam']
 
-    boxsize = header.attrs['BoxSize'] # Mpc/h
+    boxside = header.attrs['BoxSize'] # Mpc/h
     
     f.close()
-    return omega0, omegab, lambda0, h0, boxsize
+    return omega0, omegab, lambda0, h0, boxside
 
 
 def table_z_sn(sim,env,dirz=None):
@@ -2493,7 +2493,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     env : string
         ari or cosma, to use the adecuate paths
     rewrite: boolean
-        True or False
+        True or False for rewriting the output file if it already exists
     Testing: boolean
         True or False
     nfiles : integer
@@ -2615,11 +2615,11 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     dvlos.fill(np.nan)
 
     # Get the cosmological parameters and boxsize
-    omega0, omegab, lambda0, h0, boxsize = get_cosmology(sim,env)
+    omega0, omegab, lambda0, h0, boxside = get_cosmology(sim,env)
 
     # Distance to halo center
     dr_fof = get_r(cop_x,cop_y,cop_z,
-                   fof_x[gn],fof_y[gn],fof_z[gn],box=boxsize)
+                   fof_x[gn],fof_y[gn],fof_z[gn],box=boxside)
 
     # Get indexes for centrals
     cind = np.where(sgn == 0)
@@ -2656,21 +2656,21 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
 
                 # Radial velocity
                 satd = get_vr(cx,cy,cz,sx,sy,sz,
-                              cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                              cvx,cvy,cvz,svx,svy,svz,box=boxside)
                 dvr[isats] = satd
 
                 # Tangential velocity
                 satd = get_vphi(cx,cy,cz,sx,sy,sz,
-                                cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                                cvx,cvy,cvz,svx,svy,svz,box=boxside)
                 dvphi[isats] = satd
 
                 # Line of site (z-axis) velocity
                 satd = get_vlos(cx,cy,cz,sx,sy,sz,
-                                cvx,cvy,cvz,svx,svy,svz,box=boxsize)
+                                cvx,cvy,cvz,svx,svy,svz,box=boxside)
                 dvlos[isats] = satd
 
         # Radial distance
-        satd = get_r(cx,cy,cz,sx,sy,sz,box=boxsize)
+        satd = get_r(cx,cy,cz,sx,sy,sz,box=boxside)
         dr[isats] = satd
         
     # Save data in a dataframe
@@ -2701,7 +2701,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     head.attrs[u'omegab']       = omegab
     head.attrs[u'lambda0']      = lambda0        
     head.attrs[u'h0']           = h0
-    head.attrs[u'boxsize']      = boxsize
+    head.attrs[u'boxside']      = boxside
     head.attrs[u'new_subnum']   = new_subnum
 
     # Output data with units
@@ -2780,12 +2780,13 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     inptype = 'PartType'+str(itype)
 
     # File with information on subhaloes and to output BH information
-    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=True,
+    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=Testing,
                                           Testing=Testing,verbose=False)
-    ### leave rewrite=Testing, verbose=verbose
+    ###here leave verbose=verbose
     if verbose: print('Outfile (Testing={}): {} \n'.format(Testing,outfile))
     f = h5py.File(outfile, 'r')
     new_subnum = f['header'].attrs['new_subnum']
+    boxside = f['header'].attrs['boxside']
     sh = f['data/Subhalo/']
     gn    = sh['groupnum'][:]
     sgn   = sh['subgroupnum'][:]
@@ -2796,10 +2797,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     shv_y = sh['shv_y'][:]
     shv_z = sh['shv_z'][:]
     f.close()
+    savesgn =sgn ###here remove after testing
     data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
     gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
-    df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subnum','cop_x','cop_y','cop_z',
-                                              'shv_x','shv_y','shv_z'])
+    df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subgroupnum','cop_x','cop_y','cop_z',
+                                             'shv_x','shv_y','shv_z'])
     data=[]
     
     # Get subgrid particle information from snapshots------------------------
@@ -2897,7 +2899,9 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
 
     # Get particle information into a pandas dataset to facilitate merging options
     if (not new_subnum):
-        data = np.c_[partID,groupnum,subnum]
+        #data = np.c_[partID,groupnum,subnum] ###here uncomment after testing
+        stest = np.append(savesgn,savesgn) ; lt=len(stest) ###here remove after testing
+        data = np.c_[partID[0:lt],groupnum[0:lt],stest] ###here remove after testing
         partID,groupnum = [[] for i in range(2)]
         df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
 
@@ -2908,15 +2912,46 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
 
     else:
         # Assign subgrid BH particles to subhaloes
-        
-    if verbose: print(df_part)
-    ####here
-    #print(outfile, file_exists) ####here
-    exit() ##here
+        data = [] ###here
 
-    #BHadd/  bhnum, nboson, added_MBH, added_Mdot
-    #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
+    # Join information from subhaloes and particles
+    df_all = pd.merge(df_s4bh, df_part, on=['groupnum','subgroupnum'])
+    if verbose: print(df_all[['partID','groupnum','subgroupnum','cop_x','partx']],
+                      df_all.columns.tolist())
+
+    # Calculate relative distances and velocities
+    dr = get_r(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
+               df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
+               box=boxside)
+
+    # Radial velocity
+    dvr = get_vr(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
+                 df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
+                 df_all['shv_x'].to_numpy(),df_all['shv_y'].to_numpy(),df_all['shv_z'].to_numpy(),
+                 df_all['pvx'].to_numpy(),df_all['pvy'].to_numpy(),df_all['pvz'].to_numpy(),
+                 box=boxside)
+
+    # Tangential velocity
+    dvphi = get_vphi(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
+                 df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
+                 df_all['shv_x'].to_numpy(),df_all['shv_y'].to_numpy(),df_all['shv_z'].to_numpy(),
+                 df_all['pvx'].to_numpy(),df_all['pvy'].to_numpy(),df_all['pvz'].to_numpy(),
+                 box=boxside)
     
+    # Line of site (z-axis) velocity
+    dvlos = get_vlos(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
+                 df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
+                 df_all['shv_x'].to_numpy(),df_all['shv_y'].to_numpy(),df_all['shv_z'].to_numpy(),
+                 df_all['pvx'].to_numpy(),df_all['pvy'].to_numpy(),df_all['pvz'].to_numpy(),
+                 box=boxside)
+
+    print(min(dvphi),max(dvphi),min(dvlos),max(dvlos)); exit()
+    exit()     #BH/  partID,  groupnum, subgroupnum pos, vel, MBH, Mdot, (a calcular: bhnum, dr, dv, dvr)
+    
+    #if (not new_subnum): 
+    #    calculate dr
+    
+    #BHadd/  bhnum, nboson, added_MBH, added_Mdot
     ## Add properties of particles in the same position--------------------------
     #groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
     #if(groups.ngroups > len(df_part.index)):
@@ -2948,16 +2983,17 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     #final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
     #del df3, df_addM
 
-    #####here
-    # Write into output file------------------------------------------------------    
-    hf = h5py.File(outfile, 'w') # Generate the file
-    f = h5py.File(outfile, 'a') ###???
 
-    # Output data with units
-    #hfdat = hf.create_group('data')
-    #shdat = hfdat.create_group('Subhalo')
-    #bhdat = hfdat.create_group('BH')
-    #addat = hfdat.create_group('BHadd')
+    # Add information to output file------------------------------------------------------    
+    hf = h5py.File(outfile, 'a')
+    hfdat = hf['data']
+    bhdat = hfdat.create_group('BH')
+    addat = hfdat.create_group('BHadd')
+    
+    #####here
+    #BHadd/  bhnum, nboson, added_MBH, added_Mdot
+    #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
+
     #
     ##BH/  PartID, MBH, MdotBH
     #prop = df_part[['partID']].to_numpy()

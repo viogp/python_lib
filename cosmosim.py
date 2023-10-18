@@ -31,17 +31,34 @@ def boundary_correction(xin,box,groups=False):
     >>> boundary_correction(np.array([110.,2,-0.5,100.,-49,-51,49,51]),100.,groups=True)
     >>> [10.   2.  -0.5  0. -49 49 49 -49]
     """
+    
+    if hasattr(xin, "__len__"):
+        xout = xin.copy()
 
-    xout = xin.copy()
-
-    if groups:
-        lbox2 = box/2.
-        xout[xin < -lbox2] = xout[xin < -lbox2] + box
-        xout[xin >= lbox2] = xout[xin >= lbox2] - box
+        if groups:
+            lbox2 = box/2.
+            xout[xin < -lbox2] = xout[xin < -lbox2] + box
+            xout[xin >= lbox2] = xout[xin >= lbox2] - box
+        else:
+            xout[xin<0] = xout[xin<0] + box
+            xout[xin>=box] = xout[xin>=box] - box
     else:
-        xout[xin<0] = xout[xin<0] + box
-        xout[xin>=box] = xout[xin>=box] - box
-
+        if groups:
+            lbox2 = box/2.
+            if (xin < -lbox2):
+                xout = xin + box
+            elif (xin >= lbox2):
+                xout = xin - box
+            else:
+                xout = xin
+        else:
+            if (xin < 0):
+                xout = xin + box
+            elif (xin >= box):
+                xout = xin - box
+            else:
+                xout = xin
+            
     return xout
 
 
@@ -142,8 +159,16 @@ def get_vr(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
 
     dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
     dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
-    
-    vr = (dx*dvx + dy*dvy + dz*dvz)/r
+
+    if hasattr(r, "__len__"):
+        vr = np.empty(len(r)); vr[:] = np.nan    
+        ind = np.where(r>0)
+        if (np.shape(ind)[1]>0):
+            vr[ind] = (dx[ind]*dvx[ind] + dy[ind]*dvy[ind] + dz[ind]*dvz[ind])/r[ind]
+    else:
+        vr = np.nan
+        if (abs(r)>0): vr = (dx*dvx + dy*dvy + dz*dvz)/r
+
     return vr
 
 
@@ -173,7 +198,17 @@ def get_vtheta(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)
     dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
 
-    vtheta =  (dx*dvy - dy*dvx)/np.sqrt(dx*dx + dy*dy) 
+    den = np.sqrt(dx*dx + dy*dy) 
+
+    if hasattr(den, "__len__"):
+        vtheta = np.empty(len(den)); vtheta[:] = np.nan    
+        ind = np.where(den>0)
+        if (np.shape(ind)[1]>0):
+            vtheta[ind] =  (dx[ind]*dvy[ind] - dy[ind]*dvx[ind])/den[ind]
+    else:
+        vtheta = np.nan
+        if (abs(den)>0): vtheta =  (dx*dvy - dy*dvx)/den
+        
     return vtheta
 
 
@@ -205,8 +240,17 @@ def get_vphi(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     dvx,dvy,dvz = get_diffpos(vx1,vy1,vz1,vx2,vy2,vz2)
 
     num = dz*(dx*dvx + dy*dvy) - dvz*(dx*dx + dy*dy)
-    den = r*r*np.sqrt(dx*dx + dy*dy) 
-    vphi = num/den
+    den = r*r*np.sqrt(dx*dx + dy*dy)
+
+    if hasattr(r, "__len__"):
+        vphi = np.empty(len(r)); vphi[:] = np.nan    
+        ind = np.where(den>0)
+        if (np.shape(ind)[1]>0):
+            vphi[ind] = num[ind]/den[ind]
+    else:
+        vphi = np.nan
+        if (abs(den)>0): vphi = num/den
+        
     return vphi
 
 
@@ -240,10 +284,23 @@ def get_vlos(x1,y1,z1,x2,y2,z2,vx1,vy1,vz1,vx2,vy2,vz2,box=None):
     dx,dy,dz = get_diffpos(x1,y1,z1,x2,y2,z2,box)    
     r = get_r(x1,y1,z1,x2,y2,z2,box)
 
-    cosphi = dz/r
-    sinphi = np.sqrt(1-cosphi*cosphi)
+    if hasattr(r, "__len__"):                                                                                
+        vlos = np.empty(len(r)); vlos[:] = np.nan
+        cosphi = np.empty(len(r)); cosphi[:] = np.nan
+        ind = np.where(r>0)
+        if (np.shape(ind)[1]>0):
+            cosphi[ind] = dz[ind]/r[ind]
 
-    vlos = vr*cosphi - vphi*sinphi
+            sinphi = np.sqrt(1-cosphi*cosphi)
+
+            vlos = vr*cosphi - vphi*sinphi
+    else:                                                                                                    
+        vlos = np.nan
+        if (abs(r)>0):
+            cosphi = dz/r
+            sinphi = np.sqrt(1-cosphi*cosphi)
+            vlos = vr*cosphi - vphi*sinphi
+
     return vlos
 
 
@@ -264,6 +321,8 @@ if __name__ == "__main__":
     vy2 = np.array([0.])
     vz2 = np.array([0.])
         
+    print(boundary_correction(110.,100.))
+    print(boundary_correction(2,100.,groups=True))
     print(boundary_correction(np.array([110.,2,-0.5,100.]),100.))
     print(boundary_correction(np.array([110.,2,-0.5,100.,-49,-51,49,51]),100.,groups=True))
     print(get_diffpos(x1,y1,z1,x2,y2,z2)) 
