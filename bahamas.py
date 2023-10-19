@@ -2727,7 +2727,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     for ip, iprop in enumerate(noms):
         nom = noms[ip]
         prop = df_sh[[nom]].to_numpy()
-        shdat.create_dataset(nom,data=prop); prop = []
+        shdat.create_dataset(nom,data=np.squeeze(prop)); prop = []
         shdat[nom].dims[0].label = desc[ip]
     
     hf.close()
@@ -2918,7 +2918,9 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     df_all = pd.merge(df_s4bh, df_part, on=['groupnum','subgroupnum'])
     if verbose: print(df_all[['partID','groupnum','subgroupnum','cop_x','partx']],
                       df_all.columns.tolist())
-
+        
+    #if (not new_subnum): 
+    #    calculate dr
     # Calculate relative distances and velocities
     dr = get_r(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
                df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
@@ -2945,11 +2947,8 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
                  df_all['pvx'].to_numpy(),df_all['pvy'].to_numpy(),df_all['pvz'].to_numpy(),
                  box=boxside)
 
-    print(min(dvphi),max(dvphi),min(dvlos),max(dvlos)); exit()
-    exit()     #BH/  partID,  groupnum, subgroupnum pos, vel, MBH, Mdot, (a calcular: bhnum, dr, dv, dvr)
-    
-    #if (not new_subnum): 
-    #    calculate dr
+
+    #BH/  partID,  groupnum, subgroupnum pos, vel, MBH, Mdot, dr, dv, dvr, (a calcular: bhnum)
     
     #BHadd/  bhnum, nboson, added_MBH, added_Mdot
     ## Add properties of particles in the same position--------------------------
@@ -2989,33 +2988,52 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     hfdat = hf['data']
     bhdat = hfdat.create_group('BH')
     addat = hfdat.create_group('BHadd')
+
+    noms = ['partID','groupnum','subgroupnum',
+            'BH_Mass','BH_Mdot']
+    desc = ['Particle ID','FoF group number','Subhalo index, cen:0',
+            '1e10Msun/h', 'Msun/year']
+    for ip, iprop in enumerate(noms):
+        nom = noms[ip]
+        prop = df_all[[nom]].to_numpy()
+        bhdat.create_dataset(nom,data=np.squeeze(prop)); prop = []
+        bhdat[nom].dims[0].label = desc[ip]
+    
+    prop = df_all[['partx', 'party', 'partz']].to_numpy()
+    bhdat.create_dataset('pos',data=prop); prop = []
+    bhdat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
+
+    prop = df_all[['pvx', 'pvy', 'pvz']].to_numpy()
+    bhdat.create_dataset('vel',data=prop); prop = []
+    bhdat['vel'].dims[0].label = 'vx,vy,vz (km/s)'
+
+    prop = dr; nom = 'dr'
+    desc = 'Relative distance to FOF COP for centrals, and to central COP for sat. gal. (cMpc/h)'
+    bhdat.create_dataset(nom,data=prop); prop = []
+    bhdat[nom].dims[0].label = desc
+
+    prop = dvr; nom = 'dvr'
+    desc = 'Relative radial velocity to central gal. (km/s)'
+    bhdat.create_dataset(nom,data=prop); prop = []
+    bhdat[nom].dims[0].label = desc
+    
+    prop = dvphi; nom = 'dvphi'
+    desc = 'Relative tangential (phi) velocity to central gal. (km/s)'
+    bhdat.create_dataset(nom,data=prop); prop = []
+    bhdat[nom].dims[0].label = desc
+    
+    prop = dvlos; nom = 'dvlos'
+    desc = 'Relative velocity to central gal. on the line of sight, assumed z-axis (km/s)'
+    bhdat.create_dataset(nom,data=prop); prop = []
+    bhdat[nom].dims[0].label = desc
+
     
     #####here
     #BHadd/  bhnum, nboson, added_MBH, added_Mdot
     #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
-
-    #
-    ##BH/  PartID, MBH, MdotBH
-    #prop = df_part[['partID']].to_numpy()
-    #bhdat.create_dataset('partID',data=prop); prop = []
-    #bhdat['partID'].dims[0].label = 'Particle ID' 
-    #
-    #prop = df_part[['BH_Mass']].to_numpy()
-    #bhdat.create_dataset('BH_Mass',data=prop); prop = []
-    #bhdat['BH_Mass'].dims[0].label = '10**10 Msun/h' 
-    #
-    #prop = df_part[['BH_Mdot']].to_numpy()
-    #bhdat.create_dataset('BH_Mdot',data=prop); prop = []
-    #bhdat['BH_Mdot'].dims[0].label = 'Msun/year' 
-    #
+    
+    
     ##BHadd/  groupnum, subnum, bhnum, added_MBH, added_MdotBH, pos, vel, nboson
-    #prop = final[['groupnum']].to_numpy()
-    #addat.create_dataset('groupnum',data=prop); prop = []
-    #addat['groupnum'].dims[0].label = 'FoF group number' 
-    #
-    #prop = final[['subgroupnum']].to_numpy()
-    #addat.create_dataset('subgroupnum',data=prop); prop = []
-    #addat['subgroupnum'].dims[0].label = 'Subgroup number particle is in' 
     #
     #prop = final[['BH_Mass']].to_numpy()
     #addat.create_dataset('added_ MBH',data=prop); prop = []
@@ -3024,11 +3042,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     #prop = final[['BH_Mdot']].to_numpy()
     #addat.create_dataset('added_MdotBH',data=prop); prop = []
     #addat['added_MdotBH'].dims[0].label = 'Msun/year' 
-    #
-    #prop = final[['partx', 'party', 'partz']].to_numpy()
-    #addat.create_dataset('pos',data=prop); prop = []
-    #addat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
-    #
+    #    #
     #prop = final[['nboson']].to_numpy()
     #addat.create_dataset('nboson',data=prop); prop = []
     #addat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
