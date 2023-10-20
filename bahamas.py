@@ -2948,46 +2948,37 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
                  box=boxside)
 
 
-    #BH/  partID,  groupnum, subgroupnum pos, vel, MBH, Mdot, dr, dv, dvr, (a calcular: bhnum)
+    # Add properties of particles in the same position--------------------------
+    groups = df_all.groupby(['groupnum','subgroupnum','partx','party','partz'], as_index=False)
+    if(groups.ngroups > len(df_all.index)):
+        print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+          format(snap,sim))
+        return None
     
-    #BHadd/  bhnum, nboson, added_MBH, added_Mdot
-    ## Add properties of particles in the same position--------------------------
-    #groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
-    #if(groups.ngroups > len(df_part.index)):
-    #    print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
-    #      format(snap,sim))
-    #    return None
-    #
-    ## Number of particles with the same position
-    #df_nboson = groups.size().reset_index(name='nboson')
-    #if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
-    #
-    ## Add the properties for particles in the same position
-    #df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
-    #df_addMdot = groups.BH_Mdot.sum() # Msun/year
-    #df_addM1 = pd.merge(df_addM_BH, df_addMdot, on=['groupnum','partx','party','partz'])
-    #del df_addM_BH, df_addMdot
-    #
-    #df_addM = pd.merge(df_addM1, df_nboson, on=['groupnum','partx','party','partz'])
-    #del df_addM1, df_nboson
-    #
-    ## Remove duplicated columns and row from initial particle information
-    #df1 = df_part[['groupnum','partx','party','partz','partID','subgroupnum']]
-    #df2 = df1.drop_duplicates(subset=['groupnum','partx','party','partz'],
-    #                          keep='last',ignore_index=True)
-    #df3 = df2.sort_values(by=['groupnum','partx','party','partz'], ignore_index=True)
-    #del df1, df2
-    #
-    ## Generate the final data set with the merge
-    #final = pd.merge(df3, df_addM, on=['groupnum','partx','party','partz'])
-    #del df3, df_addM
+    # Number of particles with the same position
+    df_nboson = groups.size().reset_index(name='nboson')
+    if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
 
+    # Add the properties for particles in the same position
+    df_addM_BH = groups.BH_Mass.sum() # 1e10 Msun/h
+    df_addMdot = groups.BH_Mdot.sum() # Msun/year
+    df_addM1 = pd.merge(df_addM_BH, df_addMdot, on=['groupnum','subgroupnum','partx','party','partz'])
+    del df_addM_BH, df_addMdot
+
+    df_addM = pd.merge(df_addM1, df_nboson, on=['groupnum','subgroupnum','partx','party','partz'])
+    del df_addM1, df_nboson
+    #print(df_addM); exit() ###here    
+
+    ## Declare bhnum, index of subgrid BH particles in the same position (BHadd)
+    #bhnum = df_all.index
+    #print(bhnum); exit() ###here
 
     # Add information to output file------------------------------------------------------    
     hf = h5py.File(outfile, 'a')
     hfdat = hf['data']
+
+    # BH/  partID, groupnum, subgroupnum, MBH, Mdot, bhnum, pos, vel, dr, dvr, dvphi, dvlos
     bhdat = hfdat.create_group('BH')
-    addat = hfdat.create_group('BHadd')
 
     noms = ['partID','groupnum','subgroupnum',
             'BH_Mass','BH_Mdot']
@@ -3028,24 +3019,19 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     bhdat[nom].dims[0].label = desc
 
     
-    #####here
-    #BHadd/  bhnum, nboson, added_MBH, added_Mdot
-    #BH/  partID,  pos, vel, MBH, Mdot, (a calcular: subnum, bhnum, dr, dv, dvr)
-    
-    
-    ##BHadd/  groupnum, subnum, bhnum, added_MBH, added_MdotBH, pos, vel, nboson
-    #
-    #prop = final[['BH_Mass']].to_numpy()
-    #addat.create_dataset('added_ MBH',data=prop); prop = []
-    #addat['BH_Mass'].dims[0].label = '10**10 Msun/h' 
-    #
-    #prop = final[['BH_Mdot']].to_numpy()
-    #addat.create_dataset('added_MdotBH',data=prop); prop = []
-    #addat['added_MdotBH'].dims[0].label = 'Msun/year' 
-    #    #
-    #prop = final[['nboson']].to_numpy()
-    #addat.create_dataset('nboson',data=prop); prop = []
-    #addat['nboson'].dims[0].label = 'Number of BH particles at the same position.'     
+    #BHadd/  nboson, added_MBH, added_Mdot
+    addat = hfdat.create_group('BHadd')
+
+    noms = ['nboson', 'BH_Mass', 'BH_Mdot']
+    outn = ['nboson', 'added_MBH', 'added_MdotBH']
+    desc = ['Number of BH particles in the same position (equal groupnum,subgroupnum,x,y,z)',
+            'Added masses of BH particles in the same position (10**10 Msun/h)',
+            'Added acretion rates for BH particles in the same position (Msun/year)']
+    for ip, iprop in enumerate(noms):
+        nom = noms[ip]
+        prop = df_addM[[nom]].to_numpy()
+        addat.create_dataset(outn[ip],data=np.squeeze(prop)); prop = []
+        addat[outn[ip]].dims[0].label = desc[ip]
     
     hf.close()
     
