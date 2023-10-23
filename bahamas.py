@@ -2797,7 +2797,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     shv_y = sh['shv_y'][:]
     shv_z = sh['shv_z'][:]
     f.close()
-    savesgn =sgn ###here remove after testing
+
     data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
     gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
     df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subgroupnum','cop_x','cop_y','cop_z',
@@ -2870,7 +2870,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
         return None
     if Testing: files = [files[0]]
     if verbose: print('\n Subfind particles: {} \n'.format(files[0]))
-    new_subnum=False    ####here-------------------------------------------------
+
     # Loop over the particle files
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
@@ -2899,9 +2899,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
 
     # Get particle information into a pandas dataset to facilitate merging options
     if (not new_subnum):
-        #data = np.c_[partID,groupnum,subnum] ###here uncomment after testing
-        stest = np.append(savesgn,savesgn) ; lt=len(stest) ###here remove after testing
-        data = np.c_[partID[0:lt],groupnum[0:lt],stest] ###here remove after testing
+        data = np.c_[partID,groupnum,subnum]
         partID,groupnum = [[] for i in range(2)]
         df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
 
@@ -2911,6 +2909,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
         df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
 
     else:
+        print(new_subnum); exit()
         # Assign subgrid BH particles to subhaloes
         data = [] ###here
 
@@ -2967,12 +2966,19 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
 
     df_addM = pd.merge(df_addM1, df_nboson, on=['groupnum','subgroupnum','partx','party','partz'])
     del df_addM1, df_nboson
-    #print(df_addM); exit() ###here    
 
-    ## Declare bhnum, index of subgrid BH particles in the same position (BHadd)
-    #bhnum = df_all.index
-    #print(bhnum); exit() ###here
+    # Generate a bhnum column from 1 to the last group of BH particles in the same position
+    df_addM.index += 1
+    df_addM.index.names = ['bhnum'] 
+    df_addM.reset_index(inplace=True)
 
+    # Add bhnum to df_all with BH info
+    df_bh = pd.merge(df_addM[['bhnum','groupnum','subgroupnum','partx','party','partz']], df_all,
+                     on=['groupnum','subgroupnum','partx','party','partz'])
+    if verbose: print(df_bh[['bhnum','groupnum','subgroupnum','partx','party','partz']],
+                      df_bh.columns.tolist())
+    del df_all
+    
     # Add information to output file------------------------------------------------------    
     hf = h5py.File(outfile, 'a')
     hfdat = hf['data']
@@ -2981,20 +2987,20 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     bhdat = hfdat.create_group('BH')
 
     noms = ['partID','groupnum','subgroupnum',
-            'BH_Mass','BH_Mdot']
+            'BH_Mass','BH_Mdot','bhnum']
     desc = ['Particle ID','FoF group number','Subhalo index, cen:0',
-            '1e10Msun/h', 'Msun/year']
+            '1e10Msun/h', 'Msun/year','Group of BH particles in the same position']
     for ip, iprop in enumerate(noms):
         nom = noms[ip]
-        prop = df_all[[nom]].to_numpy()
+        prop = df_bh[[nom]].to_numpy()
         bhdat.create_dataset(nom,data=np.squeeze(prop)); prop = []
         bhdat[nom].dims[0].label = desc[ip]
     
-    prop = df_all[['partx', 'party', 'partz']].to_numpy()
+    prop = df_bh[['partx', 'party', 'partz']].to_numpy()
     bhdat.create_dataset('pos',data=prop); prop = []
     bhdat['pos'].dims[0].label = 'x,y,z (Mpc/h)'
 
-    prop = df_all[['pvx', 'pvy', 'pvz']].to_numpy()
+    prop = df_bh[['pvx', 'pvy', 'pvz']].to_numpy()
     bhdat.create_dataset('vel',data=prop); prop = []
     bhdat['vel'].dims[0].label = 'vx,vy,vz (km/s)'
 
@@ -3019,12 +3025,13 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     bhdat[nom].dims[0].label = desc
 
     
-    #BHadd/  nboson, added_MBH, added_Mdot
+    #BHadd/  bhnum nboson, added_MBH, added_Mdot
     addat = hfdat.create_group('BHadd')
 
-    noms = ['nboson', 'BH_Mass', 'BH_Mdot']
-    outn = ['nboson', 'added_MBH', 'added_MdotBH']
-    desc = ['Number of BH particles in the same position (equal groupnum,subgroupnum,x,y,z)',
+    noms = ['bhnum','nboson', 'BH_Mass', 'BH_Mdot']
+    outn = ['bhnum','nboson', 'added_MBH', 'added_MdotBH']
+    desc = ['Group of BH particles in the same position',
+            'Number of BH particles in the same position (equal groupnum,subgroupnum,x,y,z)',
             'Added masses of BH particles in the same position (10**10 Msun/h)',
             'Added acretion rates for BH particles in the same position (Msun/year)']
     for ip, iprop in enumerate(noms):
