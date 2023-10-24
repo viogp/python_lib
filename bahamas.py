@@ -2797,12 +2797,6 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     shv_y = sh['shv_y'][:]
     shv_z = sh['shv_z'][:]
     f.close()
-
-    data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
-    gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)] 
-    df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subgroupnum','cop_x','cop_y','cop_z',
-                                             'shv_x','shv_y','shv_z'])
-    data=[]
     
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
@@ -2881,11 +2875,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
             partID = p0['ParticleIDs'][:] 
             groupnum = p0['GroupNumber'][:] # FoF group number particle is in
             # Negative values: particles within r200 but not part of the halo
-            if (not new_subnum): subnum = p0['SubGroupNumber'][:]
+            subnum = p0['SubGroupNumber'][:]
         else:
             partID    = np.append(partID,p0['ParticleIDs'][:]) 
             groupnum  = np.append(groupnum,p0['GroupNumber'][:])
-            if (not new_subnum): subnum = np.append(groupnum,p0['SubGroupNumber'][:])
+            subnum = np.append(groupnum,p0['SubGroupNumber'][:])
     
     if verbose:
         print('GroupNum: min={:d}, max={:d}'.format(min(groupnum),max(groupnum)))
@@ -2898,21 +2892,52 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
         groupnum = abs(groupnum)-1
 
     # Get particle information into a pandas dataset to facilitate merging options
-    if (not new_subnum):
-        data = np.c_[partID,groupnum,subnum]
-        partID,groupnum = [[] for i in range(2)]
-        df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
+    data = np.c_[partID,groupnum,subnum]
+    partID,groupnum,subnum = [[] for i in range(3)]
+    df_psub = pd.DataFrame(data=data,columns=['partID','groupnum','subgroupnum'])
 
-        # Join the particle information---------------------------------------------
-        df_part = pd.merge(df_psub, df_pbh, on=['partID'])
-        df_part.sort_values(by=['groupnum'], inplace=True)
-        df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
+    # Join the particle information
+    df_part = pd.merge(df_psub, df_pbh, on=['partID'])
+    df_part.sort_values(by=['groupnum'], inplace=True)
+    df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
+    del df_psub, df_pbh
 
-    else:
-        print(new_subnum); exit()
-        # Assign subgrid BH particles to subhaloes
-        data = [] ###here
+    if (new_subnum):  # Assign subgrid BH particles to subhaloes
+        # Initialize array with distances
+        dr = np.zeros(len(df_part)); dr.fill(np.nan)
 
+        # Loop over groupnum and the substructure within
+        for index, row in df_part.iterrows():
+            ind = np.where(gn == row['groupnum'])
+            if (np.shape(ind)[1]>0):
+                subnum = sgn[ind]
+                subx = cop_x[ind]
+                suby = cop_y[ind]
+                subz = cop_z[ind]
+
+                mindr = boxside
+                isub  = -99
+                for ii,sub in enumerate(subnum):
+                    # Measure dr and find the min
+                    dr = get_r(subx[ii],suby[ii],subz[ii],
+                               row['partx'],row['party'],row['partz'],box=boxside)
+                    if (dr < mindr):
+                        mindr = dr
+                        isub = sub
+
+                #change the value of subnum in df_part
+                df['subgroupnum'].at[index] = isub ####here to be checked
+                print(dr,mindr,isub)
+                exit()
+        exit()
+
+    # Data frame from subhaloes for BHs, to be able to merge with particle info.
+    data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
+    gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z=[[] for i in range(8)]
+    df_s4bh = pd.DataFrame(data=data,columns=['groupnum','subgroupnum','cop_x','cop_y','cop_z',
+                                             'shv_x','shv_y','shv_z'])
+    data=[]
+    
     # Join information from subhaloes and particles
     df_all = pd.merge(df_s4bh, df_part, on=['groupnum','subgroupnum'])
     if verbose: print(df_all[['partID','groupnum','subgroupnum','cop_x','partx']],
