@@ -2592,7 +2592,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
         if (len(groupnum) != len(subgroupnum)):
             print('STOP b.get_subhalo4BH: different lenghts for subgroupnum and groupnum, {}'.format(ff))
 
-    # Only consider subhaloes with some mass enclosed in 30kpc
+    # Only consider haloes with some mass enclosed in 30kpc
     ind = np.where(ms30 > 0.)
     if (np.shape(ind)[1] < 1):
         print('STOP (b.map_subBH): no centrals with stellar mass.')
@@ -2781,8 +2781,8 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
 
     # File with information on subhaloes and to output BH information
     outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=Testing,
-                                          Testing=Testing,verbose=False)
-    ###here leave verbose=verbose
+                                          Testing=Testing,verbose=verbose)
+
     if verbose: print('Outfile (Testing={}): {} \n'.format(Testing,outfile))
     f = h5py.File(outfile, 'r')
     new_subnum = f['header'].attrs['new_subnum']
@@ -2901,35 +2901,47 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     df_part.sort_values(by=['groupnum'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
     del df_psub, df_pbh
-
+    
     if (new_subnum):  # Assign subgrid BH particles to subhaloes
-        # Initialize array with distances
-        dr = np.zeros(len(df_part)); dr.fill(np.nan)
-
+        inilen = len(df_part)
+        inr = 0
+        
         # Loop over groupnum and the substructure within
         for index, row in df_part.iterrows():
             ind = np.where(gn == row['groupnum'])
-            if (np.shape(ind)[1]>0):
+            if (np.shape(ind)[1]>=1):
                 subnum = sgn[ind]
                 subx = cop_x[ind]
                 suby = cop_y[ind]
                 subz = cop_z[ind]
 
                 mindr = boxside
-                isub  = -99
+                minsub  = -99
                 for ii,sub in enumerate(subnum):
                     # Measure dr and find the min
-                    dr = get_r(subx[ii],suby[ii],subz[ii],
+                    dr1 = get_r(subx[ii],suby[ii],subz[ii],
                                row['partx'],row['party'],row['partz'],box=boxside)
-                    if (dr < mindr):
-                        mindr = dr
-                        isub = sub
+                    if (dr1 <= mindr):
+                        mindr = dr1
+                        minsub = sub
+                        
+                # Assign the subhalo number to the BH particle
+                df_part['subgroupnum'].at[index] = minsub
 
-                #change the value of subnum in df_part
-                df['subgroupnum'].at[index] = isub ####here to be checked
-                print(dr,mindr,isub)
-                exit()
-        exit()
+                # Fill vector with relative distances
+                if inr == 0:
+                    dr = np.array([mindr])
+                    inr += 1
+                else:
+                    dr = np.append(dr,mindr)
+            else:
+                # Remove particles associated to haloes without stellar mass
+                df_part = df_part.drop(labels=index, axis=0)
+
+        ndrop = inilen-len(df_part)
+        if ndrop>0:
+            df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
+            if verbose:print(' {} rows have been deleted from df_part'.format(ndrop))
 
     # Data frame from subhaloes for BHs, to be able to merge with particle info.
     data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
@@ -2942,13 +2954,13 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     df_all = pd.merge(df_s4bh, df_part, on=['groupnum','subgroupnum'])
     if verbose: print(df_all[['partID','groupnum','subgroupnum','cop_x','partx']],
                       df_all.columns.tolist())
-        
-    #if (not new_subnum): 
-    #    calculate dr
-    # Calculate relative distances and velocities
-    dr = get_r(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
-               df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
-               box=boxside)
+    del df_s4bh,df_part
+    
+    if (not new_subnum): 
+        # Calculate relative distances and velocities
+        dr = get_r(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
+                   df_all['partx'].to_numpy(),df_all['party'].to_numpy(),df_all['partz'].to_numpy(),
+                   box=boxside)
 
     # Radial velocity
     dvr = get_vr(df_all['cop_x'].to_numpy(),df_all['cop_y'].to_numpy(),df_all['cop_z'].to_numpy(),
