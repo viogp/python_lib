@@ -2784,8 +2784,17 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     # Black hole particles to be read, 5:BH
     itype = 5 
     inptype = 'PartType'+str(itype)
-
-    # File with information on subhaloes and to output BH information
+    
+    # Get subgrid particle information from snapshots------------------------
+    files, allfiles = get_particle_files(snap,sim,env,subfind=False)
+    if (not allfiles):
+        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+              format(snap,env))
+        return None
+    if Testing: files = [files[0],files[1]]
+    if verbose: print('Particles: {} \n'.format(files[0]))
+    
+    # File with information on subhaloes and to output BH information---------
     outfile, file_exists = get_subhalo4BH(snap,sim,env,dirz=dirz,outdir=outdir,
                                           rewrite=rewrite,Testing=Testing,verbose=verbose)
     if (not rewrite): return outfile
@@ -2804,17 +2813,8 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     shv_y = sh['shv_y'][:]
     shv_z = sh['shv_z'][:]
     f.close()
-    
-    # Get subgrid particle information from snapshots------------------------
-    files, allfiles = get_particle_files(snap,sim,env,subfind=False)
-    if (not allfiles):
-        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
-              format(snap,env))
-        return None
-    if Testing: files = [files[0],files[1]]
-    if verbose: print('Particles: {} \n'.format(files[0]))
 
-    # Loop over the particle files
+    # Loop over the particle files-------------------------------------------
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
         p0 = f[inptype]
