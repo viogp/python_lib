@@ -2736,7 +2736,7 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     return outfile, file_exists
 
 
-def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
+def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbose=False):
     '''
     Produce a file joining subgrid BH properties with their positions 
     and information on halo identifier. Joining done on PartID.
@@ -2753,6 +2753,8 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
         Alternative path to table with z and snapshot.
     outdir : string
         Path to output file
+    rewrite: boolean
+        True or False for rewriting the output file if it already exists
     Testing : boolean
         Calculations on part or all the simulation
     verbose : boolean
@@ -2769,7 +2771,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     >>> sim = 'HIRES/AGN_TUNED_nu0_L050N256_WMAP9'
     >>> b.get_subBH(31,sim,'arilega')
     '''
-
+    
     # Stop for environments different to arilega
     if (env != 'arilega'):
         print('WARNING (b.get_subBH): Function developed for env=arilega.')
@@ -2780,8 +2782,9 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
     inptype = 'PartType'+str(itype)
 
     # File with information on subhaloes and to output BH information
-    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=Testing,
+    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=rewrite,
                                           Testing=Testing,verbose=verbose)
+    if (not rewrite): return outfile
 
     if verbose: print('Outfile (Testing={}): {} \n'.format(Testing,outfile))
     f = h5py.File(outfile, 'r')
