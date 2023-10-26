@@ -2915,7 +2915,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,Testing=True,verbose=False):
                 suby = cop_y[ind]
                 subz = cop_z[ind]
 
-                mindr = boxside
+                mindr = 2*boxside
                 minsub  = -99
                 for ii,sub in enumerate(subnum):
                     # Measure dr and find the min
