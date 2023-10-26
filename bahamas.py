@@ -2479,7 +2479,7 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     return subgroupnum
 
 
-def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=False):
+def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=False,nfiles=2,verbose=False):
     """
     Check if a file with the subhalo properties relevant for the
     analysis of subgrid BH particles is there, and otherwise create it.
@@ -2491,7 +2491,11 @@ def get_subhalo4BH(outdir,sim,snap,rewrite=False,Testing=False,nfiles=2,verbose=
     sim : string
         Simulation name
     env : string
-        ari or cosma, to use the adecuate paths
+        ari, arilega or cosma to use the adecuate paths
+    dirz : string
+        Alternative path to table with z and snapshot.
+    outdir : string
+        Path to output file
     rewrite: boolean
         True or False for rewriting the output file if it already exists
     Testing: boolean
@@ -2782,11 +2786,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     inptype = 'PartType'+str(itype)
 
     # File with information on subhaloes and to output BH information
-    outfile, file_exists = get_subhalo4BH(outdir,sim,snap,rewrite=rewrite,
-                                          Testing=Testing,verbose=verbose)
+    outfile, file_exists = get_subhalo4BH(snap,sim,env,dirz=dirz,outdir=outdir,
+                                          rewrite=rewrite,Testing=Testing,verbose=verbose)
     if (not rewrite): return outfile
-
     if verbose: print('Outfile (Testing={}): {} \n'.format(Testing,outfile))
+
     f = h5py.File(outfile, 'r')
     new_subnum = f['header'].attrs['new_subnum']
     boxside = f['header'].attrs['boxside']
