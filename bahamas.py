@@ -86,7 +86,7 @@ def get_zminmaxs(zz,dz=None,verbose=False):
         zmaxs = [iz + dz for iz in zz]
     elif(len(zz)<2):
         if (verbose):
-            print('WARNING (get_zminmaxs): Setting to default dz={}'.format(defaultdz))
+            print('\n WARNING (get_zminmaxs): Setting to default dz={}'.format(defaultdz))
         dz = defaultdz
         zmins = [iz - dz for iz in zz]
         zmaxs = [iz + dz for iz in zz]
@@ -206,7 +206,7 @@ def mb2msun(massb,h0,verbose=False):
 
     mass = -999.
     if(massb <= 0):
-        if (verbose): print('WARNING (get_mb2msun): Input mass <= 0, returning -999.')
+        if (verbose): print('\n WARNING (get_mb2msun): Input mass <= 0, returning -999.')
     else:
         mass = massb*np.power(10.,10.)/h0
         
@@ -240,7 +240,7 @@ def mb2lmsun(massb,h0,verbose=False):
 
     lmass = -999.
     if(massb <= 0):
-        if (verbose): print('WARNING (get_mb2lmsun): Input mass <= 0, returning -999.')
+        if (verbose): print('\n WARNING (get_mb2lmsun): Input mass <= 0, returning -999.')
     else:
         lmass = np.log10(massb) + 10. - np.log10(h0)
         
@@ -279,7 +279,7 @@ def get_dirb(env):
     elif (env == 'lap'):
         dirb = dirbahamaslap
     else:
-        print('WARNING (b.get_dirb): environment name not cosma, cosmalega, ari or arilega')
+        print('\n WARNING (b.get_dirb): environment name not cosma, cosmalega, ari or arilega')
 
     return dirb
 
@@ -323,7 +323,7 @@ def get_outdirs(env,dirz=None,outdir=None,sim_label=None):
         elif (env == 'lap'):
             outdir = dirbahamaslap
         else:
-            print('WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
+            print('\n WARNING (b.get_outdirs): environment name not cosma(lega) or ari(lega)')
             return None,None,None
 
     new_dir = io.create_dir(outdir) 
@@ -502,14 +502,14 @@ def get_allparticle_files(snap,sim,env):
     if (len(paths) == 1):
         path = paths[0]
     else:
-        print('WARNING(b.get_allparticle_files): '+
+        print('\n WARNING(b.get_allparticle_files): '+
               'more than one or none directories with root {}'.format(path1+'*/'))
         return None, False
 
     root = path+'snap_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
-        print('WARNING (b.get_allparticle_files): no files in path {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_allparticle_files): no files in path {}'.format(path1+'*/'))
         return None, False
 
     numff =[int(ff.split('.')[1]) for ff in files]
@@ -520,7 +520,7 @@ def get_allparticle_files(snap,sim,env):
 
         # Check if there are missing files
         if (ii != numff[iind]):
-            print('WARNING (b.get_allparticle_files): missing file {}.{}.hdf5'.format(root,ii))
+            print('\n WARNING (b.get_allparticle_files): missing file {}.{}.hdf5'.format(root,ii))
             allfiles = False
 
     return outff, allfiles
@@ -568,7 +568,7 @@ def get_particle_files(snap,sim,env,subfind=True):
     if (len(paths) == 1):
         path = paths[0]
     else:
-        print('WARNING(b.get_particle_files): more than one or none directories with root {}'.format(path1+'*/'))
+        print('\n WARNING(b.get_particle_files): more than one or none directories with root {}'.format(path1+'*/'))
         return None, False
 
     if subfind:
@@ -578,7 +578,7 @@ def get_particle_files(snap,sim,env,subfind=True):
 
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
-        print('WARNING (b.get_particle_files): no files in path {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_particle_files): no files in path {}'.format(path1+'*/'))
         return None, False
 
     numff =[int(ff.split('.')[1]) for ff in files]
@@ -589,7 +589,7 @@ def get_particle_files(snap,sim,env,subfind=True):
 
         # Check if there are missing files
         if (ii != numff[iind]):
-            print('WARNING (b.get_particle_files): missing file {}.{}.hdf5'.format(root,ii))
+            print('\n WARNING (b.get_particle_files): missing file {}.{}.hdf5'.format(root,ii))
             allfiles = False
 
     return outff, allfiles
@@ -632,15 +632,15 @@ def get_subfind_files(snap,sim,env):
     if (len(paths) == 1):
         path = paths[0]
     else:
-        print('WARNING (b.get_subfind_files): more than one or none directories with root {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_subfind_files): more than one or none directories with root {}'.format(path1+'*/'))
         return None, False
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
-        print('WARNING (b.get_subfind_files): no files in path {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_subfind_files): no files in path {}'.format(path1+'*/'))
         return None, False
-
+    
     numff =[int(ff.split('.')[1]) for ff in files]
     ind = np.argsort(numff)
     outff = [None]*len(files)
@@ -649,7 +649,7 @@ def get_subfind_files(snap,sim,env):
 
         # Check if there are missing files
         if (ii != numff[iind]):
-            print('WARNING (b.get_subfind_files): missing file {}.{}.hdf5'.format(root,ii))
+            print('\n WARNING (b.get_subfind_files): missing file {}.{}.hdf5'.format(root,ii))
             allfiles = False
 
     return outff, allfiles
@@ -744,7 +744,7 @@ def table_z_sn(sim,env,dirz=None):
     # Initialize arrays for z and sn
     dirs = glob.glob(path+'groups_0*')
     if (len(dirs) < 1) :
-        print('WARNING (b.table_z_sn): {} not containing expected files'.format(path))
+        print('\n WARNING (b.table_z_sn): {} not containing expected files'.format(path))
         return None
         
     zzs = np.zeros(shape=len(dirs)) ; zzs.fill(-999.)
@@ -760,7 +760,7 @@ def table_z_sn(sim,env,dirz=None):
 
         infile = dir+'/group_tab_'+ending+'.0.hdf5'
         if (not os.path.isfile(infile)):
-            print('WARNING: Files missing in {}'.format(dir))
+            print('\n WARNING: Files missing in {}'.format(dir))
             continue
 
         f = h5py.File(infile, 'r')
@@ -839,17 +839,17 @@ def get_z(snap,sim,env,dirz=None):
         if (sns == snap):
             return zzs
         else:
-            print('WARNING: no snapshot number {} found in {}'.format(snap,tablez))
+            print('\n WARNING: no snapshot number {} found in {}'.format(snap,tablez))
             return -999.            
     else:
         sns = np.asarray(snsf,dtype=int)
         # Find the index of the snapshot number
         ind = np.where(sns == snap)
         if (np.shape(ind)[1]<1):
-            print('WARNING: no snapshot number {} found in {}'.format(snap,tablez))
+            print('\n WARNING: no snapshot number {} found in {}'.format(snap,tablez))
             return -999.
         elif (np.shape(ind)[1]>1):
-            print('WARNING: several snapshot number {} found in {}'.format(snap,tablez))
+            print('\n WARNING: several snapshot number {} found in {}'.format(snap,tablez))
             return -999.
         else:
             zz = zzs[ind][0]
@@ -924,27 +924,27 @@ def get_snap(zz,sim,env,zmin=None,zmax=None,dirz=None):
         if (zmin < zzs and zzs < zmax):
             return int(lsns),float(zzs)
         else:
-            print('WARNING: {} far from single {} found in {}'.format(zz,zzs,tablez))
+            print('\n WARNING: {} far from single {} found in {}'.format(zz,zzs,tablez))
             return -999,-999.
     sns = np.asarray(lsns,dtype=int)
 
     # Find the closest redshift
     if ((zz < zzs[0] and zmax < zzs[0]) or (zz<0.)):
-        print('WARNING: {}<{}, min. z found in {}'.format(zz,zzs[0],tablez))
+        print('\n WARNING: {}<{}, min. z found in {}'.format(zz,zzs[0],tablez))
         return -999,-999.
     elif(zz > zzs[-1] and zmin > zzs[-1]):
-        print('WARNING: {}>{}, max. z found in {}'.format(zz,zzs[-1],tablez))
+        print('\n WARNING: {}>{}, max. z found in {}'.format(zz,zzs[-1],tablez))
         return -999.,-999.
     else:
         idx = (np.abs(zzs - zz)).argmin()
         if (zmin < zzs[idx] and zzs[idx] < zmax):
             return sns[idx],zzs[idx]
         else:
-            print('WARNING: z={} outside range {}<z<{}, {}'.format(zzs[idx],zmin,zmax,tablez))
+            print('\n WARNING: z={} outside range {}<z<{}, {}'.format(zzs[idx],zmin,zmax,tablez))
             return -999,-999.
 
 
-def get_cenids(snap,sim,env,Testing=False,nfiles=2,allhaloes=True):
+def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     """
     Get the list of indexes for central galaxies
     using FOF/FirstSubhaloID (index of first subhalos, or centrals)
@@ -961,8 +961,6 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2,allhaloes=True):
         True or False
     nfiles : integer
         Number of files to be considered for testing
-    allhaloes : boolean
-        False if only haloes without problems (r500>0)
 
     Returns
     -----
@@ -981,35 +979,39 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2,allhaloes=True):
     if allfiles is False: return -999.
 
     # Cycle through the files
-    for ii,ff in enumerate(files):
-        if (Testing and ii>=nfiles): break
+    ii = 0
+    for ff in files:
         io.stop_if_no_file(ff)
 
         f = h5py.File(ff, 'r')
-        
+
         # Index of first subhalo in SubHalo list (starts at 0) 
-        if (allhaloes):
-            cenh = np.unique(f['FOF/FirstSubhaloID'][:])
-        else:
-            r500 = f['FOF/Group_R_Crit500'][:]
-            ind = np.where(r500>0)
-            cenh = f['FOF/FirstSubhaloID'][ind]
-            ucen = np.unique(f['FOF/FirstSubhaloID'][:])
-            if (len(cenh) > len(ucen)):
-                print('WARNING (b.get_cenids): Not unique central IDs {}'.format(ff))
+        first = f['FOF/FirstSubhaloID'][:]
+
+        # Haloes with no substructure are not well defined
+        nsubh = f['FOF/NumOfSubhalos'][:]
+        ind = np.where(nsubh>0)
+        if (np.shape(ind)[1]>0):
+            cenh = first[ind]            
+            if (abs(len(cenh) - len(np.unique(first))) > 1):
+                print('\n WARNING (b.get_cenids): Not unique central IDs {}'.format(ff))
+                return None
+        
+            if (ii == 0):
+                cenids = cenh
+                halos = f['Subhalo/GroupNumber'][:]
+            else:
+                cenids = np.append(cenids, cenh)  
+                halos = np.append(halos,f['Subhalo/GroupNumber'][:])
+
+            if (not io.is_sorted(cenids)):
+                print('\n WARNING (b.get_cenids): Not ordered indeces {}'.format(ff))
                 return None
 
-        if (ii == 0):
-            cenids = cenh
-            halos = f['Subhalo/GroupNumber'][:]
-        else:
-            cenids = np.append(cenids, cenh)  
-            halos = np.append(halos,f['Subhalo/GroupNumber'][:])
-
-    if (not io.is_sorted(cenids)):
-        print('WARNING (b.get_cenids): Not ordered indeces {}'.format(ff))
-        return None
-
+            ii += 1
+            if (Testing and ii>=nfiles): break
+            
+        f.close()    
     return cenids
 
 
@@ -1068,13 +1070,13 @@ def get_subfind_prop(snap,sim,env,propdef,proptype=None,Testing=False,nfiles=2,v
                 try:
                     prop = f[propdef][:]
                 except:
-                    print('WARNING (bahamas): no {} found in {}'.format(propdef,ff))
+                    print('\n WARNING (bahamas): no {} found in {}'.format(propdef,ff))
                     return None
             else:
                 try:
                     prop = f[propdef][:,itype]
                 except:
-                    print('WARNING (bahamas): no {} found in {}'.format(propdef,ff))
+                    print('\n WARNING (bahamas): no {} found in {}'.format(propdef,ff))
                     return None
         else:
             if (proptype is None):
@@ -1128,7 +1130,7 @@ def resolution(sim,env,zz=0.,msunh=True,dirz=None,verbose=False):
     itype = ptypes.index('DM') 
     mdm = masstable[itype]
     if (mdm<0):
-        print('WARNING: negative or 0 input mass, returning -999.')
+        print('\n WARNING: negative or 0 input mass, returning -999.')
         return -999., -999.
     else:
         omega0, omegab, lambda0, h0, volume = get_cosmology(sim,env)
@@ -1371,7 +1373,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
     
     keys = [key for key, value in unitdefault.items()]
     if (proplabel not in keys):
-        print('WARNING (get_propfunc): '+proplabel+' not in ('+','.join(keys)+')')
+        print('\n WARNING (get_propfunc): '+proplabel+' not in ('+','.join(keys)+')')
         return None
 
     # Get snapshot
@@ -1547,7 +1549,7 @@ def map_m500(snap,sim,env,ptype='gas',overwrite=False,mlim=0.,dirz=None,outdir=N
     '''
 
     if (ptype == 'DM'):
-        print('WARNING (bahamas.map_m500): For DM, use directly the halo masses')
+        print('\n WARNING (bahamas.map_m500): For DM, use directly the halo masses')
         return None
 
     # Type of particles to be read
@@ -1566,14 +1568,14 @@ def map_m500(snap,sim,env,ptype='gas',overwrite=False,mlim=0.,dirz=None,outdir=N
         e = 'data/'+nompartmass in f
         f.close()
         if (e):
-            print('WARNING (b.map_m500): {} already in file.'.format(nompartmass))
+            print('\n WARNING (b.map_m500): {} already in file.'.format(nompartmass))
             return outfile
 
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
 
     if (not allfiles):
-        print('WARNING (b.map_m500): no adequate particle files found, {}, {}'.
+        print('\n WARNING (b.map_m500): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if (Testing): files = [files[0]]
@@ -1620,7 +1622,7 @@ def map_m500(snap,sim,env,ptype='gas',overwrite=False,mlim=0.,dirz=None,outdir=N
     # Get FOF/Subfind files
     files, allfiles = get_subfind_files(snap,sim,env)
     if (not allfiles):
-        print('WARNING (bahamas.map_m500): no adequate Subfind files found, {}, {}'.
+        print('\n WARNING (bahamas.map_m500): no adequate Subfind files found, {}, {}'.
               format(snap,env))
         return None
     if (Testing): files = [files[0],files[1]]
@@ -1844,7 +1846,7 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,cop=False,
     # Get particle files
     files, allfiles = get_particle_files(snap,sim,env)
     if (not allfiles):
-        print('WARNING (bahamas.map_mHMR): no adequate particle files found, {}, {}'.
+        print('\n WARNING (bahamas.map_mHMR): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0]]
@@ -1889,7 +1891,7 @@ def map_mHMR(snap,sim,env,ptype='BH',mlim=0.,nhmr=2.,cop=False,
     # Get FOF&Subfind files
     files, allfiles = get_subfind_files(snap,sim,env)
     if (not allfiles):
-        print('WARNING (bahamas.map_mHMR): no adequate Subfind files found, {}, {}'.
+        print('\n WARNING (bahamas.map_mHMR): no adequate Subfind files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0],files[1]]
@@ -2143,7 +2145,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
 
     # Stop for environments different to arilega
     if (env != 'arilega'):
-        print('WARNING (b.get_subBH): Function developed for env=arilega.')
+        print('\n WARNING (b.get_subBH): Function developed for env=arilega.')
         return None
 
     # Black hole particles to be read, 5:BH
@@ -2156,7 +2158,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
-        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+        print('\n WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0],files[1]]
@@ -2173,7 +2175,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
             try:
                 partID  = p0['ParticleIDs'][:]
             except:
-                print('WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
+                print('\n WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
                 return None
 
             # Read the data
@@ -2197,7 +2199,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
     # Get Subfind particle files----------------------------------------------
     files, allfiles = get_particle_files(snap,sim,env)
     if (not allfiles):
-        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+        print('\n WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0]]
@@ -2264,7 +2266,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
         # Group particles in the same position
         groups = df_part.groupby(['groupnum','partx','party','partz'], as_index=False)
         if(groups.ngroups > len(df_part.index)):
-            print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+            print('\n WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
               format(snap,sim))
             return None
 
@@ -2275,7 +2277,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
         # Number of particles with the same position and velocity
         groupv = df_part.groupby(['groupnum','partx','party','partz','pvx','pvy','pvz'], as_index=False)
         if(groupv.ngroups > len(df_part.index)):
-            print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+            print('\n WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
               format(snap,sim))
             return None
         df_nbosonv = groupv.size().reset_index(name='nbosonv')
@@ -2439,7 +2441,7 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     >>> import bahamas as b
     >>> b.get_subnum('HIRES/AGN_TUNED_nu0_L050N256_WMAP9',31,'arilega',Testing=True)
     """
-
+    Testing = False ###here remove after testing
     # Read the FOF Group Number subhalo belongs to and its mass (1e10Msun/h)
     groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',
                                 Testing=Testing,verbose=verbose)
@@ -2448,12 +2450,13 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     #msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='DM',Testing=Testing)
     #mh = get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=Testing)
 
-    # Initialize output
-    subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(-1.);
-    
     # Index of first subhalo in SubHalo list (starts at 0) 
-    cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=True)
-    
+    #cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=True) ###here
+    cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=False) ###here
+
+    print('In get_subnum') ###here
+    print(len(groupnum),max(groupnum)) ###here
+
     if (max(cind) > (len(groupnum)-1) and Testing):
         ind = np.where(cind < len(groupnum)-1) 
         if(np.shape(ind)[1]<1):
@@ -2464,17 +2467,31 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
         print('STOP (b.get_subnum): problem with centrals indexes.')
         return None
 
+    # Initialize the index for subhaloes and store a 0 for centrals
+    subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(np.nan)
     subgroupnum[cind] = 0
+    print(print(len(cind),min(cind),max(cind))); exit() ###here
 
+    #r500 = f['FOF/Group_R_Crit500'][:] ###here
+    #ind = np.where(r500>0) ### here, flag allhaloes?
+
+    
+    inotord = 0; notord = []     
     for i, subg in enumerate(subgroupnum):
-        if subg == 0:
+        if subg == -1:
+            continue
+        elif subg == 0:
             isub = 0;
             maxmass = msubh[i];
         else:
             isub += 1;
             subgroupnum[i] = isub;
-            if (msubh[i]>maxmass and verbose):
-                print('WARNING b.subgroupnum: mass not ordered for halo {}; {:.2f} {:.2f}'.format(groupnum[i],msubh[i],maxmass))
+            if (msubh[i]>maxmass):
+                notord.append(groupnum[i])
+                inotord += 1
+
+    if (inotord>0 and verbose):
+        print('\n WARNING b.subgroupnum: mass not ordered for {} haloes: {}'.format(inotord,notord))
 
     return subgroupnum
 
@@ -2526,7 +2543,7 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
     # Get halo information from FOF&Subfind files-------------------------------
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False:
-        print('WARNING (b.get_subhalo4BH): no adequate Subfind files found, {}, {}, {}'.
+        print('\n WARNING (b.get_subhalo4BH): no adequate Subfind files found, {}, {}, {}'.
               format(files[0],snap,env))
         return outfile, False
     if verbose: print('b.get_subhalo4BH: First Subfind file is {}'.format(files[0]))
@@ -2538,7 +2555,7 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
     # Loop over the FOF&Subfind files
     new_subnum = False
     for iff, ff in enumerate(files):
-        f = h5py.File(ff, 'r') #; print(ff); exit()
+        f = h5py.File(ff, 'r') #; print(ff)
         fof = f['FOF']
         sh = f['Subhalo']
 
@@ -2630,6 +2647,7 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
     dr[cind] = dr_fof[cind]
 
     # Distance and velocities from satellite to central galaxies
+    inotcen = 0; notcen = []     
     for ig in np.unique(gn):
         ii = np.where(gn == ig)
         if (np.shape(ii)[1] < 1): continue
@@ -2645,15 +2663,15 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
         ncens = np.shape(icens)[1]
         if (ncens > 1):
             if verbose:
-                print('WARNING (get_subhalo4BH): {} centrals in halo {}'.format(ncens,ig))
+                print('\n WARNING (get_subhalo4BH): {} centrals in halo {}'.format(ncens,ig))
             continue
         else:
             cx,cy,cz,cvx,cvy,cvz = [np.zeros(shape=nsats,dtype=float) for i in range(6)]
             if (ncens < 1): # Distance to halo COP
                 cx.fill(fof_x[ig]); cy.fill(fof_y[ig]); cz.fill(fof_z[ig])
-                if verbose:
-                    print('WARNING (get_subhalo4BH): no central selected in halo {}'.format(ig))
-        
+                notcen.append(ig)
+                inotcen += 1
+
             else: # Distance and velocities relative to central galaxy
                 cx.fill(cop_x[icens][0]); cy.fill(cop_y[icens][0]); cz.fill(cop_z[icens][0])
                 cvx.fill(shv_x[icens][0]); cvy.fill(shv_y[icens][0]); cvz.fill(shv_z[icens][0])
@@ -2676,7 +2694,10 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
         # Radial distance
         satd = get_r(cx,cy,cz,sx,sy,sz,box=boxside)
         dr[isats] = satd
-        
+
+    if (inotcen>0 and verbose):
+        print('\n WARNING (get_subhalo4BH): no central selected in {} haloes, {}'.format(inotcen,notcen))
+
     # Save data in a dataframe
     data = np.vstack([gn,sgn,mh,rh,
                       dr,dvr,dvphi,dvlos,
@@ -2778,7 +2799,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     
     # Stop for environments different to arilega
     if (env != 'arilega'):
-        print('WARNING (b.get_subBH): Function developed for env=arilega.')
+        print('\n WARNING (b.get_subBH): Function developed for env=arilega.')
         return None
 
     # Black hole particles to be read, 5:BH
@@ -2788,7 +2809,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     # Get subgrid particle information from snapshots------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=False)
     if (not allfiles):
-        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+        print('\n WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0],files[1]]
@@ -2825,7 +2846,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
             try:
                 partID  = p0['ParticleIDs'][:]
             except:
-                print('WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
+                print('\n WARNING (b.get_subBH): empty data {}'.format(ff+'/'+inptype+'/ParticleIDs'))
                 return None
     
             # Read the data
@@ -2866,7 +2887,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     # Get the halo the BH particles belong to ----------------------------------
     files, allfiles = get_particle_files(snap,sim,env,subfind=True)
     if (not allfiles):
-        print('WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
+        print('\n WARNING (b.get_subBH): no adequate particle files found, {}, {}'.
               format(snap,env))
         return None
     if Testing: files = [files[0]]
@@ -2994,7 +3015,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     # Add properties of particles in the same position--------------------------
     groups = df_all.groupby(['groupnum','subgroupnum','partx','party','partz'], as_index=False)
     if(groups.ngroups > len(df_all.index)):
-        print('WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
+        print('\n WARNING (b.get_subBH): problem grouping particle information, {}, {}'.
           format(snap,sim))
         return None
     
@@ -3349,8 +3370,10 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
 
 if __name__== "__main__":
     dirz = None ; outdir = None
-    snap = 31
-    zz = 3.
+    #snap = 31
+    #zz = 0.
+    snap = 27 #31
+    zz = 0.75 #0.
 
     env = 'arilega'
     #env = 'cosmalega'
@@ -3361,8 +3384,8 @@ if __name__== "__main__":
         dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
     if (env == 'arilega'):
-        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
-        #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+        #sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
         dirz = '/hpcdata4/arivgonz/BAHAMAS/'
         outdir = '/hpcdata4/arivgonz/Junk/'
     if (env == 'ari'):
@@ -3377,7 +3400,7 @@ if __name__== "__main__":
     #print(get_subnum(sim,snap,env,Testing=False))
     #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True))
-    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
@@ -3402,7 +3425,7 @@ if __name__== "__main__":
     #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmin=[2.8],zmax=[3.8])
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
-    #print(get_cenids(snap,sim,env))
+    print(get_cenids(snap,sim,env))
     #print(get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='star',Testing=True))
     #print('-------'); print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=True))
     #print(resolution(sim,env,dirz=dirz))
