@@ -977,7 +977,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     # Simulation input
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False: return -999.
-
+    print(files[0]); exit() ###here
     # Cycle through the files
     ii = 0
     for ff in files:
