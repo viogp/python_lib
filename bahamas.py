@@ -32,9 +32,10 @@ dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
 dirobsari = '/beegfs2/Obs_Data/'
 dirplotari = '/home/arivgonz/buds/'
 
-dirbahamascosmalega = '/cosma7/data/dp004/fkgm22/BAHAMAS/' #'/cosma6/data/dp004/Eagle/jsTestRuns/BAHAMAS_XL/'
-dirbahamascosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
-dirobscosma = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
+dirbahamascosmalega = '/cosma7/data/dp004/Eagle/jsTestRuns/BAHAMAS/'
+#'/cosma7/data/dp004/fkgm22/ANTILLES/L100N256/WMAP9/' 
+dirbahamascosma = '/cosma7/data/dp004/dc-gonz3/BAHAMAS/'
+dirobscosma = '/cosma7/data/dp004/dc-gonz3/BAHAMAS/Obs_Data/'
 
 dirbahamaslap = '/home/violeta/soil/BAHAMAS/'
 dirobslap = '/home/violeta/soil/Obs_Data/'
@@ -3375,14 +3376,14 @@ if __name__== "__main__":
     snap = 27 #31
     zz = 0.75 #0.
 
-    env = 'arilega'
-    #env = 'cosmalega'
+    #env = 'arilega'
+    env = 'cosmalega'
     #env = 'lap'
     
     if (env == 'cosmalega'):
         sim = None #'L400N1024/WMAP9/Sims/BAHAMAS'
-        dirz = '/cosma6/data/dp004/dc-gonz3/BAHAMAS/'
-        outdir = '/cosma6/data/dp004/dc-gonz3/Junk/'
+        dirz = '/cosma7/data/dp004/dc-gonz3/BAHAMAS/'
+        outdir = '/cosma7/data/dp004/dc-gonz3/Junk/'
     if (env == 'arilega'):
         #sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
         sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
