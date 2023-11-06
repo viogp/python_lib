@@ -978,9 +978,9 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     # Simulation input
     files, allfiles = get_subfind_files(snap,sim,env)
     if allfiles is False: return -999.
-    print(files[0]); exit() ###here
+
     # Cycle through the files
-    ii = 0
+    ii = 0; cenids = [];
     for ff in files:
         io.stop_if_no_file(ff)
 
@@ -1000,10 +1000,8 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
         
             if (ii == 0):
                 cenids = cenh
-                halos = f['Subhalo/GroupNumber'][:]
             else:
                 cenids = np.append(cenids, cenh)  
-                halos = np.append(halos,f['Subhalo/GroupNumber'][:])
 
             if (not io.is_sorted(cenids)):
                 print('\n WARNING (b.get_cenids): Not ordered indeces {}'.format(ff))
@@ -1013,6 +1011,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
             if (Testing and ii>=nfiles): break
             
         f.close()    
+
     return cenids
 
 
@@ -2442,7 +2441,7 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     >>> import bahamas as b
     >>> b.get_subnum('HIRES/AGN_TUNED_nu0_L050N256_WMAP9',31,'arilega',Testing=True)
     """
-    Testing = False ###here remove after testing
+
     # Read the FOF Group Number subhalo belongs to and its mass (1e10Msun/h)
     groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',
                                 Testing=Testing,verbose=verbose)
@@ -2456,7 +2455,7 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=False) ###here
 
     print('In get_subnum') ###here
-    print(len(groupnum),max(groupnum)) ###here
+    print(len(groupnum),max(groupnum)); exit() ###here
 
     if (max(cind) > (len(groupnum)-1) and Testing):
         ind = np.where(cind < len(groupnum)-1) 
@@ -3398,7 +3397,7 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
-    #print(get_subnum(sim,snap,env,Testing=False))
+    print(get_subnum(sim,snap,env,Testing=False))
     #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True))
     #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
@@ -3426,7 +3425,7 @@ if __name__== "__main__":
     #snap, zsnap = get_snap(3.2,sim,env,dirz=dirz,zmin=[2.8],zmax=[3.8])
     #print('target z={} -> snap={}, z_snap={}'.format(3.2,snap,zsnap))
     #print(get_allparticle_files(snap,sim,env))
-    print(get_cenids(snap,sim,env))
+    #print(get_cenids(snap,sim,env))
     #print(get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='star',Testing=True))
     #print('-------'); print(get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=True))
     #print(resolution(sim,env,dirz=dirz))
