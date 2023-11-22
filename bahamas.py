@@ -27,12 +27,12 @@ BH_seed_mass = 7.63*10**5 #Msun/h
 #dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 #dirobsari = '/hpcdata0/Obs_Data/'
 
-dirbahamasarilega = '/beegfs1/backup/beegfs2/hpcdata0_backup/simulations/BAHAMAS'
+dirbahamasarilega = '/beegfs1/backup/beegfs2/hpcdata0_backup/simulations/BAHAMAS/'
 # '/mnt/autofs/beegfs2/hpcdata0_backup/simulations/'
 # '/beegfs2/hpcdata0_backup/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
 dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
-dirobsari = '/beegfs2/Obs_Data/'
-dirplotari = '/home/arivgonz/buds/'
+dirobsari = '/users/arivgonz/trunk/Obs_Data/'
+dirplotari = '/users/arivgonz/output/'
 
 dirbahamascosmalega = '/cosma7/data/dp004/Eagle/jsTestRuns/BAHAMAS/'
 #'/cosma7/data/dp004/fkgm22/ANTILLES/L100N256/WMAP9/' 
@@ -973,7 +973,7 @@ def get_cenids(snap,sim,env,Testing=False,nfiles=2):
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega',allhaloes=False)
+    >>> b.get_cenids(31,'HIRES/AGN_TUNED_nu0_L050N256_WMAP9','arilega')
     >>> b.get_cenids(27,'L400N1024/WMAP9/Sims/BAHAMAS','cosmalega',Testing=True)
     """
 
@@ -2453,8 +2453,7 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     #mh = get_subfind_prop(snap,sim,env,'FOF/Group_M_Crit200',Testing=Testing)
 
     # Index of first subhalo in SubHalo list (starts at 0) 
-    #cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=True) ###here
-    cind = get_cenids(snap,sim,env,Testing=Testing,allhaloes=False) ###here
+    cind = get_cenids(snap,sim,env,Testing=Testing)
 
     print('In get_subnum') ###here
     print(len(groupnum),max(groupnum)); exit() ###here
@@ -2474,10 +2473,6 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     subgroupnum[cind] = 0
     print(print(len(cind),min(cind),max(cind))); exit() ###here
 
-    #r500 = f['FOF/Group_R_Crit500'][:] ###here
-    #ind = np.where(r500>0) ### here, flag allhaloes?
-
-    
     inotord = 0; notord = []     
     for i, subg in enumerate(subgroupnum):
         if subg == -1:
@@ -3377,9 +3372,10 @@ if __name__== "__main__":
     snap = 27 #31
     zz = 0.75 #0.
 
-    #env = 'arilega'
-    env = 'cosmalega'
+    env = 'arilega'
+    #env = 'cosmalega'
     #env = 'lap'
+
     
     if (env == 'cosmalega'):
         sim = None #'L400N1024/WMAP9/Sims/BAHAMAS'
@@ -3388,8 +3384,8 @@ if __name__== "__main__":
     if (env == 'arilega'):
         #sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
         sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
-        dirz = '/hpcdata4/arivgonz/BAHAMAS/'
-        outdir = '/hpcdata4/arivgonz/Junk/'
+        dirz = '/users/arivgonz/output/BAHAMAS/'
+        outdir = '/users/arivgonz/output/Junk/'
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
     if (env == 'lap'):

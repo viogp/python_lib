@@ -5,33 +5,49 @@ def mkdir_p(dir):
     if not os.path.exists(dir):
         os.mkdir(dir)
     
+# Job description
+nom = 'nd_bahamas'
+time = '00:15:00'  #Format: d-hh:mm:ss
+nodes = 1
+ntasks = 1
+cputask = 1
+partition = 'test'  # test/compute 
 
 # Get current working directory
-job_directory = "%s/.job" %os.getcwd()  
+job = os.getcwd()+'/'+'bahamas.py'  
 
 # Logs output directory
-log_dir = '/tmp/users/arivgonz/logs/'
+log_dir = '/users/arivgonz/output/logs/'
 mkdir_p(log_dir)
 
-# Job file
-nom = 'bahamas'
-job_file = os.path.join(job_directory,"%s.job" % nom)
-print(job_file)
-#    nom_data = os.path.join(data_dir, nom)
-#
-#    # Create nom directories
-#    mkdir_p(nom_data)
-#
-#    with open(job_file) as fh:
-#        fh.writelines("#!/bin/bash\n")
-#        fh.writelines("#SBATCH --job-name=%s.job\n" % nom)
-#        fh.writelines("#SBATCH --output=.out/%s.out\n" % nom)
-#        fh.writelines("#SBATCH --error=.out/%s.err\n" % nom)
-#        fh.writelines("#SBATCH --time=2-00:00\n")
-#        fh.writelines("#SBATCH --mem=12000\n")
-#        fh.writelines("#SBATCH --qos=normal\n")
-#        fh.writelines("#SBATCH --mail-type=ALL\n")
-#        fh.writelines("#SBATCH --mail-user=$USER@stanford.edu\n")
-#        fh.writelines("Rscript $HOME/project/NomLips/run.R %s potato shiabato\n" %nom_data)
-#
-#    os.system("sbatch %s" %job_file)
+# For checking if the module is loaded
+script_content1 = 'module_to_check="apps/anaconda3/2023.03/bin" \n'
+
+# Submission script
+script = os.path.join(log_dir,"%s.sh" % nom)
+with open(script,'w') as fh:
+    fh.write("#!/bin/bash \n")
+    fh.write("\n")
+    fh.write("#SBATCH --job-name=%s.job \n" % nom)
+    fh.write("#SBATCH --output=%sout.%s \n" % (log_dir,nom))
+    fh.write("#SBATCH --error=%serr.%s \n" % (log_dir,nom))
+    fh.write("#SBATCH --time=%s \n" % time)
+    fh.write("#SBATCH --nodes=%s \n" % str(nodes))
+    fh.write("#SBATCH --ntasks=%s \n" % str(ntasks))
+    fh.write("#SBATCH --cpus-per-task=%s \n" % str(cputask))
+    fh.write("#SBATCH --partition=%s \n" % partition)
+    fh.write("#SBATCH --mail-type=END,FAIL \n")
+    fh.write("#SBATCH --mail-user=violetagp@protonmail.com \n")
+    fh.write("\n")
+    fh.write("flight env activate gridware \n")
+    fh.write("\n")
+    fh.write("%s \n" % script_content1)
+    fh.write("module_list_output=$(module list 2>&1) \n")
+    fh.write("if [[ $module_list_output !~ $module_to_check ]]; then \n")
+    fh.write("  module load $module_to_check \n")
+    fh.write("fi \n")
+    fh.write("\n")    
+    fh.write("python3 %s \n" % job)
+
+print("Log dir.: %s" % log_dir)
+os.system("sbatch %s" % script)
