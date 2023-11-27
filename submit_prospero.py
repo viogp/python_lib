@@ -21,16 +21,18 @@ log_dir = '/users/arivgonz/output/logs/'
 mkdir_p(log_dir)
 
 # For checking if the module is loaded
-script_content1 = 'module_to_check="apps/anaconda3/2023.03/bin" \n'
+jnom = "%j."+nom
+script_content1 = 'module_to_check="apps/anaconda3/2023.03/bin"'
+script_content2 = 'if [[ $module_list_output != *"$module_to_check"* ]]; then'
 
 # Submission script
 script = os.path.join(log_dir,"%s.sh" % nom)
 with open(script,'w') as fh:
     fh.write("#!/bin/bash \n")
     fh.write("\n")
-    fh.write("#SBATCH --job-name=%s.job \n" % nom)
-    fh.write("#SBATCH --output=%sout.%s \n" % (log_dir,nom))
-    fh.write("#SBATCH --error=%serr.%s \n" % (log_dir,nom))
+    fh.write("#SBATCH --job-name=job.%s \n" % jnom)
+    fh.write("#SBATCH --output=%sout.%s \n" % (log_dir,jnom))
+    fh.write("#SBATCH --error=%serr.%s \n" % (log_dir,jnom))
     fh.write("#SBATCH --time=%s \n" % time)
     fh.write("#SBATCH --nodes=%s \n" % str(nodes))
     fh.write("#SBATCH --ntasks=%s \n" % str(ntasks))
@@ -41,9 +43,9 @@ with open(script,'w') as fh:
     fh.write("\n")
     fh.write("flight env activate gridware \n")
     fh.write("\n")
-    fh.write("%s \n" % script_content1)
-    fh.write("module_list_output=$(module list 2>&1) \n")
-    fh.write("if [[ $module_list_output !~ $module_to_check ]]; then \n")
+    fh.write("%s \n \n" % script_content1)
+    fh.write("module_list_output=$(module list 2>&1) \n \n")
+    fh.write("%s \n" % script_content2)
     fh.write("  module load $module_to_check \n")
     fh.write("fi \n")
     fh.write("\n")    

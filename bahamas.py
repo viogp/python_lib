@@ -2455,9 +2455,6 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     # Index of first subhalo in SubHalo list (starts at 0) 
     cind = get_cenids(snap,sim,env,Testing=Testing)
 
-    print('In get_subnum') ###here
-    print(len(groupnum),max(groupnum)); exit() ###here
-
     if (max(cind) > (len(groupnum)-1) and Testing):
         ind = np.where(cind < len(groupnum)-1) 
         if(np.shape(ind)[1]<1):
@@ -2471,8 +2468,15 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     # Initialize the index for subhaloes and store a 0 for centrals
     subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(np.nan)
     subgroupnum[cind] = 0
+    print(subgroupnum[0:3],subgroupnum[-10:])
+    print(groupnum[0:3],groupnum[-10:])
     print(print(len(cind),min(cind),max(cind))); exit() ###here
 
+    #    # Haloes with no substructure are not well defined
+    #    nsubh = f['FOF/NumOfSubhalos'][:]
+    #    ind = np.where(nsubh>0)
+    #    if (np.shape(ind)[1]>0):
+    
     inotord = 0; notord = []     
     for i, subg in enumerate(subgroupnum):
         if subg == -1:
