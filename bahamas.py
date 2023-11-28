@@ -28,7 +28,7 @@ BH_seed_mass = 7.63*10**5 #Msun/h
 #dirobsari = '/hpcdata0/Obs_Data/'
 
 dirbahamasarilega = '/beegfs1/backup/beegfs2/hpcdata0_backup/simulations/BAHAMAS/'
-# '/mnt/autofs/beegfs2/hpcdata0_backup/simulations/'
+#dirbahamasarilega = '/mnt/autofs/beegfs2/hpcdata0_backup/simulations/'
 # '/beegfs2/hpcdata0_backup/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
 dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
 dirobsari = '/users/arivgonz/trunk/Obs_Data/'
@@ -634,8 +634,11 @@ def get_subfind_files(snap,sim,env):
     paths = glob.glob(path1+'*/')
     if (len(paths) == 1):
         path = paths[0]
+    elif (len(paths) > 1):
+        print('\n WARNING (b.get_subfind_files): more than one directory with root {}'.format(path1+'*/'))
+        return None, False
     else:
-        print('\n WARNING (b.get_subfind_files): more than one or none directories with root {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_subfind_files): no directory with root {}'.format(path1+'*/'))
         return None, False
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
