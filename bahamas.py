@@ -501,18 +501,22 @@ def get_allparticle_files(snap,sim,env):
     path1 = get_path2part(sim,env)+'snapshot_'+str(snap).zfill(n0)
 
     # Get path to particle files
-    paths = glob.glob(path1+'*/') 
+    p_str = path1+'*/'   
+    #p_str = path1+'/'  ###here return to this when the issue w the queues is solved.
+    paths = glob.glob(p_str)
     if (len(paths) == 1):
         path = paths[0]
+    elif (len(paths) > 1):
+        print('\n WARNING (b.get_allparticle_files): more than one directory with root {}'.format(p_str))
+        return None, False
     else:
-        print('\n WARNING(b.get_allparticle_files): '+
-              'more than one or none directories with root {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_allparticle_files): no directory with root {}'.format(p_str))
         return None, False
 
     root = path+'snap_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
-        print('\n WARNING (b.get_allparticle_files): no files in path {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_allparticle_files): no files in path {}'.format(p_str))
         return None, False
 
     numff =[int(ff.split('.')[1]) for ff in files]
@@ -567,13 +571,18 @@ def get_particle_files(snap,sim,env,subfind=True):
         path1 = get_path2part(sim,env)+'snapshot_'+str(snap).zfill(n0)
 
     # Get path to particle files
-    paths = glob.glob(path1+'*/') 
+    p_str = path1+'*/'   
+    #p_str = path1+'/'  ###here return to this when the issue w the queues is solved.
+    paths = glob.glob(p_str)
     if (len(paths) == 1):
         path = paths[0]
-    else:
-        print('\n WARNING(b.get_particle_files): more than one or none directories with root {}'.format(path1+'*/'))
+    elif (len(paths) > 1):
+        print('\n WARNING (b.get_particle_files): more than one directory with root {}'.format(p_str))
         return None, False
-
+    else:
+        print('\n WARNING (b.get_particle_files): no directory with root {}'.format(p_str))
+        return None, False
+    
     if subfind:
         root = path+'eagle_subfind_particles_'+str(snap).zfill(n0)
     else:
@@ -581,7 +590,7 @@ def get_particle_files(snap,sim,env,subfind=True):
 
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
-        print('\n WARNING (b.get_particle_files): no files in path {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_particle_files): no files in path {}'.format(p_str))
         return None, False
 
     numff =[int(ff.split('.')[1]) for ff in files]
@@ -631,20 +640,22 @@ def get_subfind_files(snap,sim,env):
     path1 = get_path2data(sim,env)+'groups_'+str(snap).zfill(n0)
 
     # Get path to subfind files
-    paths = glob.glob(path1+'*/')
+    p_str = path1+'*/'   
+    #p_str = path1+'/'  ###here return to this when the issue w the queues is solved.
+    paths = glob.glob(p_str)
     if (len(paths) == 1):
         path = paths[0]
     elif (len(paths) > 1):
-        print('\n WARNING (b.get_subfind_files): more than one directory with root {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_subfind_files): more than one directory with root {}'.format(p_str))
         return None, False
     else:
-        print('\n WARNING (b.get_subfind_files): no directory with root {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_subfind_files): no directory with root {}'.format(p_str))
         return None, False
 
     root = path+'eagle_subfind_tab_'+str(snap).zfill(n0)
     files = glob.glob(root+'*.hdf5')
     if (len(files)<1):
-        print('\n WARNING (b.get_subfind_files): no files in path {}'.format(path1+'*/'))
+        print('\n WARNING (b.get_subfind_files): no files in path {}'.format(p_str))
         return None, False
     
     numff =[int(ff.split('.')[1]) for ff in files]
@@ -2450,6 +2461,8 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
     # Read the FOF Group Number subhalo belongs to and its mass (1e10Msun/h)
     groupnum = get_subfind_prop(snap,sim,env,'Subhalo/GroupNumber',
                                 Testing=Testing,verbose=verbose)
+    nsubh = get_subfind_prop(snap,sim,env,'FOF/NumOfSubhalos',
+                                Testing=Testing,verbose=verbose)
     msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass',
                                 Testing=Testing,verbose=verbose)
     #msubh    = get_subfind_prop(snap,sim,env,'Subhalo/Mass_030kpc',proptype='DM',Testing=Testing)
@@ -2469,33 +2482,32 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
         return None
 
     # Initialize the index for subhaloes and store a 0 for centrals
-    subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(np.nan)
+    subgroupnum = np.zeros(len(groupnum),dtype=int); subgroupnum.fill(-1)
     subgroupnum[cind] = 0
-    print(subgroupnum[0:3],subgroupnum[-10:])
-    print(groupnum[0:3],groupnum[-10:])
-    print(print(len(cind),min(cind),max(cind))); exit() ###here
-
-    #    # Haloes with no substructure are not well defined
-    #    nsubh = f['FOF/NumOfSubhalos'][:]
-    #    ind = np.where(nsubh>0)
-    #    if (np.shape(ind)[1]>0):
     
-    inotord = 0; notord = []     
+    inotord = 0; notord = []
     for i, subg in enumerate(subgroupnum):
-        if subg == -1:
-            continue
-        elif subg == 0:
-            isub = 0;
-            maxmass = msubh[i];
+        gn = groupnum[i]
+        ns = nsubh[gn]
+        if subg == 0:
+            isub = 0
+            maxmass = msubh[i]
         else:
             isub += 1;
+            if (isub > ns):
+                outff, allfiles = get_subfind_files(snap,sim,env)
+                print('\n STOP b.get_subnum: more substructure than expected for halo {} \n {}'.format(
+                    gn,outff[0]))
+                return None
+
             subgroupnum[i] = isub;
+
             if (msubh[i]>maxmass):
-                notord.append(groupnum[i])
+                notord.append(gn)
                 inotord += 1
 
     if (inotord>0 and verbose):
-        print('\n WARNING b.subgroupnum: mass not ordered for {} haloes: {}'.format(inotord,notord))
+        print('\n WARNING b.get_subnum: mass not ordered for {} haloes: {}'.format(inotord,notord))
 
     return subgroupnum
 
@@ -2767,8 +2779,15 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
 
 def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbose=False):
     '''
-    Produce a file joining subgrid BH properties with their positions 
-    and information on halo identifier. Joining done on PartID.
+    Produce a file joining subgrid BH properties with that of their host (sub)haloes. 
+
+    Information on (sub)haloes hosting subgrid BH particles is retrived with get_subhalo4BH.
+    Subgrid BH particle information is read and assigned a Subfind halo (groupnum), based on the PartID.
+    Then, for each subgrid BH particle the host subhalo (subgroupnum) is found 
+    using the distance to the center of potential. 
+    Galaxy properties hosted by the same subhalo are assigned to BH particles and
+    if there is no stellar mass, those BH particles are ignored.
+    Relative positions and velocities are calculated and also added mass for BH particles at the same position.
 
     Parameters
     -----------
@@ -2839,12 +2858,12 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     shv_z = sh['shv_z'][:]
     f.close()
 
-    # Loop over the particle files-------------------------------------------
+    # Loop over the BH subgrid particle files-------------------------------------
     for iff, ff in enumerate(files):
         f = h5py.File(ff, 'r') #; print(ff,inptype)
         p0 = f[inptype]
     
-        # Read particle information
+        # Read subgrid BH particle information
         if (iff == 0):
             # Check that there is data to be read
             try:
@@ -3402,10 +3421,10 @@ if __name__== "__main__":
         outdir = '/home/violeta/Downloads/'
         
     #print(get_particle_files(snap,sim,env,subfind=False))
-    print(get_subnum(sim,snap,env,Testing=False))
+    #print(get_subnum(sim,snap,env,Testing=False))
     #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True))
-    #print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
@@ -3442,3 +3461,5 @@ if __name__== "__main__":
     #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/Snapshots/snapshot_026/snap_026.27.hdf5'
     #infile = '/hpcdata0/simulations/BAHAMAS/AGN_TUNED_nu0_L100N256_WMAP9/Data/EagleSubGroups_5r200/groups_026/eagle_subfind_tab_026.0.hdf5'
     #print(print_h5attributes(infile,'Constants'))
+    #print(get_subfind_files(snap,sim,env))
+    #print(get_cosmology(sim,env))
