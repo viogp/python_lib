@@ -11,7 +11,7 @@ def mkdir_p(dir):
     
 # Job description
 jobnames = ['test']
-time = '01:00:00'  #Format: d-hh:mm:ss
+time = '05:00:00'  #Format: d-hh:mm:ss
 nodes = 1
 ntasks = 1
 cputask = 1

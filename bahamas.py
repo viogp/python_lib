@@ -501,8 +501,8 @@ def get_allparticle_files(snap,sim,env):
     path1 = get_path2part(sim,env)+'snapshot_'+str(snap).zfill(n0)
 
     # Get path to particle files
-    p_str = path1+'*/'   
-    #p_str = path1+'/'  ###here return to this when the issue w the queues is solved.
+    p_str = path1+'/'   
+    #p_str = path1+'*/'  ###here return to this when the issue w the queues is solved.
     paths = glob.glob(p_str)
     if (len(paths) == 1):
         path = paths[0]
@@ -571,8 +571,8 @@ def get_particle_files(snap,sim,env,subfind=True):
         path1 = get_path2part(sim,env)+'snapshot_'+str(snap).zfill(n0)
 
     # Get path to particle files
-    p_str = path1+'*/'   
-    #p_str = path1+'/'  ###here return to this when the issue w the queues is solved.
+    p_str = path1+'/'   
+    #p_str = path1+'*/'  ###here return to this when the issue w the queues is solved.
     paths = glob.glob(p_str)
     if (len(paths) == 1):
         path = paths[0]
@@ -640,8 +640,8 @@ def get_subfind_files(snap,sim,env):
     path1 = get_path2data(sim,env)+'groups_'+str(snap).zfill(n0)
 
     # Get path to subfind files
-    p_str = path1+'*/'   
-    #p_str = path1+'/'  ###here return to this when the issue w the queues is solved.
+    p_str = path1+'/'   
+    #p_str = path1+'*/'  ###here return to this when the issue w the queues is solved.
     paths = glob.glob(p_str)
     if (len(paths) == 1):
         path = paths[0]
@@ -3043,7 +3043,9 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
         return None
     
     # Number of particles with the same position
-    df_nboson = groups.size().reset_index(name='nboson')
+    #df_nboson = groups.size().reset_index(name='nboson') ###here return to this when the issue w the queues is solved.
+    df_nboson = groups.size().reset_index()
+    df_nboson = df_nboson.rename(columns={'size': 'nboson'})
     if verbose: print('Max. BH bosons = {}'.format(df_nboson['nboson'].max()))
 
     # Add the properties for particles in the same position
