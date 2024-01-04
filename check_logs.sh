@@ -27,9 +27,16 @@ logs() {
     if [ -z "$log_files" ]; then
         echo "$log_files not found."
     else
-	for file in $log_files; do
-            more "$file"
-        done
+        # Get the last file in the list
+        last_file=$(echo "$log_files" | awk 'END {print}')
+
+        # Display the content of the last file using more
+        more "$last_file"
+
+	## Loop over all the files
+	#for file in $log_files; do
+        #    more "$file"
+        #done
     fi
 }
 
