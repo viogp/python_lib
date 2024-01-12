@@ -1,37 +1,38 @@
 #!/usr/bin/env python
-
 import os
-from datetime import datetime
-now = datetime.now()
+import time as tt
 
-def mkdir_p(dir):
-    '''make a directory (dir) if it doesn't exist'''
-    if not os.path.exists(dir):
-        os.mkdir(dir)
-    
+# Executable
+program = 'bahamas.py'  
+        
 # Job description
-jobnames = ['test']
-time = '05:00:00'  #Format: d-hh:mm:ss
+#partition = 'test'  # test (1h limit)/compute (24h limit) 
+#time = '01:00:00'  #Format: d-hh:mm:ss
+partition = 'compute'
+time = '05:00:00'  
 nodes = 1
 ntasks = 1
 cputask = 1
-partition = 'compute'  # test/compute 
 
 # Get current working directory
-path2program = os.getcwd()+'/'+'bahamas.py'  
+jobnames = [program[:-3]]
+path2program = os.getcwd()+'/'+program
 
 # Logs output directory
 log_dir = '/users/arivgonz/output/logs/'
-mkdir_p(log_dir)
+if (not os.path.exists(log_dir)): os.mkdir(log_dir)
 
 # For checking if the module is loaded
 script_content1 = 'module_to_check="apps/anaconda3/2023.03/bin"'
 script_content2 = 'if [[ $module_list_output != *"$module_to_check"* ]]; then'
 
 # Submission script
+counter = 1
 for jobname in jobnames:
-    #script = log_dir+jobname+now.strftime('_%Y%m%d_%H%M')+'.sh'
-    script = log_dir+jobname+'.sh'
+    now = tt.localtime()
+    script = f"{log_dir}{jobname}_{now.tm_hour:02d}{now.tm_min:02d}_{counter}.sh"
+    counter += 1       
+    #script = log_dir+jobname+'.sh'
     
     with open(script,'w') as fh:
         fh.write("#!/bin/bash \n")

@@ -2379,7 +2379,7 @@ def old_get_subBH(snap,sim,env,addp=False,dirz=None,outdir=None,Testing=True,ver
     return outfile
 
 
-def get_subBH_file(outdir,sim,snap,part=True,nhmr=2.,cop=True):
+def get_subBH_file(outdir,sim,snap,part=True,allhaloes=True,nhmr=2.,cop=True):
     '''
     Get the name and existance check of the files generated with either
     get_subBH (particle info.) or map_subBH (mapped particles)
@@ -2394,6 +2394,8 @@ def get_subBH_file(outdir,sim,snap,part=True,nhmr=2.,cop=True):
        Snapshot of the simulation
     part : boolean
         True for the particle file name; False for the mapped particles into haloes file 
+    allhaloes : boolean
+        False for particles associated with galaxies
     nhrm: float
        Times the HalfMassRadius is considered
     cop: boolean
@@ -2415,6 +2417,8 @@ def get_subBH_file(outdir,sim,snap,part=True,nhmr=2.,cop=True):
 
     if part:
         outfile = outdir2+'subBH_part_snap'+str(snap)+'.hdf5'
+        if not allhaloes:
+            outfile = outdir2+'subBH_partwgal_snap'+str(snap)+'.hdf5'
     else:
         snhmr = ('%f' % nhmr).rstrip('0').rstrip('.').replace('.','_')
         if cop:
@@ -2507,12 +2511,13 @@ def get_subnum(sim,snap,env,Testing=False,nfiles=2,verbose=False):
                 inotord += 1
 
     if (inotord>0 and verbose):
-        print('\n WARNING b.get_subnum: mass not ordered for {} haloes: {}'.format(inotord,notord))
+        print(f"\n WARNING b.get_subnum: mass not ordered for {inotord} haloes: {notord}")
 
     return subgroupnum
 
 
-def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=False,nfiles=2,verbose=False):
+def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,allhaloes=True,
+                   rewrite=False,Testing=False,nfiles=2,verbose=False):
     """
     Check if a file with the subhalo properties relevant for the
     analysis of subgrid BH particles is there, and otherwise create it.
@@ -2529,9 +2534,11 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
         Alternative path to table with z and snapshot.
     outdir : string
         Path to output file
-    rewrite: boolean
+    allhaloes : boolean
+        False to only output (sub)haloes hosting galaxies
+    rewrite : boolean
         True or False for rewriting the output file if it already exists
-    Testing: boolean
+    Testing : boolean
         True or False
     nfiles : integer
         Number of files to be considered for testing
@@ -2548,11 +2555,13 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
     Examples
     ---------
     >>> import bahamas as b
-    >>> b.get_subhalo4BH(27,'L400N1024/WMAP9/Sims/BAHAMAS')
+    >>> b.get_subhalo4BH(31,'HIRES/AGN_RECAL_nu0_L100N512_WMAP9','arilega',
+                         dirz='/users/arivgonz/output/BAHAMAS/',rewrite=True,
+                         outdir='/users/arivgonz/output/Junk/',Testing=True)
     """
 
     # Output file
-    outfile, file_exists = get_subBH_file(outdir,sim,snap,part=True)
+    outfile, file_exists = get_subBH_file(outdir,sim,snap,part=True,allhaloes=allhaloes)
     if (file_exists and not rewrite):
         return outfile, file_exists
 
@@ -2593,6 +2602,17 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
             shv_y = sh['Velocity'][:,1]           # km/s
             shv_z = sh['Velocity'][:,2]           # km/s
 
+            ## Test differences between ms30 and the total stellar mass
+            #totms  = sh['MassType'][:,stype]    # 1e10Msun/h 
+            #ind1 = np.where(totms<= 0); set_ind1 = set(ind1[0])
+            #ind2 = np.where(ms30<= 0); set_ind2 = set(ind2[0])
+            #print(f"Subhaloes with MassType<=0 and M30Kpc<0: {np.shape(ind1)[1]}, {np.shape(ind2)[1]}")
+            #different_values = set_ind1.symmetric_difference(set_ind2)
+            #different_values_totms = totms[list(different_values)]
+            #different_values_ms30 = ms30[list(different_values)]
+            #print("Different values in totms:", different_values_totms)
+            #print("Different values in ms30:", different_values_ms30)
+
             try:
                 # SubGroup Number of subhalo, begins at 0 for most massive subhalo within a group 
                 subgroupnum  = sh['SubGroupNumber'][:]
@@ -2629,17 +2649,22 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
         if (len(groupnum) != len(subgroupnum)):
             print('STOP b.get_subhalo4BH: different lenghts for subgroupnum and groupnum, {}'.format(ff))
 
-    # Only consider haloes with some mass enclosed in 30kpc
-    ind = np.where(ms30 > 0.)
-    if (np.shape(ind)[1] < 1):
-        print('STOP (b.map_subBH): no centrals with stellar mass.')
-        return None
-    gn = groupnum[ind]
-
-    cop_x = cop_x[ind]; cop_y = cop_y[ind]; cop_z = cop_z[ind]
-    shv_x = shv_x[ind]; shv_y = shv_y[ind]; shv_z = shv_z[ind]    
-    sgn = subgroupnum[ind]
-
+    if allhaloes:
+        # Consider all haloes
+        gn = groupnum
+        sgn = subgroupnum
+    else:
+        # Only consider haloes with some mass enclosed in 30kpc
+        ind = np.where(ms30 > 0.)
+        if (np.shape(ind)[1] < 1):
+            print('STOP (b.map_subBH): no centrals with stellar mass.')
+            return None
+        gn = groupnum[ind]
+        sgn = subgroupnum[ind]
+        ms30 = ms30[ind]; SFR = SFR[ind]
+        cop_x = cop_x[ind]; cop_y = cop_y[ind]; cop_z = cop_z[ind]
+        shv_x = shv_x[ind]; shv_y = shv_y[ind]; shv_z = shv_z[ind]    
+    
     # Halo properties
     mh, rh = [np.zeros(shape=len(gn)) for i in range(2)]
     mh = mhalo[gn]
@@ -2719,7 +2744,7 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
                       dr,dvr,dvphi,dvlos,
                       cop_x,cop_y,cop_z,
                       shv_x,shv_y,shv_z,
-                      ms30[ind],SFR[ind]]).T
+                      ms30,SFR]).T
     df_sh = pd.DataFrame(data=data,columns=['groupnum','subgroupnum',
                                             'M200C','R200C',
                                             'dr','dvr','dvphi','dvlos',
@@ -2779,15 +2804,16 @@ def get_subhalo4BH(snap,sim,env,dirz=None,outdir=None,rewrite=False,Testing=Fals
 
 def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbose=False):
     '''
-    Produce a file joining subgrid BH properties with that of their host (sub)haloes. 
+    Produce a file joining subgrid BH properties with those of their host (sub)haloes. 
 
     Information on (sub)haloes hosting subgrid BH particles is retrived with get_subhalo4BH.
-    Subgrid BH particle information is read and assigned a Subfind halo (groupnum), based on the PartID.
-    Then, for each subgrid BH particle the host subhalo (subgroupnum) is found 
-    using the distance to the center of potential. 
+    Subgrid BH particle information is read and assigned a Subfind halo (groupnum), 
+    based on the PartID. Then, for each subgrid BH particle the host subhalo (subgroupnum) 
+    is found using the distance to the center of potential. 
     Galaxy properties hosted by the same subhalo are assigned to BH particles and
     if there is no stellar mass, those BH particles are ignored.
-    Relative positions and velocities are calculated and also added mass for BH particles at the same position.
+    Relative positions and velocities are calculated.
+    Mass is also given by adding masses for BH particles at the same position (vel. might differ).
 
     Parameters
     -----------
@@ -2860,7 +2886,7 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
 
     # Loop over the BH subgrid particle files-------------------------------------
     for iff, ff in enumerate(files):
-        f = h5py.File(ff, 'r') #; print(ff,inptype)
+        f = h5py.File(ff, 'r') ; print(ff,inptype)
         p0 = f[inptype]
     
         # Read subgrid BH particle information
@@ -2891,12 +2917,11 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
             pvx         = np.append(pvx,p0['Velocity'][:,0])
             pvy         = np.append(pvy,p0['Velocity'][:,1])
             pvz         = np.append(pvz,p0['Velocity'][:,2])
-            
+
     if verbose:
         print('BH: seed={:.2e}; min={:.2e}, max={:.2e}'.format(BH_seed_mass,
                                                                min(BH_Mass)*10**10,
                                                                max(BH_Mass)*10**10))
-
     # Get subgrid information into a pandas dataset to facilitate merging options
     #here: This operation changes groupnum and subgroupnum into floats, but doesn't seem to matter
     #      tried dtype=[np.uint32,np.int32,np.int32,np.float64,np.float64,np.float64,np.float32,np.float32,np.float32]
@@ -2952,12 +2977,13 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
     df_part.sort_values(by=['groupnum'], inplace=True)
     df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
     del df_psub, df_pbh
-    
+
     if (new_subnum):  # Assign subgrid BH particles to subhaloes
         inilen = len(df_part)
         inr = 0
         
         # Loop over groupnum and the substructure within
+        count_rem = 0
         for index, row in df_part.iterrows():
             ind = np.where(gn == row['groupnum'])
             if (np.shape(ind)[1]>=1):
@@ -2986,13 +3012,14 @@ def get_subBH(snap,sim,env,dirz=None,outdir=None,rewrite=True,Testing=True,verbo
                 else:
                     dr = np.append(dr,mindr)
             else:
-                # Remove particles associated to haloes without stellar mass
+                # Remove particles not associated to the substructure in file
                 df_part = df_part.drop(labels=index, axis=0)
 
         ndrop = inilen-len(df_part)
         if ndrop>0:
             df_part.reset_index(inplace=True, drop=True)  # Reset index from 0
-            if verbose:print(' {} rows have been deleted from df_part'.format(ndrop))
+        if verbose:
+            print(f" {ndrop} rows ({100*ndrop/len(df_part):.1f}%) have been deleted from df_part")
 
     # Data frame from subhaloes for BHs, to be able to merge with particle info.
     data = np.c_[gn,sgn,cop_x,cop_y,cop_z,shv_x,shv_y,shv_z]
@@ -3395,25 +3422,22 @@ def map_subBH(snap,sim,env,nhmr=2.,cop=True,addp=False,
 
 if __name__== "__main__":
     dirz = None ; outdir = None
-    #snap = 31
-    #zz = 0.
-    snap = 27 #31
-    zz = 0.75 #0.
+    snap = 31; zz = 0.
+    #snap = 27 ; zz = 0.75
 
     env = 'arilega'
     #env = 'cosmalega'
     #env = 'lap'
-
     
     if (env == 'cosmalega'):
         sim = None #'L400N1024/WMAP9/Sims/BAHAMAS'
         dirz = '/cosma7/data/dp004/dc-gonz3/BAHAMAS/'
         outdir = '/cosma7/data/dp004/dc-gonz3/Junk/'
     if (env == 'arilega'):
-        #sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
-        sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
+        sim = 'HIRES/AGN_RECAL_nu0_L100N512_WMAP9'
+        #sim = 'AGN_TUNED_nu0_L400N1024_WMAP9'
         dirz = '/users/arivgonz/output/BAHAMAS/'
-        outdir = '/users/arivgonz/output/Junk/'
+        outdir = '/users/arivgonz/output/Junk/'  #'/hpcdata4/arivgonz/BAHAMAS/'
     if (env == 'ari'):
         sim = 'L050N256/WMAP9/Sims/ws_324_23_mu_7_05_dT_8_35_n_75_BH_beta_1_68_msfof_1_93e11'
     if (env == 'lap'):
@@ -3426,7 +3450,8 @@ if __name__== "__main__":
     #print(get_subnum(sim,snap,env,Testing=False))
     #print(old_get_subBH(snap,sim,env,addp=True,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_subBH_file(outdir,sim,snap)) #,part=True))
-    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
+    #print(get_subhalo4BH(snap,sim,env,dirz=dirz,outdir=outdir,allhaloes=True,rewrite=True,Testing=True,verbose=True)) 
+    print(get_subBH(snap,sim,env,dirz=dirz,outdir=outdir,rewrite=True,Testing=True,verbose=True))
     #print(map_subBH(snap,sim,env,dirz=dirz,outdir=outdir,Testing=True,verbose=True))
     #print(get_mHMRmap_file(outdir,sim,snap))
     #print(map_mHMR(snap,sim,env,ptype='BH',nhmr=2.,cop=True,dirz=dirz,outdir=outdir,verbose=True))
