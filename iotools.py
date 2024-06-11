@@ -105,6 +105,7 @@ def count_symbol(infile,sym):
         print('File {} not found'.format(infile))
     return ' '
 
+
 if __name__== "__main__":
     infile = 'blu'
     outdir = 'remove_dir/blu'

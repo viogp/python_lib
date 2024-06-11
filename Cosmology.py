@@ -517,7 +517,7 @@ def cv_survey(z1,z2,area,verbose=False):
     vsurvey = dV*area/asky
     
     if verbose:
-        print('V survey (dz={:.1f}) = {:.4e} (Mpc/h)^-3'.format(z2-z1,vsurvey))    
+        print('V survey (dz={:.1f}) = ({:.4e} Mpc/h)^3 = {:.4e} (Mpc/h)^3'.format(z2-z1,pow(vsurvey,1/3),vsurvey))    
     return vsurvey
 
 
@@ -824,3 +824,4 @@ if __name__== "__main__":
     set_cosmology(0.2,0.0483,0.8,0.6777)
     zz = 1.
     print(distance_modulus(zz))
+
