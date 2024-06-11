@@ -758,6 +758,10 @@ def table_z_sn(sim,env,dirz=None):
             os.makedirs(dirz)
         tablez = dirz+tblz
 
+    # Return the full path if the table exists
+    if (os.path.isfile(tablez)):
+        return tablez
+        
     # Initialize arrays for z and sn
     dirs = glob.glob(path+'groups_0*')
     if (len(dirs) < 1) :
@@ -1144,7 +1148,7 @@ def resolution(sim,env,zz=0.,msunh=True,dirz=None,verbose=False):
     masstable = header.attrs['MassTable']
 
     itype = ptypes.index('DM') 
-    mdm = masstable[itype]
+    mdm = masstable[itype]    # 10^10Msun/h 
     if (mdm<0):
         print('\n WARNING: negative or 0 input mass, returning -999.')
         return -999., -999.
@@ -1303,7 +1307,7 @@ def get_nh(zz,massdef,sim,env,mmin=9.,mmax=16.,dm=0.1,
             return outfil
 
     # Get the halo mass
-    mh = get_prop(snap,sim,env,massdef,Testing=Testing)
+    mh = get_subfind_prop(snap,sim,env,massdef,Testing=Testing)
     ind = np.where(mh > 0.)
     lmh = np.log10(mh[ind]) + 10. # log10(M/Msun/h)
 
@@ -1434,7 +1438,7 @@ def get_propfunc(zz,propdefs,proplabel,sim,env,ptype=['star'],mmin=9.,mmax=16.,d
         for propdef in pfof:
             iprop += 1
             pdef = propdef.split('/')[1]
-            prop = get_fofprop(snap,sim,env,pdef,Testing=Testing)
+            prop = get_subfind_prop(snap,sim,env,pdef,Testing=Testing)
             if (prop is None): continue
             
             ind = np.where(prop > 0.)
