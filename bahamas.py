@@ -27,7 +27,8 @@ BH_seed_mass = 7.63*10**5 #Msun/h
 #dirbahamasari = '/hpcdata0/arivgonz/BAHAMAS/'
 #dirobsari = '/hpcdata0/Obs_Data/'
 
-dirbahamasarilega = '/beegfs1/backup/beegfs2/hpcdata0_backup/simulations/BAHAMAS/'
+dirbahamasarilega = '/mnt/cosmo_scratch/backup/beegfs2/hpcdata0_backup/simulations/BAHAMAS'
+#dirbahamasarilega = '/beegfs1/backup/beegfs2/hpcdata0_backup/simulations/BAHAMAS/'
 #dirbahamasarilega = '/mnt/autofs/beegfs2/hpcdata0_backup/simulations/'
 # '/beegfs2/hpcdata0_backup/simulations/BAHAMAS/' # Output: '/beegfs2/arivgonz/BAHAMAS/'
 dirbahamasari = '/enc1/hpcddn/hpcdata3/arivgonz/BAHAMAS/' #from havok
